@@ -1,0 +1,279 @@
+.holyssum-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
+
+.holyssum-main-event {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.holyssum-main-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1B1B1B;
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 8px;
+  margin: -24px -24px 24px -24px;
+
+  .holyssum-main-header-icon {
+    font-size: 1.5rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.holyssum-main-event-info {
+  h2 {
+    color: #1B1B1B;
+    font-size: 1.1rem;
+    margin: 0 0 12px 0;
+  }
+
+  p {
+    margin: 0 0 8px 0;
+    color: #444;
+    font-size: 0.95rem;
+  }
+}
+
+.holyssum-main-entry-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.holyssum-main-verify-form {
+  margin-top: 20px;
+}
+
+.holyssum-main-verify-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.holyssum-main-verify-input {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+
+  &::placeholder {
+    color: #999;
+  }
+}
+
+.holyssum-main-verify-error {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin: 0 0 12px 0;
+}
+
+.holyssum-main-verify-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.holyssum-main-list-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.holyssum-main-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #1B1B1B;
+  background: #fff;
+  color: #1B1B1B;
+
+  &:hover {
+    background: #1B1B1B;
+    color: #fff;
+  }
+
+  &.primary {
+    background: #1B1B1B;
+    color: #fff;
+    border-color: #1B1B1B;
+
+    &:hover {
+      background: #000;
+    }
+  }
+
+  &.secondary {
+    background: #fff;
+    color: #1B1B1B;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+  }
+}
+
+.holyssum-main-list-section {
+  .holyssum-main-section-title {
+    color: #1B1B1B;
+    font-size: 1.1rem;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #1B1B1B;
+  }
+}
+
+.holyssum-main-loading,
+.holyssum-main-empty {
+  color: #888;
+  text-align: center;
+  padding: 32px;
+}
+
+.holyssum-main-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.holyssum-main-grid-item {
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 1px solid #1B1B1B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  .holyssum-main-grid-gender {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 4px;
+    background: #1B1B1B;
+    color: #fff;
+  }
+}
+
+@media (max-width: 768px) {
+  .holyssum-main {
+    padding: 20px 12px;
+  }
+
+  .holyssum-main-event {
+    padding: 20px 16px;
+    margin-bottom: 24px;
+  }
+
+  .holyssum-main-header {
+    margin: -20px -16px 20px -16px;
+    padding: 12px 16px;
+
+    h1 {
+      font-size: 1.1rem;
+    }
+  }
+
+  .holyssum-main-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .holyssum-main-grid-item {
+    padding: 14px;
+  }
+
+  .holyssum-main-entry-actions,
+  .holyssum-main-list-actions,
+  .holyssum-main-verify-buttons {
+    flex-wrap: wrap;
+  }
+
+  .holyssum-main-btn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .holyssum-main {
+    padding: 16px 10px;
+  }
+
+  .holyssum-main-event {
+    padding: 16px 12px;
+    margin-bottom: 20px;
+  }
+
+  .holyssum-main-header {
+    margin: -16px -12px 16px -12px;
+    padding: 12px;
+
+    h1 {
+      font-size: 1rem;
+    }
+  }
+
+  .holyssum-main-event-info h2 {
+    font-size: 1rem;
+  }
+
+  .holyssum-main-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .holyssum-main-grid-item {
+    padding: 14px;
+  }
+
+  .holyssum-main-entry-actions,
+  .holyssum-main-list-actions,
+  .holyssum-main-verify-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .holyssum-main-btn {
+    width: 100%;
+  }
+}
+
+.holyssum-main-review-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.holyssum-main-review-btn {
+  padding: 14px 32px;
+  font-size: 1rem;
+}

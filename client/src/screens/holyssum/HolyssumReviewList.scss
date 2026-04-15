@@ -1,0 +1,139 @@
+.holyssum-review-list-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 16px 24px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.holyssum-review-list-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.holyssum-review-list-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1B1B1B;
+  color: #fff;
+  padding: 14px 20px;
+
+  .holyssum-review-list-header-icon {
+    font-size: 1.25rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.holyssum-review-list-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 20px;
+  padding: 10px 16px;
+  background: #1B1B1B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #333;
+  }
+}
+
+.holyssum-review-list-body {
+  padding: 0 24px 24px;
+}
+
+.holyssum-review-list-loading,
+.holyssum-review-list-empty {
+  text-align: center;
+  color: #888;
+  padding: 32px;
+}
+
+.holyssum-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.holyssum-review-list-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.holyssum-review-list-item-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #f9f9f9;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+}
+
+.holyssum-review-list-item-name {
+  flex: 1;
+  font-weight: 600;
+  color: #1B1B1B;
+}
+
+.holyssum-review-list-item-date {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.holyssum-review-list-item-toggle {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.holyssum-review-list-item-detail {
+  padding: 16px;
+  background: #fff;
+  border-top: 1px solid #eee;
+}
+
+.holyssum-review-detail-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+
+  .holyssum-review-detail-label {
+    flex-shrink: 0;
+    width: 160px;
+    color: #666;
+  }
+
+  span:last-child {
+    flex: 1;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &.holyssum-review-detail-row-full {
+    flex-direction: column;
+    gap: 4px;
+
+    .holyssum-review-detail-label {
+      width: auto;
+    }
+  }
+}

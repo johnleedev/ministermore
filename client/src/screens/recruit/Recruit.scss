@@ -1,0 +1,811 @@
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+};
+
+.subpage__main {
+  width: 100%;
+  min-height: 100vh;
+  @media (max-width: 1000px) { 
+    width: 100%;
+  }
+
+  // 공통으로 사용
+  section {
+    margin-top: 30px;
+    margin-bottom: 30px;
+  }
+
+  // 상세보기 --------------------------------------------------------
+
+  .main_title_row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    
+    @media screen and (max-width: 1000px) {
+      flex-direction: column;
+      margin-bottom: 30px;
+    }
+    
+    @media screen and (max-width: 600px) {
+      margin-bottom: 40px;
+    }
+
+    .main_title {
+      font-size: 27px;
+      color: #000;
+      padding: 5px 0 20px;
+      word-break: break-all;
+  
+      @media screen and (max-width: 1000px) {
+        font-size: 24px;
+        line-height: 1.5;
+        padding: 5px 0 15px;
+        margin-bottom: 20px;
+      }
+      
+      @media screen and (max-width: 600px) {
+        font-size: 22px;
+        padding: 5px 0 10px;
+      }
+    }
+    .postBtnbox {
+      display: flex;
+      @media screen and (max-width: 1000px) {
+       margin-bottom: 20px;
+      }
+      
+      .postBtn {
+        padding: 10px;
+        background: #000;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        @include middle();
+        
+        p {
+          color: #fff;
+        }
+      }
+      .postBtn:hover {
+        cursor: pointer;
+        opacity:  0.8;
+      }
+    }
+    
+  }
+  
+
+  .copBtn {
+    display: flex;
+    align-items: center;
+    gap: 0 3px;
+
+    .girBtn {
+      display: inline-flex;
+      align-items: center;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 16px;
+      padding: 5px 10px;
+      gap: 0 2px;
+
+      @media screen and (max-width: 850px) {
+          font-size: 11px;
+      }
+
+      &.favorite {
+          margin-left: 6px;
+      }
+    }
+
+    .recruit__religiousbody_box {
+      display: flex;
+      align-items: center;
+      img {
+        width: 18px;
+        height: 18px;
+      }
+      .recruit__religiousbody {
+        margin-left: 5px;
+        font-size: 16px;
+        color: #8d8d8d;
+      }
+    }
+  }
+
+  .section_title {
+    font-size: 24px;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+
+  } 
+
+
+  .summaryBx {
+    border-top: 2px solid #4a5470;
+    display: flex;
+    justify-content: space-between;
+    padding: 30px 20px;
+    @media (max-width: 1000px) { 
+      flex-direction: column; 
+    }
+
+    .tbCol {
+      width: 45%;
+      @media (max-width: 1000px) { 
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      h4 {
+        font-size: 18px;
+        margin-bottom: 30px;
+      }
+    }
+
+    .tbList {
+      display: grid;
+      grid-template-columns: 120px auto;
+      gap: 20px 0;
+      margin-top: 7px;
+
+      @media screen and (max-width: 650px) {
+          gap: 4px 0;
+      }
+
+      .tbLabel {
+        color: #999;
+        line-height: 30px;
+      }
+      .tbValue {
+        color: #333;
+        line-height: 30px;
+        word-break: break-all;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+
+        @media screen and (max-width: 650px) {
+            flex-wrap: wrap;
+        }
+        
+        p {
+          word-break: break-all;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: normal;
+          margin: 0;
+          line-height: 1.4;
+        }
+      }
+    }
+
+    
+
+    .tbAdd {
+        .dt {
+            font-size: 11px;
+            color: #999;
+        }
+    }
+  }
+  
+  .copInfoBx {
+    border-top: 2px solid #4a5470;
+
+    @media screen and (max-width: 830px) {
+        width: 100%;
+        justify-content: center;
+    }
+    .header {
+      width: 100%;
+      padding: 15px 20px;
+      box-sizing: border-box;
+      border-bottom: 1px solid #ccc;
+      @include middle();
+
+      .church {
+        font-size: 20px;
+        color: #000;
+        font-weight: 400;
+
+        @media screen and (max-width: 650px) {
+            font-size: 14px;
+        }
+      }
+    }
+
+    .copInfoBx-cover {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+
+      .copLogo {
+        width: 20%;
+        margin: 0 30px;
+  
+        @media screen and (max-width: 1000px) {
+            display: none;
+        }
+        
+        .emptyLogo {
+          border: 1px solid #ccc;
+          @include middle();
+          padding: 20px;
+          
+          p {
+            color: #9c9c9c;
+          }
+        }
+        .churchLogo {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+      }
+      .copInfo {
+        width: 100%;
+        display: grid;
+        padding: 30px 20px;
+        grid-template-columns: 120px auto;
+        gap: 20px 0;
+  
+        .label {
+          color: #999;
+          line-height: 30px;
+        }
+        .value {
+          color: #333;
+          line-height: 30px;
+          word-break: break-all;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: normal;
+  
+          @media screen and (max-width: 650px) {
+              flex-wrap: wrap;
+          }
+
+          .recruit__religiousbody_box {
+            display: flex;
+            align-items: center;
+
+            img {
+              width: 15px;
+              height: 15px;
+            }
+            .recruit__religiousbody {
+              margin-left: 5px;
+            }
+          }
+        }
+      }
+    }
+    
+  }
+
+
+  // 글쓰기 --------------------------------------------------------
+
+  .inputCover {
+    border-top: 2px solid #4a5470;
+    padding: 30px 10px;
+
+    .inputBox {
+      width: 100%;
+      margin-bottom: 30px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid #f3f3f3;
+      display: flex;
+      align-items: center;
+
+      .title {
+        position: relative;
+        padding-left: 10px;
+        box-sizing: border-box;
+        width: 15%;
+        height: 100%;
+        font-size: 18px;
+        font-weight: 600;
+
+        p:before {
+          position: absolute;
+          left: 0px;
+          top: 45%;
+          transform: translateY(-50%);
+          content: '';
+          width: 3px;
+          height: 15px;
+          background: #334968;
+        }
+      }
+     
+      .inputRow {
+        width: 85%;
+        height: max-content;
+
+        .subTitle {
+          position: relative;
+          margin-bottom: 10px;
+          margin-left: 3px;
+          padding-left: 10px;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+
+          p {
+            color: #414141;
+          }
+          p:before {
+            position: absolute;
+            left: 0px;
+            top: 45%;
+            transform: translateY(-50%);
+            content: '';
+            width: 3px;
+            height: 15px;
+            background: #9b9b9b;
+          }
+          .subTitle-dropdownBox {
+            width: 150px;
+            height: 40px;
+            border: 1px solid #dedede;
+            border-radius: 5px;
+            padding: 2px;
+            outline: none;
+            font-size: 16px;
+            margin: 0;
+          }
+          .addminusBtn {
+            width: 38px;
+            height: 38px;
+            border: 1px solid #dedede;
+            border-radius: 5px;
+            margin-left: 5px;
+            @include middle();
+            p {
+              font-size: 20px;
+            }
+          }
+          .addminusBtn:hover {
+            cursor: pointer;
+            opacity: 0.8;
+          }
+        }
+        .second {
+          margin-top: 30px;
+        }
+      }
+      .inputdefault {
+        width: 100%;
+        font-size: 15px;
+        font-weight: normal;
+        height: 50px;
+        padding-left: 10px;
+        box-sizing: border-box;
+        border: 1px solid #E9E9E9;
+        border-radius: 5px;
+      }
+      .dropdownBox {
+        border: 1px solid #dedede;
+        border-radius: 5px;
+        padding: 2px;
+        width: 100%;
+        height: 50px;
+        outline: none;
+        font-size: 16px;
+        margin: 0;
+      }
+      .subTextBox {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+
+        .subText {
+          border: 1px solid #dedede;
+          border-radius: 3px;
+          padding: 10px;
+          margin-right: 5px;
+          margin-top: 5px;
+          @include middle();
+        }
+        .subText:hover {
+          cursor: pointer;
+          opacity: 0.8;
+        }
+        .selected {
+          border: 2px solid #333;
+        }
+      }
+      .checkTextRow {
+        width: 100%;
+        display: grid;
+        justify-content: space-between;
+        grid-template-columns: 30% 30% 30%;
+
+        .checkTextBox {
+          width: 100%;
+          padding: 10px 0;
+          display: flex;
+          align-items: center;
+
+          input[type="checkbox"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+          }
+          .checkmark {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+            position: relative;
+          }
+          input:checked + .checkmark {
+            background-color: #333;
+          }
+          input:checked + .checkmark::after {
+            content: "";
+            position: absolute;
+            left: 8px;
+            top: 4px;
+            width: 6px;
+            height: 12px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+          }
+
+          .imgtextBox {
+            
+            @include middle();
+            img {
+              max-width: 20px;
+              max-height: 20px;
+              margin-right: 10px;
+            }
+          }
+          .selected {
+            font-weight: bold;
+            
+          }
+          
+        }
+        .checkTextBox:hover {
+          cursor: pointer;
+          opacity: 0.8;
+        }
+
+      }
+      .selectBoxRow {
+        width: 100%;
+        display: flex;
+        align-items: center;
+     
+      }
+      
+    }
+    
+   
+    h4 {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    .imageInputBox {
+      width: 100%;
+      display: flex;
+      align-items: center;
+
+      .imageDropzoneCover {
+        width: 150px;
+        min-width: 150px;
+        @include middle();
+
+        .imageDropzoneStyle {
+          width: 100%;
+          height: 30px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          border-radius: 4px;
+          border: 1px dashed #e8e8e8;
+          cursor: pointer;
+          div.imageplus {
+            font-size: 14px;
+            color: #333;
+          }
+        }
+      }
+
+      .imagebox {
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+        img {
+          width: 100px;
+          height: 100px;
+          object-fit: contain;
+          display: block;
+        }
+        p {
+          margin: 0 10px;
+        }
+        div {
+          @include middle();
+        }
+      }
+
+    }
+    
+    // DateBox
+    .calendarbox {
+      width: 150px;
+      height: 50px;
+      position: relative;
+      min-height: 30px; 
+      display: flex; 
+      align-items: center;
+      border: 1px solid #E9E9E9;
+      box-sizing: border-box;
+      border-radius: 5px;
+      padding: 5px;
+
+      .dateboxSingle {
+        width: 130px;
+
+        .react-datepicker__tab-loop {
+          .react-datepicker-popper {
+            .react-datepicker {
+              width: 320px;
+
+              .react-datepicker__month-container {
+                .react-datepicker__header {
+                  .react-datepicker__header__dropdown {
+                    left: 20px;
+                  }
+                }
+              }
+            }
+          }
+        }
+        .react-datepicker-wrapper {
+          .react-datepicker__input-container {
+            > input {
+              width: 100px;
+              border: none;
+              font-size: 16px;
+              font-weight: 600;
+            }
+            .react-datepicker__close-icon {
+              display: none;
+            }
+          }
+        }
+      }
+      .datebox {
+        position: relative;
+        
+        // 달력 날짜 선택, 하단 모달창
+        .react-datepicker__tab-loop {
+
+          .react-datepicker-popper {
+
+            .react-datepicker {
+              position: absolute;
+              top: 0;
+              left: -100px;
+              display: flex;
+              justify-content: space-between;
+              border: 1px solid #ccc;
+              border-radius: 10px;
+
+              // 왼쪽(지난달) 버튼
+              .react-datepicker__navigation {
+                margin: 10px;
+                width: 30px;
+                height: 30px;
+              
+                .react-datepicker__navigation-icon::before {
+                  border-color:  rgb(95, 183, 239);
+                  border-width: 2px 2px 0 0;
+                }
+                &:hover {
+                  cursor: pointer;
+                  opacity: 0.8;
+                }
+              }
+
+              // 달력 content
+              .react-datepicker__month-container {
+                width: 300px;
+                background-color: #fff;
+                border-radius: 10px;
+                padding: 10px;
+              
+                .react-datepicker__header {
+                  background-color: #fff;
+                  border-top-left-radius: 10px;
+                  border-top-right-radius: 10px;
+
+                  // 월녁 타이틀
+                  .react-datepicker__current-month {
+                    height: 35px;
+                    color: #333;
+                  }
+                  // 년도 선택 드롭박스
+                  .react-datepicker__header__dropdown {
+                    position: absolute;
+                    top: 10px;
+
+                    .react-datepicker__year-dropdown-container {
+
+                      .react-datepicker__year-read-view {
+                        
+                        .react-datepicker__year-read-view--down-arrow {
+                          border-color:  rgb(95, 183, 239);
+                          border-width: 2px 2px 0 0;
+                        }
+                      }
+                      .react-datepicker__year-dropdown {
+                        width: 70px;
+                        background-color: #fff;
+                        .react-datepicker__year-option {
+                          height: 30px;
+                          font-size: 14px;
+                          font-weight: 400;
+                          margin: 0;
+                          padding: 0;
+                          @include middle();
+                        }
+                        .react-datepicker__year-option--selected_year {
+                          background-color:  rgb(95, 183, 239);
+                          .react-datepicker__year-option--selected {
+                            display: none;
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                // 요일 row
+                .react-datepicker__day-names {
+                  font-family: 'Noto Sans KR', sans-serif;
+                  display: grid;
+                  grid-template-columns: 12% 12% 12% 12% 12% 12% 12%;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  margin: 0 10px;
+
+                  .react-datepicker__day-name {
+                    width: 40px;
+                    margin: 0;
+                  }
+                }
+                // 달력 box 
+                .react-datepicker__month {
+                  padding: 0;
+                  margin: 10px;
+
+                  .react-datepicker__week {
+                    font-family: 'Noto Sans KR', sans-serif;
+                    display: grid;
+                    grid-template-columns: 12% 12% 12% 12% 12% 12% 12%;
+                    justify-content: space-between;
+                    align-items: flex-start;
+
+                    .react-datepicker__day {
+                      width: 40px;
+                      height: 40px;
+                      border-radius: 20px;
+                      margin: 0;
+                      @include middle();
+                    }
+                    .react-datepicker__day--keyboard-selected {
+                      background-color: rgb(95, 183, 239);
+                    }
+                    .react-datepicker__day--outside-month {
+                      color: #ccc;
+                    }
+                    .react-datepicker__day--in-selecting-range {
+                      background-color: #ccc;
+                    }
+                    .react-datepicker__day--in-range {
+                      background-color: rgb(205, 228, 242);
+                    }
+                    .react-datepicker__day--range-start,
+                    .react-datepicker__day--range-end {
+                      background-color: rgb(43, 153, 222);
+                    }
+                    .react-datepicker__day--selecting-range-end {
+                      background-color: rgb(95, 183, 239);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      .calender-icon {
+        position: absolute;
+        pointer-events: none; 
+      }
+    }
+
+
+    .EditorTinymce {
+      z-index: 0;
+
+      
+    }
+  }
+
+  .submitBtnWrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 100px;
+    gap: 0 20px;
+
+    .submitBtn {
+      width: 250px;
+      height: 70px;
+      background: #000;
+      color: #fff;
+      font-size: 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s;
+    }
+    .submitBtn:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .custom-html-content {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 16px;
+    font-size: 15px;
+    color: #222;
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.5;
+  }
+  .custom-html-content p {
+    margin-bottom: 15px;
+    font-size: 16px;
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  .custom-html-content ul {
+    padding-left: 20px;
+  }
+  .custom-html-content li {
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  
+
+}
+
+

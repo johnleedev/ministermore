@@ -1,0 +1,378 @@
+// Conti Maker – ContiMain / 5.html 스타일 통일
+$accent-blue: #3b82f6;
+$accent-blue-dark: #1e3a8a;
+$accent-blue-light: #eff6ff;
+$accent-blue-border: #bfdbfe;
+$text-muted: #64748b;
+$text-dark: #1e293b;
+$border: #e2e8f0;
+$white: #ffffff;
+$bg-page: #f8fafc;
+
+.conti-maker {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: $bg-page;
+  min-height: 100vh;
+  padding: 48px 24px 80px;
+}
+
+.conti-maker__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+// ----- 헤더 (ContiMain 동일) -----
+.conti-maker__header {
+  margin-bottom: 40px;
+}
+
+.conti-maker__title-bar {
+  width: 60px;
+  height: 6px;
+  background-color: $accent-blue;
+  margin-bottom: 16px;
+}
+
+.conti-maker__title {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  color: $text-dark;
+  margin: 0 0 8px 0;
+}
+
+.conti-maker__subtitle {
+  font-size: 16px;
+  color: $text-muted;
+  margin: 0;
+  line-height: 1.5;
+}
+
+// ----- 로딩 -----
+.conti-maker__loading {
+  text-align: center;
+  padding: 60px 20px;
+
+  p {
+    font-size: 18px;
+    color: $text-muted;
+    margin: 0;
+  }
+}
+
+// ----- 설정 영역 -----
+.conti-maker__setup {
+  background-color: $white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 40px;
+  border: 1px solid $border;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.conti-maker__search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.conti-maker__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: $text-dark;
+  min-width: 80px;
+}
+
+.conti-maker__select {
+  padding: 10px 14px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: $white;
+  color: $text-dark;
+  min-width: 120px;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: $accent-blue;
+  }
+
+  &--sm {
+    min-width: 100px;
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+}
+
+.conti-maker__conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.conti-maker__condition-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.conti-maker__condition-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-dark;
+  min-width: 52px;
+}
+
+.conti-maker__notice {
+  padding: 14px 18px;
+  background-color: $accent-blue-light;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid $accent-blue-border;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: $accent-blue-dark;
+    line-height: 1.5;
+  }
+}
+
+.conti-maker__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.conti-maker__btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &--primary {
+    background-color: $accent-blue-dark;
+    color: $white;
+
+    &:hover {
+      background-color: darken($accent-blue-dark, 6%);
+    }
+  }
+
+  &--secondary {
+    background-color: #64748b;
+    color: $white;
+
+    &:hover {
+      background-color: #475569;
+    }
+  }
+}
+
+// ----- 결과 섹션 (5.html 레이아웃) -----
+.conti-maker__result {
+  margin-top: 48px;
+}
+
+.conti-maker__result-header {
+  margin-bottom: 28px;
+}
+
+.conti-maker__result-title-bar {
+  width: 60px;
+  height: 6px;
+  background-color: $accent-blue;
+  margin-bottom: 16px;
+}
+
+.conti-maker__result-title {
+  font-size: clamp(22px, 2.5vw, 28px);
+  font-weight: 800;
+  color: $text-dark;
+  margin: 0 0 8px 0;
+}
+
+.conti-maker__result-subtitle {
+  font-size: 16px;
+  color: $text-muted;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.conti-maker__result-body {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+}
+
+// ----- 페이퍼 스타일 콘티 카드 (가로 꽉 참) -----
+.conti-maker__paper-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.conti-maker__paper {
+  border-radius: 8px;
+  border: 1px solid $border;
+
+  &--back {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 0;
+    bottom: -10px;
+    background-color: #f1f5f9;
+    transform: rotate(2deg);
+    z-index: 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  }
+
+  &--front {
+    position: relative;
+    z-index: 1;
+    background-color: $white;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.conti-maker__paper-header {
+  margin-bottom: 16px;
+}
+
+.conti-maker__paper-options {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.conti-maker__paper-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-muted;
+  }
+}
+
+.conti-maker__songs-grid {
+  display: grid;
+  gap: 16px;
+  flex: 1;
+  min-height: 200px;
+}
+
+.conti-maker__song-card {
+  background: #fafafa;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: $accent-blue;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+}
+
+.conti-maker__song-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.conti-maker__song-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  word-break: break-word;
+  flex: 1;
+}
+
+.conti-maker__song-pill {
+  background-color: $accent-blue-light;
+  color: #2563eb;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.conti-maker__song-card-actions {
+  margin-bottom: 10px;
+}
+
+.conti-maker__regenerate-btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid $accent-blue;
+  border-radius: 6px;
+  background: $white;
+  color: $accent-blue;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $accent-blue;
+    color: $white;
+  }
+}
+
+.conti-maker__song-score {
+  flex: 1;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+
+  img {
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+  }
+}
+
+.conti-maker__no-score {
+  font-size: 13px;
+  color: $text-muted;
+}
+
+.conti-maker__paper-footer {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid $border;
+  text-align: center;
+
+  p {
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+}
+

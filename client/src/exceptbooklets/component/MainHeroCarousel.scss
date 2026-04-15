@@ -1,0 +1,151 @@
+.main-hero-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+  &--fill {
+    position: absolute;
+    inset: 0;
+  }
+
+  &--compact {
+    min-height: 200px;
+    border-radius: 10px;
+    max-height: 280px;
+  }
+
+  &__viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  &__track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.35s ease-out;
+    will-change: transform;
+  }
+
+  &__slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    z-index: 0;
+  }
+
+  &__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.65);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    &--prev {
+      left: 8px;
+    }
+
+    &--next {
+      right: 8px;
+    }
+  }
+
+  &__dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+
+    &--active {
+      background: #fff;
+      transform: scale(1.15);
+    }
+  }
+
+  &__view-full {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    margin: 0;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.68);
+    }
+
+    &:active {
+      transform: translate(-50%, -50%) scale(0.98);
+    }
+  }
+}

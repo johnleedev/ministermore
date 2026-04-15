@@ -1,0 +1,1467 @@
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+};
+@mixin centerWidth {
+  width: 100%;
+  max-width: 1400px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  @media (max-width: 1400px) {
+    width: 90%;
+  }
+  @media (max-width: 800px) {
+    width: 95%;
+  }
+};
+
+
+.AdminContainer {
+  width: 100vw;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+
+.AdminContent {
+  width: 100%;
+  height: 80vh;
+  @include middle();
+  flex-direction: column;
+
+  .admin_input_wrapper {
+    width: 300px;
+    height: 100px;
+    margin-bottom: 30px;
+
+    .admin_box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 250px;
+      height: 50px;
+
+      .admin_content_text {
+        width: 30%;
+      }
+      .admin_content_input {
+        width: 70%;
+        height: 40px;
+        font-size: 15px;
+        font-weight: normal;
+        min-height: 40px;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #E9E9E9;
+        border-radius: 5px;
+        margin-bottom: 10px;
+      }
+    }
+  }
+  .login_button {
+    width: 100px;
+    height: 30px;
+  }
+
+}
+
+
+.amdin_Main_Btn {
+  width: 200px;
+  height: 50px;
+  @include middle();
+  border: 1px solid #BDBDBD;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}  
+.amdin_Main_Btn:hover {
+  cursor: pointer;
+  border: 1px solid #333;
+}
+
+.admin-register {
+  width: 100%;
+  padding-top: 100px;
+  @include centerWidth();
+
+  @media (max-width: 800px) {
+    .mobile-none {
+      display: none;
+    }
+  }
+
+  > .inner {
+
+    .top-cover {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      @media (max-width: 1200px) {
+       flex-direction: column;
+      }
+      .left-box {
+        width: 65%;
+        @media (max-width: 1200px) {
+          width: 100%;
+         }
+        .inputbox {
+          width: 100%;
+          min-height: 50px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-radius: 5px;
+          margin-bottom: 10px;
+          
+          .name {
+            width: 150px;
+            font-size: 18px;
+            @include middle;
+            @media (max-width: 800px) { 
+              width: 70px;
+              font-size: 14px;
+            }
+          }
+          > input,
+          > .input {
+            width: 90%;
+            min-height: 40px;
+            padding: 4px 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            border-radius: 5px;
+            color: #000;
+            font-size: 15px;
+            font-weight: 500;
+          }
+          textarea {
+            width: 90%;
+            color: #000;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            border: 1px solid #ccc;
+          }
+          .dropdownBox {
+            border: 1px solid #dedede;
+            border-radius: 5px;
+            padding: 2px;
+            width: 100%;
+            min-height: 40px;
+            outline: none;
+            font-size: 15px;
+          }
+        }
+        .checkInputCover {
+          display: flex;
+          align-items: center;
+          margin-left: 10px;
+          display: grid;
+          grid-template-columns: repeat(8, 1fr);
+          @media (max-width: 1200px) {
+            grid-template-columns: repeat(6, 1fr);
+          }
+          @media (max-width: 800px) {
+            grid-template-columns: repeat(5, 1fr);
+          }
+          gap: 10px;
+          margin-bottom: 20px;
+          
+          .checkInputbox {
+            @include middle();
+            padding: 10px 7px;
+            border: 1px solid #ccc;
+            p {
+              font-size: 14px;
+            }
+          }
+          .checkInputbox:hover {
+            cursor: pointer;
+            background-color: #8C8C8C;
+          }
+          .selected {
+            background-color: #333;
+            color: #fff;
+          }
+        }
+
+        .textbox {
+          margin-bottom: 10px;
+        }
+        .textareabox {
+          white-space: pre-line;
+          margin-bottom: 5px;
+        }
+      }
+      .right-box {
+        width: 30%;
+        @media (max-width: 1200px) {
+          width: 100%;
+         }
+
+        .admin-imagebox {
+          width: 100%;
+          @include middle();
+          margin-bottom: 100px;
+          img {
+            width: 100%;
+            max-width: 1000px;
+          }
+        }
+      }
+    }
+    
+
+
+    
+
+    .songsBox {
+      width: 100%;
+
+      .songs-input-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 25px;
+
+        .songs-input-btn {
+          border: 1px solid #ccc;
+          @include middle();
+          border-radius: 5px;
+          padding: 3px;
+        }
+        .songs-input-btn:hover {
+          cursor: pointer;
+          background-color: #ccc;
+        }
+      }
+    }
+
+    .recruitBox {
+      width: 100%;
+
+      .recruit-input-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 25px;
+
+        .recruit-input-btn {
+          border: 1px solid #ccc;
+          @include middle();
+          border-radius: 5px;
+          padding: 3px;
+        }
+        .recruit-input-btn:hover {
+          cursor: pointer;
+          background-color: #ccc;
+        }
+      }
+    }
+
+    .buttonbox {
+      height: 50px;
+      left: 0;
+      right: 0;
+      margin: 20px auto;
+      display: flex;
+      justify-content: center;
+
+      .button {
+        width: 10%;
+        @media (max-width: 1200px) {
+          width: 15%;
+        }
+        @media (max-width: 800px) {
+          width: 25%;
+        }
+        height: 40px;
+        background-color: #333;
+        border-radius: 10px;
+        @include middle;
+
+        p {
+          font-weight: 700;
+          font-size: 16px;
+        }
+      }
+      .button:hover {
+        background-color: #8C8C8C;
+        cursor: pointer;
+      }
+      .button.reset {
+        width: 200px;
+        height: 50px;
+        color: #fff;
+        background-color: #333;
+        border-radius: 10px;
+        @include middle;
+        font-weight: 700;
+        font-size: 16px;
+      }
+    }
+
+    .btn-row {
+      width: 100%;
+      margin: 20px 0;
+      @include middle();
+
+      .btn {
+        font-size: 13px;
+        width: 20px;
+        height: 20px;
+        margin: 7px;
+        color: #979797;
+        @include middle();
+      }
+      .current {
+        color: #2c3d54;
+        border-bottom: 2px solid #2c3d54;;
+      }
+      .btn:hover {
+        cursor: pointer;
+        color: #2c3d54;
+      }
+    }
+  }
+
+  
+  .custom-html-content {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 16px;
+    font-size: 15px;
+    color: #222;
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.5;
+  }
+  .custom-html-content p {
+    margin-bottom: 15px;
+    font-size: 16px;
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  .custom-html-content ul {
+    padding-left: 20px;
+  }
+  .custom-html-content li {
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  // RegisterRecruit.tsx에서 사용하는 스타일 (Recruit.scss에서 가져옴)
+  .recruit {
+    padding-top: 50px;
+    @media (max-width: 600px) { 
+      padding-top: 10px;
+    }
+
+    > .inner {
+      .subpage__main {
+        width: 100%;
+        min-height: 100vh;
+        @media (max-width: 1000px) { 
+          width: 100%;
+        }
+
+        section {
+          margin-top: 30px;
+          margin-bottom: 30px;
+        }
+
+        .main_title_row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          
+          @media screen and (max-width: 1000px) {
+            flex-direction: column;
+            margin-bottom: 30px;
+          }
+          
+          @media screen and (max-width: 600px) {
+            margin-bottom: 40px;
+          }
+
+          .main_title {
+            font-size: 27px;
+            color: #000;
+            padding: 5px 0 20px;
+            word-break: break-all;
+        
+            @media screen and (max-width: 1000px) {
+              font-size: 24px;
+              line-height: 1.5;
+              padding: 5px 0 15px;
+              margin-bottom: 20px;
+            }
+            
+            @media screen and (max-width: 600px) {
+              font-size: 22px;
+              padding: 5px 0 10px;
+            }
+          }
+        }
+
+        .section_title {
+          font-size: 24px;
+          letter-spacing: -0.5px;
+          margin-bottom: 10px;
+        }
+
+        .inputCover {
+          border-top: 2px solid #4a5470;
+          padding: 30px 10px;
+
+          .inputBox {
+            width: 100%;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #f3f3f3;
+            display: flex;
+            align-items: center;
+
+            .title {
+              position: relative;
+              padding-left: 10px;
+              box-sizing: border-box;
+              width: 15%;
+              height: 100%;
+              font-size: 18px;
+              font-weight: 600;
+
+              p:before {
+                position: absolute;
+                left: 0px;
+                top: 45%;
+                transform: translateY(-50%);
+                content: '';
+                width: 3px;
+                height: 15px;
+                background: #334968;
+              }
+            }
+           
+            .inputRow {
+              width: 85%;
+              height: max-content;
+
+              .subTitle {
+                position: relative;
+                margin-bottom: 10px;
+                margin-left: 3px;
+                padding-left: 10px;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+
+                p {
+                  color: #414141;
+                }
+                p:before {
+                  position: absolute;
+                  left: 0px;
+                  top: 45%;
+                  transform: translateY(-50%);
+                  content: '';
+                  width: 3px;
+                  height: 15px;
+                  background: #9b9b9b;
+                }
+                .subTitle-dropdownBox {
+                  width: 150px;
+                  height: 40px;
+                  border: 1px solid #dedede;
+                  border-radius: 5px;
+                  padding: 2px;
+                  outline: none;
+                  font-size: 16px;
+                  margin: 0;
+                }
+                .addminusBtn {
+                  width: 38px;
+                  height: 38px;
+                  border: 1px solid #dedede;
+                  border-radius: 5px;
+                  margin-left: 5px;
+                  @include middle();
+                  p {
+                    font-size: 20px;
+                  }
+                }
+                .addminusBtn:hover {
+                  cursor: pointer;
+                  opacity: 0.8;
+                }
+              }
+              .second {
+                margin-top: 30px;
+              }
+            }
+            .inputdefault {
+              width: 100%;
+              font-size: 15px;
+              font-weight: normal;
+              height: 50px;
+              padding-left: 10px;
+              box-sizing: border-box;
+              border: 1px solid #E9E9E9;
+              border-radius: 5px;
+            }
+            .dropdownBox {
+              border: 1px solid #dedede;
+              border-radius: 5px;
+              padding: 2px;
+              width: 100%;
+              height: 50px;
+              outline: none;
+              font-size: 16px;
+              margin: 0;
+            }
+            .subTextBox {
+              width: 100%;
+              display: flex;
+              align-items: center;
+              flex-wrap: wrap;
+
+              .subText {
+                border: 1px solid #dedede;
+                border-radius: 3px;
+                padding: 10px;
+                margin-right: 5px;
+                margin-top: 5px;
+                @include middle();
+              }
+              .subText:hover {
+                cursor: pointer;
+                opacity: 0.8;
+              }
+              .selected {
+                border: 2px solid #333;
+              }
+            }
+            .checkTextRow {
+              width: 100%;
+              display: grid;
+              justify-content: space-between;
+              grid-template-columns: 30% 30% 30%;
+
+              .checkTextBox {
+                width: 100%;
+                padding: 10px 0;
+                display: flex;
+                align-items: center;
+
+                input[type="checkbox"] {
+                  opacity: 0;
+                  width: 0;
+                  height: 0;
+                  position: absolute;
+                }
+                .checkmark {
+                  width: 25px;
+                  height: 25px;
+                  border: 1px solid #ccc;
+                  border-radius: 4px;
+                  margin-right: 10px;
+                  position: relative;
+                }
+                input:checked + .checkmark {
+                  background-color: #333;
+                }
+                input:checked + .checkmark::after {
+                  content: "";
+                  position: absolute;
+                  left: 8px;
+                  top: 4px;
+                  width: 6px;
+                  height: 12px;
+                  border: solid white;
+                  border-width: 0 2px 2px 0;
+                  transform: rotate(45deg);
+                }
+
+                .imgtextBox {
+                  @include middle();
+                  img {
+                    max-width: 20px;
+                    max-height: 20px;
+                    margin-right: 10px;
+                  }
+                }
+                .selected {
+                  font-weight: bold;
+                }
+                .selectedLocation {
+                  font-weight: bold;
+                }
+                .selectedSubarea {
+                  font-weight: bold;
+                }
+              }
+              .checkTextBox:hover {
+                cursor: pointer;
+                opacity: 0.8;
+              }
+            }
+            .selectBoxRow {
+              width: 100%;
+              display: flex;
+              align-items: center;
+            }
+          }
+          
+          h4 {
+            font-size: 18px;
+            margin-bottom: 30px;
+          }
+
+          .imageInputBox {
+            width: 100%;
+            display: flex;
+            align-items: center;
+
+            .imageDropzoneCover {
+              width: 150px;
+              min-width: 150px;
+              @include middle();
+
+              .imageDropzoneStyle {
+                width: 100%;
+                height: 30px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                border-radius: 4px;
+                border: 1px dashed #e8e8e8;
+                cursor: pointer;
+                div.imageplus {
+                  font-size: 14px;
+                  color: #333;
+                }
+              }
+            }
+
+            .imagebox {
+              display: flex;
+              align-items: center;
+              font-size: 16px;
+              img {
+                width: 100px;
+                height: 100px;
+                object-fit: contain;
+                display: block;
+              }
+              p {
+                margin: 0 10px;
+              }
+              div {
+                @include middle();
+              }
+            }
+          }
+
+          .calendarbox {
+            width: 150px;
+            height: 50px;
+            position: relative;
+            min-height: 30px; 
+            display: flex; 
+            align-items: center;
+            border: 1px solid #E9E9E9;
+            box-sizing: border-box;
+            border-radius: 5px;
+            padding: 5px;
+
+            .dateboxSingle {
+              width: 130px;
+
+              .react-datepicker__tab-loop {
+                .react-datepicker-popper {
+                  .react-datepicker {
+                    width: 320px;
+
+                    .react-datepicker__month-container {
+                      .react-datepicker__header {
+                        .react-datepicker__header__dropdown {
+                          left: 20px;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              .react-datepicker-wrapper {
+                .react-datepicker__input-container {
+                  > input {
+                    width: 100px;
+                    border: none;
+                    font-size: 16px;
+                    font-weight: 600;
+                  }
+                  .react-datepicker__close-icon {
+                    display: none;
+                  }
+                }
+              }
+            }
+            .datebox {
+              position: relative;
+              
+              .react-datepicker__tab-loop {
+                .react-datepicker-popper {
+                  .react-datepicker {
+                    position: absolute;
+                    top: 0;
+                    left: -100px;
+                    display: flex;
+                    justify-content: space-between;
+                    border: 1px solid #ccc;
+                    border-radius: 10px;
+
+                    .react-datepicker__navigation {
+                      margin: 10px;
+                      width: 30px;
+                      height: 30px;
+                    
+                      .react-datepicker__navigation-icon::before {
+                        border-color:  rgb(95, 183, 239);
+                        border-width: 2px 2px 0 0;
+                      }
+                      &:hover {
+                        cursor: pointer;
+                        opacity: 0.8;
+                      }
+                    }
+
+                    .react-datepicker__month-container {
+                      width: 300px;
+                      background-color: #fff;
+                      border-radius: 10px;
+                      padding: 10px;
+                    
+                      .react-datepicker__header {
+                        background-color: #fff;
+                        border-top-left-radius: 10px;
+                        border-top-right-radius: 10px;
+
+                        .react-datepicker__current-month {
+                          height: 35px;
+                          color: #333;
+                        }
+                        .react-datepicker__header__dropdown {
+                          position: absolute;
+                          top: 10px;
+
+                          .react-datepicker__year-dropdown-container {
+                            .react-datepicker__year-read-view {
+                              .react-datepicker__year-read-view--down-arrow {
+                                border-color:  rgb(95, 183, 239);
+                                border-width: 2px 2px 0 0;
+                              }
+                            }
+                            .react-datepicker__year-dropdown {
+                              width: 70px;
+                              background-color: #fff;
+                              .react-datepicker__year-option {
+                                height: 30px;
+                                font-size: 14px;
+                                font-weight: 400;
+                                margin: 0;
+                                padding: 0;
+                                @include middle();
+                              }
+                              .react-datepicker__year-option--selected_year {
+                                background-color:  rgb(95, 183, 239);
+                                .react-datepicker__year-option--selected {
+                                  display: none;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      .react-datepicker__day-names {
+                        font-family: 'Noto Sans KR', sans-serif;
+                        display: grid;
+                        grid-template-columns: 12% 12% 12% 12% 12% 12% 12%;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin: 0 10px;
+
+                        .react-datepicker__day-name {
+                          width: 40px;
+                          margin: 0;
+                        }
+                      }
+                      .react-datepicker__month {
+                        padding: 0;
+                        margin: 10px;
+
+                        .react-datepicker__week {
+                          font-family: 'Noto Sans KR', sans-serif;
+                          display: grid;
+                          grid-template-columns: 12% 12% 12% 12% 12% 12% 12%;
+                          justify-content: space-between;
+                          align-items: flex-start;
+
+                          .react-datepicker__day {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 20px;
+                            margin: 0;
+                            @include middle();
+                          }
+                          .react-datepicker__day--keyboard-selected {
+                            background-color: rgb(95, 183, 239);
+                          }
+                          .react-datepicker__day--outside-month {
+                            color: #ccc;
+                          }
+                          .react-datepicker__day--in-selecting-range {
+                            background-color: #ccc;
+                          }
+                          .react-datepicker__day--in-range {
+                            background-color: rgb(205, 228, 242);
+                          }
+                          .react-datepicker__day--range-start,
+                          .react-datepicker__day--range-end {
+                            background-color: rgb(43, 153, 222);
+                          }
+                          .react-datepicker__day--selecting-range-end {
+                            background-color: rgb(95, 183, 239);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            .calender-icon {
+              position: absolute;
+              pointer-events: none; 
+            }
+          }
+
+          .EditorTinymce {
+            z-index: 0;
+          }
+        }
+      }
+    }
+  }
+
+  // recruitBox 내부 스타일 추가 (RecruitList.scss에서 필요시)
+  .recruitBox {
+    .recruit-input-row {
+      .recruit-input-title {
+        font-weight: 500;
+        color: #333;
+      }
+      .recruit-input-keySort {
+        font-weight: 500;
+        color: #333;
+      }
+      .recruit-input-theme {
+        font-weight: 500;
+        color: #333;
+      }
+      .songs-input-theme {
+        font-weight: 500;
+        color: #333;
+      }
+    }
+  }
+}
+
+// 커뮤니티 게시판 관리 스타일 (전역)
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+
+  th, td {
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 14px;
+  }
+
+  th {
+    background: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+    font-size: 15px;
+  }
+
+  td {
+    color: #555;
+  }
+
+  tr:hover {
+    background: #f8f9fa;
+  }
+
+  .admin-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0 2px;
+  }
+
+  .delete-btn {
+    background: #dc3545;
+    color: white;
+  }
+
+  .delete-btn:hover {
+    background: #c82333;
+  }
+
+  .view-btn {
+    background: #007bff;
+    color: white;
+  }
+
+  .view-btn:hover {
+    background: #0056b3;
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-top: 20px;
+
+  .page-btn {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .page-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #007bff;
+  }
+
+  .page-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+
+  .page-btn:disabled {
+    background: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+  }
+}
+
+.filter-section {
+  select {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    font-size: 14px;
+    outline: none;
+  }
+
+  select:focus {
+    border-color: #007bff;
+  }
+}
+
+.board-list {
+  .empty-message {
+    text-align: center;
+    padding: 50px;
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+// Worship Management Styles
+.admin-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+
+    h2 {
+      margin: 0;
+      color: #333;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .admin-actions {
+      .btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.btn-primary {
+          background: #007bff;
+          color: white;
+
+          &:hover {
+            background: #0056b3;
+          }
+        }
+      }
+    }
+  }
+
+  .search-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+
+      input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+
+        &:focus {
+          border-color: #007bff;
+        }
+      }
+
+      .btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.btn-search {
+          background: #28a745;
+          color: white;
+
+          &:hover {
+            background: #218838;
+          }
+        }
+
+        &.btn-reset {
+          background: #6c757d;
+          color: white;
+
+          &:hover {
+            background: #5a6268;
+          }
+        }
+      }
+    }
+
+    .theme-search {
+      p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .theme-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .theme-btn {
+          padding: 6px 12px;
+          border: 1px solid #ddd;
+          background: white;
+          color: #333;
+          border-radius: 20px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: #007bff;
+            color: #007bff;
+          }
+
+          &.selected {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+          }
+        }
+      }
+    }
+  }
+
+  .table-container {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+
+      th, td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      td {
+        color: #555;
+        font-size: 14px;
+        vertical-align: middle;
+
+        &.loading, &.no-data {
+          text-align: center;
+          padding: 40px;
+          color: #666;
+          font-style: italic;
+        }
+      }
+
+      tr:hover {
+        background: #f8f9fa;
+      }
+
+      .theme-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+
+        .theme-tag {
+          padding: 2px 6px;
+          background: #e9ecef;
+          color: #495057;
+          border-radius: 12px;
+          font-size: 11px;
+          white-space: nowrap;
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 5px;
+
+        .btn {
+          padding: 6px 10px;
+          border: none;
+          border-radius: 4px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          &.btn-edit {
+            background: #ffc107;
+            color: #212529;
+
+            &:hover {
+              background: #e0a800;
+            }
+          }
+
+          &.btn-delete {
+            background: #dc3545;
+            color: white;
+
+            &:hover {
+              background: #c82333;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding: 20px 0;
+
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      color: #333;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: #f8f9fa;
+        border-color: #007bff;
+      }
+
+      &:disabled {
+        background: #f5f5f5;
+        color: #999;
+        cursor: not-allowed;
+      }
+    }
+
+    span {
+      color: #666;
+      font-size: 14px;
+    }
+  }
+}
+
+// Modal Styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+
+  .modal {
+    background: white;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 25px;
+      border-bottom: 1px solid #e9ecef;
+
+      h3 {
+        margin: 0;
+        color: #333;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          color: #333;
+        }
+      }
+    }
+
+    .modal-body {
+      padding: 25px;
+
+      .form-group {
+        margin-bottom: 20px;
+
+        label {
+          display: block;
+          margin-bottom: 8px;
+          color: #333;
+          font-weight: 500;
+          font-size: 14px;
+        }
+
+        input, textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 14px;
+          box-sizing: border-box;
+          outline: none;
+
+          &:focus {
+            border-color: #007bff;
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 100px;
+        }
+      }
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 20px 25px;
+      border-top: 1px solid #e9ecef;
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.btn-secondary {
+          background: #6c757d;
+          color: white;
+
+          &:hover {
+            background: #5a6268;
+          }
+        }
+
+        &.btn-primary {
+          background: #007bff;
+          color: white;
+
+          &:hover {
+            background: #0056b3;
+          }
+        }
+
+        &.btn-danger {
+          background: #dc3545;
+          color: white;
+
+          &:hover {
+            background: #c82333;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 15px;
+
+    .admin-header {
+      flex-direction: column;
+      gap: 15px;
+      align-items: flex-start;
+
+      .admin-actions {
+        width: 100%;
+      }
+    }
+
+    .search-section {
+      .search-row {
+        flex-direction: column;
+        gap: 10px;
+
+        input {
+          width: 100%;
+        }
+      }
+
+      .theme-buttons {
+        justify-content: center;
+      }
+    }
+
+    .table-container {
+      overflow-x: auto;
+
+      .admin-table {
+        min-width: 800px;
+      }
+    }
+  }
+
+  .modal-overlay {
+    .modal {
+      width: 95%;
+      margin: 20px;
+    }
+  }
+}
+

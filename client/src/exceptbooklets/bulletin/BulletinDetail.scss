@@ -1,0 +1,178 @@
+// ----- 히어로 보조 줄 (교회명 아래 주보 제목·날짜) -----
+.church_detail__hero-overlay .bulletin-detail__hero-subline {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 8px 0 0 0;
+  color: #fff;
+  opacity: 0.95;
+  line-height: 1.4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+// ----- 템플릿 본문 (church_detail__body 내부) -----
+.bulletin-template-info {
+  padding: 0 4px 8px;
+}
+
+.bulletin-template-info__card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 16px;
+}
+
+.bulletin-template-info__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 6px 0;
+}
+
+.bulletin-template-info__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.bulletin-template-info__meta {
+  font-size: 13px;
+  color: #475569;
+  margin: 0 0 14px 0;
+}
+
+.bulletin-template-info__body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #334155;
+  margin: 0 0 14px 0;
+  white-space: pre-wrap;
+}
+
+.bulletin-template-info__quiry {
+  font-size: 14px;
+  margin: 0;
+
+  a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.bulletin-template-info__quiry-label {
+  display: inline-block;
+  margin-right: 8px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.bulletin-template-order__section-title,
+.bulletin-template-news__section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 14px 0;
+}
+
+.bulletin-template-order--loading,
+.bulletin-template-news--loading {
+  padding: 24px 8px;
+  text-align: center;
+}
+
+.bulletin-template-order__hint,
+.bulletin-template-news__hint {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.bulletin-template-order__empty,
+.bulletin-template-news__empty {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+  padding: 12px 4px;
+}
+
+.bulletin-template-order__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bulletin-template-order__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.bulletin-template-order__left {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bulletin-template-order__num {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bulletin-template-order__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  strong {
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  span {
+    font-size: 12px;
+    color: #64748b;
+  }
+}
+
+.bulletin-template-order__time {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.bulletin-template-news__body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #334155;
+  margin: 0;
+  white-space: pre-wrap;
+}

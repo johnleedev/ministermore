@@ -1,0 +1,692 @@
+// Conti Intro Page – 콘티 만들기 소개
+$accent-blue: #3b82f6;
+$accent-blue-dark: #1e3a8a;
+$accent-blue-light: #eff6ff;
+$accent-blue-border: #bfdbfe;
+$panel-left-bg: #f8fafc;
+$panel-left-border: #e2e8f0;
+$text-muted: #64748b;
+$text-dark: #1e293b;
+$white: #ffffff;
+
+.conti-intro {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+// ----- Section 1: Hero -----
+.conti-intro__hero {
+  min-height: 70vh;
+  display: flex;
+  align-items: stretch;
+  background-color: $white;
+}
+
+.conti-intro__hero-inner {
+  display: flex;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 70vh;
+}
+
+.conti-intro__hero-left {
+  flex: 1;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: $white;
+}
+
+.conti-intro__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: $accent-blue-dark;
+  margin-bottom: 24px;
+
+  svg {
+    font-size: 18px;
+  }
+}
+
+.conti-intro__accent-bar {
+  width: 80px;
+  height: 6px;
+  background-color: $accent-blue;
+  margin-bottom: 24px;
+}
+
+.conti-intro__hero-sub {
+  font-size: 14px;
+  font-weight: 500;
+  color: $accent-blue-dark;
+  margin: 0 0 12px 0;
+}
+
+.conti-intro__hero-title {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  line-height: 1.3;
+  color: $text-dark;
+  margin: 0 0 20px 0;
+
+  .conti-intro__hero-title-accent {
+    color: $accent-blue;
+  }
+}
+
+.conti-intro__hero-desc {
+  font-size: 16px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0 0 28px 0;
+}
+
+.conti-intro__hero-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 40px 0;
+}
+
+.conti-intro__hero-features li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  color: #4b5563;
+  font-size: 15px;
+}
+
+.conti-intro__hero-feature-icon {
+  width: 24px;
+  height: 24px;
+  background-color: $accent-blue-light;
+  color: $accent-blue;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.conti-intro__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  background-color: $accent-blue-dark;
+  color: $white;
+  font-weight: 700;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s;
+
+  &:hover {
+    background-color: darken($accent-blue-dark, 6%);
+    transform: translateY(-1px);
+  }
+
+  svg {
+    font-size: 14px;
+  }
+}
+
+.conti-intro__hero-right {
+  flex: 0 0 45%;
+  position: relative;
+  background-color: #1e293b;
+  display: flex;
+  align-items: flex-end;
+  padding: 48px 40px;
+  overflow: hidden;
+}
+
+.conti-intro__hero-right-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 58, 138, 0.4) 100%);
+  z-index: 1;
+}
+
+.conti-intro__hero-right-note {
+  position: absolute;
+  left: 15%;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 120px;
+  color: rgba(255, 255, 255, 0.08);
+  z-index: 2;
+}
+
+.conti-intro__hero-right-verse {
+  position: relative;
+  z-index: 3;
+  color: $white;
+
+  p {
+    font-size: 22px;
+    font-style: italic;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+  }
+
+  span {
+    font-size: 14px;
+    opacity: 0.9;
+  }
+}
+
+// ----- Section 2: Why (Pain vs Solution) -----
+.conti-intro__why {
+  padding: 80px 24px 100px;
+  background-color: $white;
+}
+
+.conti-intro__section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.conti-intro__title-bar {
+  width: 60px;
+  height: 6px;
+  background-color: $accent-blue;
+  margin-bottom: 20px;
+}
+
+.conti-intro__section-title {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  color: $text-dark;
+  margin: 0 0 12px 0;
+}
+
+.conti-intro__section-sub {
+  font-size: 16px;
+  color: $text-muted;
+  margin: 0 0 48px 0;
+  line-height: 1.5;
+}
+
+.conti-intro__why-grid {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  position: relative;
+}
+
+.conti-intro__panel {
+  flex: 1;
+  border-radius: 20px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.conti-intro__panel--left {
+  background-color: $panel-left-bg;
+  border: 1px solid $panel-left-border;
+}
+
+.conti-intro__panel--right {
+  background-color: $accent-blue-light;
+  border: 1px solid $accent-blue-border;
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
+}
+
+.conti-intro__panel-header {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  svg {
+    font-size: 22px;
+  }
+}
+
+.conti-intro__panel-header--left {
+  color: $text-muted;
+}
+
+.conti-intro__panel-header--right {
+  color: #1e40af;
+}
+
+.conti-intro__list-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 28px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.conti-intro__icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20px;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.conti-intro__icon-box--left {
+  background-color: #e2e8f0;
+  color: $text-muted;
+}
+
+.conti-intro__icon-box--right {
+  background-color: $accent-blue;
+  color: $white;
+}
+
+.conti-intro__text-content {
+  flex: 1;
+
+  h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+  }
+
+  p {
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+.conti-intro__panel--left .conti-intro__text-content h4 {
+  color: #475569;
+}
+
+.conti-intro__panel--left .conti-intro__text-content p {
+  color: $text-muted;
+}
+
+.conti-intro__panel--right .conti-intro__text-content h4 {
+  color: $accent-blue-dark;
+}
+
+.conti-intro__panel--right .conti-intro__text-content p {
+  color: $accent-blue;
+}
+
+.conti-intro__arrow-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48px;
+  color: #cbd5e1;
+  font-size: 24px;
+}
+
+// ----- Section 3: Key Features -----
+.conti-intro__features {
+  padding: 80px 24px 100px;
+  background-color: #f8fafc;
+}
+
+.conti-intro__features-grid {
+  display: flex;
+  gap: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.conti-intro__features-col {
+  flex: 1;
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+}
+
+.conti-intro__features-col--essential {
+  background-color: $accent-blue-light;
+  border-right: 1px solid #dbeafe;
+}
+
+.conti-intro__features-col--extended {
+  background-color: $white;
+}
+
+.conti-intro__features-col-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1e40af;
+
+  svg {
+    font-size: 20px;
+  }
+}
+
+.conti-intro__features-col-title--extended {
+  color: #374151;
+}
+
+.conti-intro__card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.conti-intro__feature-card {
+  background-color: $white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #1f2937;
+  }
+
+  p {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+.conti-intro__feature-card--essential .conti-intro__feature-card-icon {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.conti-intro__feature-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.conti-intro__feature-card--extended {
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+
+.conti-intro__feature-card-icon--extended {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+// ----- Section 4: Process -----
+.conti-intro__process {
+  padding: 80px 24px 100px;
+  background-color: $white;
+}
+
+.conti-intro__process-timeline {
+  position: relative;
+  padding: 60px 0;
+}
+
+.conti-intro__process-line-bg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #e2e8f0;
+  border-radius: 2px;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.conti-intro__process-steps {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.conti-intro__step-unit {
+  flex: 1;
+  min-width: 140px;
+  max-width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.conti-intro__step-text {
+  margin-bottom: 20px;
+
+  .conti-intro__step-num {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: $accent-blue;
+    margin-bottom: 8px;
+  }
+
+  h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 6px 0;
+  }
+
+  p {
+    font-size: 13px;
+    color: $text-muted;
+    line-height: 1.4;
+    margin: 0;
+  }
+}
+
+.conti-intro__step-icon {
+  width: 64px;
+  height: 64px;
+  background-color: $white;
+  border: 3px solid #cbd5e1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #94a3b8;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.conti-intro__step-unit:hover .conti-intro__step-icon {
+  border-color: $accent-blue;
+  color: $accent-blue;
+  background-color: $accent-blue-light;
+  transform: scale(1.08);
+}
+
+.conti-intro__step-unit--highlight .conti-intro__step-icon {
+  width: 72px;
+  height: 72px;
+  font-size: 28px;
+  background-color: $accent-blue;
+  border-color: #2563eb;
+  color: $white;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.conti-intro__process-cta {
+  text-align: center;
+  margin-top: 56px;
+}
+
+.conti-intro__cta--large {
+  padding: 18px 40px;
+  font-size: 18px;
+}
+
+// ----- 결과물 예시 (기능 카드 6개) -----
+.conti-intro__result-features {
+  padding: 80px 24px 100px;
+  background-color: $white;
+}
+
+.conti-intro__result-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conti-intro__result-feature-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: $accent-blue-border;
+  }
+}
+
+.conti-intro__result-feature-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background-color: $accent-blue-light;
+  color: $accent-blue;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.conti-intro__result-feature-content {
+  flex: 1;
+  min-width: 0;
+
+  h4 {
+    margin: 0 0 6px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: $text-dark;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: $text-muted;
+    line-height: 1.5;
+  }
+}
+
+// ----- Responsive -----
+@media (max-width: 1024px) {
+  .conti-intro__hero-inner {
+    flex-direction: column;
+  }
+
+  .conti-intro__hero-left {
+    padding: 48px 32px;
+  }
+
+  .conti-intro__hero-right {
+    flex: none;
+    min-height: 280px;
+    padding: 32px 24px;
+  }
+
+  .conti-intro__hero-right-note {
+    font-size: 80px;
+  }
+
+  .conti-intro__why-grid {
+    flex-direction: column;
+  }
+
+  .conti-intro__arrow-connector {
+    transform: rotate(90deg);
+  }
+
+  .conti-intro__features-grid {
+    flex-direction: column;
+  }
+
+  .conti-intro__features-col--essential {
+    border-right: none;
+    border-bottom: 1px solid #dbeafe;
+  }
+
+  .conti-intro__process-steps {
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .conti-intro__step-unit {
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 640px) {
+  .conti-intro__hero-left {
+    padding: 32px 20px;
+  }
+
+  .conti-intro__card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .conti-intro__process-steps {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .conti-intro__process-line-bg {
+    display: none;
+  }
+
+  .conti-intro__step-unit {
+    max-width: 100%;
+  }
+}

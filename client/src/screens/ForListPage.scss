@@ -1,0 +1,172 @@
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+};
+
+// 페이지 제목 ------------------------------------------
+.subpage__main__title {
+  display: flex;
+  justify-content: space-between;
+  @media (max-width: 1000px) { 
+    margin-top: 30px;
+    margin-bottom: 20px;
+  }
+  
+  h3 {
+    font-size: 30px;
+    font-weight: 600;
+    color: #33383f;
+  }
+  
+  .postBtn {
+    padding: 10px;
+    border: 1px solid #cbcbcb;
+    border-radius: 5px;
+    @include middle();
+  }
+  .postBtn:hover {
+    cursor: pointer;
+    opacity:  0.8;
+  }
+}
+
+// 검색창  ------------------------------------------
+.subpage__main__search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+
+  .inputdefault {
+    font-size: 15px;
+    font-weight: normal;
+    height: 35px;
+    text-align: center;
+    border: 1px solid #E9E9E9;
+    box-sizing: border-box;
+    border-radius: 5px;
+    padding-left: 5px;
+  }
+  .width {
+    width: 70%;
+    text-align:left;
+    @media (max-width: 1000px) { 
+      width: 100%;
+    }
+
+  }
+  
+  .buttons {
+    @include middle();
+    
+    @media (max-width: 600px) { 
+      font-size: 14px;
+    }
+
+    .btn {
+      width: 80px;
+      height: 24px;
+      @include middle();
+      padding: 5px 10px;
+      border: 1px solid #E9E9E9;
+      margin: 0 5px;
+      border-radius: 5px;
+    }
+    .search {
+      background-color: #4f5460;
+      p {
+        color: #fff;
+      }
+    }
+    .reset {
+      background-color: #b9b9b9;
+      p {
+        color: #fff;
+      }
+    }
+    .btn:hover {
+      cursor: pointer;
+      opacity: 0.8;
+    }
+  }
+}
+
+
+// 검색 셀렉트 버튼  ------------------------------------------
+.checkInputCover{
+  display: flex;
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+.Recruit  {
+  grid-template-columns: repeat(7, 1fr);
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  @media (max-width: 1000px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.Worship  {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  // grid-template-columns: repeat(16, 1fr);
+  // @media (max-width: 1400px) {
+  //   grid-template-columns: repeat(12, 1fr);
+  // }
+  // @media (max-width: 1000px) {
+  //   grid-template-columns: repeat(9, 1fr);
+  // }
+  // @media (max-width: 800px) {
+  //   grid-template-columns: repeat(6, 1fr);
+  // }
+}
+.checkInputbox {
+  @include middle();
+  padding: 10px 7px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  p {
+    font-size: 14px;
+  }
+}
+.checkInputbox:hover {
+  cursor: pointer;
+  opacity: 0.8;
+}
+.search-selected {
+  background-color: #333;
+  color: #333;
+}
+
+// 페이지 버튼  ------------------------------------------
+.btn-row {
+  width: 100%;
+  margin: 20px 0;
+  @include middle();
+
+  .btn {
+    font-size: 15px;
+    width: 25px;
+    height: 25px;
+    margin: 7px;
+    color: #979797;
+    @include middle();
+  }
+  .current {
+    color: #2c3d54;
+    border-bottom: 2px solid #2c3d54;;
+  }
+  .btn:hover {
+    cursor: pointer;
+    color: #2c3d54;
+  }
+}

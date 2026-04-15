@@ -1,0 +1,358 @@
+/**
+ * 행사 전단지 — 브라우저 SDK 일반결제(`requestEventBookletPayment`) 완료 후
+ * PortOne REST로 결제 검증 → `eventMain`·`eventInfo` 저장 + 결제 메타데이터 컬럼 기록
+ *
+ * app.js: `app.use('/paymentrequestpay', …)` → 클라이언트 POST `/paymentrequestpay/event/complete-browser`
+ *
+ * churchMain `insertChurchMainRow`(PortoneBilling.js)와 유사하게 portone* 필드를 둡니다.
+ */
+const express = require('express');
+const router = express.Router();
+router.use(express.json());
+const cors = require('cors');
+router.use(cors());
+
+const { bookleteventdb } = require('../dbdatas/bookletdb');
+const { templateIdStrFromBody, normalizeVisibleTabsArray } = require('../service/bookletEvent/bookletEventMerge');
+const { toTemplateInt } = require('../service/bookletEvent/bookletEventShared');
+const { PORTONE_API_SECRET, PORTONE_STORE_ID } = require('./portonedata');
+
+/** `totalAmount` 미전달 시에만 사용 (구 클라이언트 호환). 가능하면 요청 본문 `totalAmount`로 검증하세요. */
+const FALLBACK_EXPECTED_AMOUNT_KRW = parseInt(
+  process.env.EVENT_BOOKLET_AMOUNT_VAT_KRW || '55000',
+  10,
+) || 55000;
+const EVENT_ORDER_NAME = '행사 전단지 제작';
+/** 원 단위 이상 방지 (조작 완화) */
+const MAX_EVENT_AMOUNT_KRW = 100_000_000;
+
+const EVENT_BOOKLET_TYPE_IDS = new Set(['ordination', 'newcomer', 'concert', 'retreat']);
+
+function normalizeBookletTypeForBilling(v) {
+  const s = v == null ? '' : String(v).trim();
+  return EVENT_BOOKLET_TYPE_IDS.has(s) ? s : 'ordination';
+}
+
+/** PortOne 결제 객체에서 승인 시각 (PortoneBilling.js 의 pickPaidAt 과 동일 규칙) */
+function pickPaidAt(payParsed) {
+  if (!payParsed || typeof payParsed !== 'object') return null;
+  const p = payParsed.payment ?? payParsed;
+  const raw =
+    p.paidAt ??
+    p.payment?.paidAt ??
+    p.completedAt ??
+    p.payment?.completedAt;
+  if (raw == null || raw === '') return null;
+  return String(raw).trim().slice(0, 64);
+}
+
+function pickPaymentRecord(parsed) {
+  if (!parsed || typeof parsed !== 'object') return null;
+  return parsed.payment ?? parsed;
+}
+
+function isPaidStatus(record) {
+  if (!record || typeof record !== 'object') return false;
+  return record.status === 'PAID';
+}
+
+function getAmountTotal(record) {
+  if (!record || typeof record !== 'object') return null;
+  const a = record.amount;
+  if (a && typeof a === 'object' && a.total != null) {
+    const t = a.total;
+    if (typeof t === 'number' && Number.isFinite(t)) return Math.round(t);
+    const n = parseInt(String(t).replace(/\D/g, ''), 10);
+    return Number.isNaN(n) ? null : n;
+  }
+  if (record.totalAmount != null) {
+    const t = record.totalAmount;
+    if (typeof t === 'number' && Number.isFinite(t)) return Math.round(t);
+    const n = parseInt(String(t), 10);
+    return Number.isNaN(n) ? null : n;
+  }
+  return null;
+}
+
+function getOrderNameFromRecord(record) {
+  if (!record || typeof record !== 'object') return null;
+  const n = record.orderName ?? record.order?.name;
+  return n != null ? String(n).trim().slice(0, 255) : null;
+}
+
+let ensuredEventMainPortoneCols = false;
+
+function ensureEventMainPortoneColumns() {
+  if (ensuredEventMainPortoneCols) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    bookleteventdb.query(
+      `SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'eventMain'`,
+      (err, rows) => {
+        if (err) return reject(err);
+        const have = new Set((rows || []).map((r) => r.c));
+        const needed = [
+          ['portonePaymentId', 'VARCHAR(255) NULL'],
+          ['portoneTxId', 'VARCHAR(64) NULL'],
+          ['portonePaidAmount', 'INT NULL'],
+          ['portoneOrderName', 'VARCHAR(255) NULL'],
+          ['portonePaidAt', 'VARCHAR(64) NULL'],
+        ];
+        let i = 0;
+        function next() {
+          if (i >= needed.length) {
+            ensuredEventMainPortoneCols = true;
+            return resolve();
+          }
+          const [name, def] = needed[i++];
+          if (have.has(name)) return next();
+          bookleteventdb.query(`ALTER TABLE eventMain ADD COLUMN \`${name}\` ${def}`, (e) => {
+            if (e) console.error(`ALTER eventMain ADD ${name}:`, e.message);
+            else have.add(name);
+            next();
+          });
+        }
+        next();
+      },
+    );
+  });
+}
+
+function insertEventMainWithPayment(bookletdbConn, body) {
+  const {
+    userAccount,
+    templateId,
+    ordererName,
+    ordererPhone,
+    orderTitle,
+    bookletType,
+    visibleTabsJson,
+    portonePaymentId,
+    portoneTxId,
+    portonePaidAmount,
+    portoneOrderName,
+    portonePaidAt,
+  } = body;
+
+  const templateIdStr = templateIdStrFromBody(templateId || 'classic');
+  const templateIdMain = toTemplateInt(templateIdStr);
+  const bookletTypeStr = normalizeBookletTypeForBilling(bookletType);
+  const payId = portonePaymentId != null ? String(portonePaymentId).trim() : '';
+
+  return new Promise((resolve, reject) => {
+    if (payId) {
+      bookletdbConn.query(
+        'SELECT id FROM eventMain WHERE portonePaymentId = ? LIMIT 1',
+        [payId],
+        (e, rows) => {
+          if (e) return reject(e);
+          if (rows && rows.length > 0) {
+            const err = new Error('이 결제로 이미 행사 전단지가 생성되었습니다.');
+            err.code = 'DUPLICATE_PORTONE';
+            err.existingId = rows[0].id;
+            return reject(err);
+          }
+          runInsert();
+        },
+      );
+    } else {
+      runInsert();
+    }
+
+    function runInsert() {
+      bookletdbConn.query(
+        `INSERT INTO eventMain (
+          userAccount, templateId, ordererName, ordererPhone, orderTitle, eventBookletType,
+          portonePaymentId, portoneTxId, portonePaidAmount, portoneOrderName, portonePaidAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userAccount || '',
+          templateIdMain,
+          ordererName || '',
+          ordererPhone || '',
+          String(orderTitle || '').trim(),
+          bookletTypeStr,
+          payId || null,
+          portoneTxId != null ? String(portoneTxId).trim().slice(0, 64) : null,
+          typeof portonePaidAmount === 'number' ? portonePaidAmount : null,
+          portoneOrderName != null ? String(portoneOrderName).slice(0, 255) : null,
+          portonePaidAt != null ? String(portonePaidAt).slice(0, 64) : null,
+        ],
+        (err, result) => {
+          if (err) return reject(err);
+          const newId = result.insertId;
+          bookletdbConn.query(
+            'INSERT INTO eventInfo (bookletId, userAccount, templateId, visibleTabs) VALUES (?, ?, ?, ?)',
+            [String(newId), userAccount || '', templateIdStr, visibleTabsJson],
+            (e2) => {
+              if (e2) return reject(e2);
+              resolve(newId);
+            },
+          );
+        },
+      );
+    }
+  });
+}
+
+router.post('/event/complete-browser', async (req, res) => {
+  const {
+    paymentId,
+    txId,
+    orderTitle,
+    ordererName,
+    ordererPhone,
+    userAccount,
+    templateId,
+    bookletType,
+    visibleTabs,
+    totalAmount: totalAmountBody,
+  } = req.body ?? {};
+
+  const pid = paymentId != null ? String(paymentId).trim() : '';
+  if (!pid) {
+    return res.status(400).json({ ok: false, message: 'paymentId가 필요합니다.' });
+  }
+
+  try {
+    await ensureEventMainPortoneColumns();
+
+    const payRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(pid)}`, {
+      headers: {
+        Authorization: `PortOne ${PORTONE_API_SECRET}`,
+      },
+    });
+    const payRaw = await payRes.text();
+    let payParsed = null;
+    try {
+      payParsed = payRaw ? JSON.parse(payRaw) : null;
+    } catch {
+      payParsed = null;
+    }
+
+    if (!payRes.ok) {
+      const msg =
+        (payParsed && (payParsed.message || payParsed.pgMessage)) || '결제 정보를 조회할 수 없습니다.';
+      return res.status(400).json({ ok: false, message: msg, details: payParsed });
+    }
+
+    const record = pickPaymentRecord(payParsed);
+    if (!isPaidStatus(record)) {
+      const st = record && typeof record === 'object' ? String(record.status ?? '') : '';
+      return res.status(400).json({
+        ok: false,
+        message: st ? `결제가 완료 상태가 아닙니다. (${st})` : '결제가 완료 상태가 아닙니다.',
+        details: payParsed,
+      });
+    }
+
+    const portoneTotal = getAmountTotal(record);
+    if (portoneTotal == null || Number.isNaN(portoneTotal)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'PortOne 결제에서 금액을 확인할 수 없습니다.',
+        details: payParsed,
+      });
+    }
+
+    let expectedKrw =
+      totalAmountBody != null && String(totalAmountBody).trim() !== ''
+        ? parseInt(String(totalAmountBody).trim(), 10)
+        : FALLBACK_EXPECTED_AMOUNT_KRW;
+    if (!Number.isFinite(expectedKrw) || expectedKrw < 1) {
+      return res.status(400).json({ ok: false, message: 'totalAmount 값이 올바르지 않습니다.' });
+    }
+    if (expectedKrw > MAX_EVENT_AMOUNT_KRW) {
+      return res.status(400).json({ ok: false, message: '허용되지 않는 결제 금액입니다.' });
+    }
+
+    if (portoneTotal !== expectedKrw) {
+      return res.status(400).json({
+        ok: false,
+        message: '결제 금액이 서비스 금액과 일치하지 않습니다.',
+        expected: expectedKrw,
+        actual: portoneTotal,
+      });
+    }
+
+    if (PORTONE_STORE_ID && record && typeof record === 'object' && record.storeId) {
+      if (String(record.storeId) !== String(PORTONE_STORE_ID)) {
+        return res.status(400).json({ ok: false, message: '스토어 정보가 일치하지 않습니다.' });
+      }
+    }
+
+    const orderNameResolved = getOrderNameFromRecord(record) || EVENT_ORDER_NAME;
+
+    const paidAtResolved = pickPaidAt(payParsed);
+
+    let visibleTabsJson = JSON.stringify(['info', 'program', 'profile']);
+    if (visibleTabs != null) {
+      const s = typeof visibleTabs === 'string' ? visibleTabs : JSON.stringify(visibleTabs);
+      if (s.trim()) {
+        try {
+          const p = JSON.parse(s);
+          if (Array.isArray(p) && p.length) {
+            const n = normalizeVisibleTabsArray(p);
+            if (n) visibleTabsJson = JSON.stringify(n);
+          }
+        } catch (_) {
+          /* keep default */
+        }
+      }
+    }
+
+    const orderTitleNorm = orderTitle != null ? String(orderTitle).trim() : '';
+    const ordererNameNorm = ordererName != null ? String(ordererName).trim() : '';
+    const ordererPhoneNorm = ordererPhone != null ? String(ordererPhone).replace(/\s/g, '') : '';
+    const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
+
+    let eventMainId;
+    try {
+      eventMainId = await insertEventMainWithPayment(bookleteventdb, {
+        userAccount: userAccountNorm,
+        templateId,
+        ordererName: ordererNameNorm,
+        ordererPhone: ordererPhoneNorm,
+        orderTitle: orderTitleNorm,
+        bookletType,
+        visibleTabsJson,
+        portonePaymentId: pid,
+        portoneTxId: txId,
+        portonePaidAmount: portoneTotal,
+        portoneOrderName: orderNameResolved,
+        portonePaidAt: paidAtResolved,
+      });
+    } catch (dbErr) {
+      if (dbErr && dbErr.code === 'DUPLICATE_PORTONE' && dbErr.existingId != null) {
+        return res.status(409).json({
+          ok: false,
+          message: dbErr.message || '이 결제로 이미 전단지가 생성되었습니다.',
+          eventMainId: dbErr.existingId,
+          paymentId: pid,
+        });
+      }
+      console.error('eventMain INSERT after browser payment', dbErr);
+      return res.status(500).json({
+        ok: false,
+        message: '결제는 확인되었으나 행사 전단지 저장에 실패했습니다. 고객센터로 문의해 주세요.',
+        paymentId: pid,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      paymentId: pid,
+      txId: txId != null ? String(txId) : undefined,
+      eventMainId,
+      portonePaidAt: paidAtResolved,
+      portoneOrderName: orderNameResolved,
+    });
+  } catch (e) {
+    console.error('complete-browser handler', e);
+    return res.status(500).json({ ok: false, message: e?.message || String(e) });
+  }
+});
+
+module.exports = router;

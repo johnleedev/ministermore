@@ -1,0 +1,166 @@
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.minister {
+  padding-top: 50px;
+  @media (max-width: 600px) {
+    padding-top: 10px;
+  }
+}
+// 검색 UI 스타일 추가
+.subpage__main__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+
+  input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+}
+
+.subpage__main__tabrow {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.subpage__main__tabbtn {
+  width: 100px;
+  padding: 15px 25px;
+  background-color: #f3f3f3;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-weight: 500;
+  color: #888;
+  transition: color 0.2s, border-bottom 0.2s;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  
+  &.active {
+    color: #fff;
+    font-weight: 700;
+    background-color: #333;
+  }
+}
+
+.subpage__main__selectedwords {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  b {
+    font-weight: 600;
+  }
+  
+  &__list {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  &__item {
+    margin-right: 8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  
+  &__none {
+    color: #aaa;
+    font-size: 14px;
+  }
+  
+  &__remove {
+    margin-left: 6px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color 0.2s;
+    
+    &:hover {
+      color: #d32f2f;
+    }
+  }
+}
+
+.subpage__main__search__btn {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  button {
+    padding: 15px 20px;
+    border-radius: 4px;
+    background: #333;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.2s;
+    
+    &:hover {
+      background: #222;
+    }
+    
+    &:active {
+      background: #555;
+    }
+  }
+}
+
+.checkInputbox {
+  border: 1.5px solid #e0e0e0;
+  transition: border-color 0.2s;
+  
+  &:hover {
+    border-color: #3f51b5;
+    background: none;
+  }
+  
+  &.selected {
+    border-color: #3f51b5;
+    background: #f5f7ff;
+  }
+  
+  span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    
+    p {
+      margin: 0;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      max-width: none;
+    }
+  }
+}
+
+/* (removed page-scoped header/footer overrides to match other pages) */
+
+

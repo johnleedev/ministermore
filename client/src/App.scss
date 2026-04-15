@@ -1,0 +1,49 @@
+.App {
+  display: flex;
+  flex-direction: column; /* 세로 정렬 */
+  justify-content: flex-start; /* 위에서부터 배치 */
+  align-items: center;
+  width: 100%;
+  min-height: 100vh; /* 최소 높이 설정 */
+  box-sizing: border-box;
+
+  .Main {
+    width: 100%;
+  }
+}
+
+
+img {
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+input {
+  outline: none;
+  background-color: #fff;
+}
+
+.inner {
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  
+}
+
+@media screen and (max-width : 1500px) { 
+  .inner {
+    width: 90vw;
+  }  
+}
+
+
+
+
+
+
+  

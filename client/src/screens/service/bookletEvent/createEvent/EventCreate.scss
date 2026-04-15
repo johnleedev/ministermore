@@ -1,0 +1,3314 @@
+// EventCreate – 좌(미리보기) / 우(입력+풋터)
+// 세로 스크롤 1개: 오른쪽 영역만 (폼 + 풋터까지 한 번에 스크롤)
+// 갤러리 미리보기: BookletEventDetail.scss 참조
+@import '../../../../exceptbooklets/component/bookletPortraitMixins';
+@import '../../../../exceptbooklets/bookletEvent/BookletEventDetail.scss';
+
+$site-header-height: 150px; // Header.tsx 영역 높이 (대략)
+
+// 전체: 한 화면 고정, 페이지 스크롤 없음
+.event-create {
+  height: calc(100vh - #{$site-header-height});
+  overflow: hidden;
+  background: #f5f5f5;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+// ----- 본문: 왼쪽 고정, 오른쪽만 스크롤 (풋터 포함) -----
+.event-create__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-create__inner {
+  display: flex;
+  gap: 0;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+// ----- 왼쪽: 미리보기 (가로 비율 4) -----
+.event-create__preview-wrap {
+  flex: 4;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 24px 20px 24px 24px;
+
+  @media (max-width: 900px) {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    padding: 16px;
+  }
+}
+
+// iPhone 형태: 가로 320px 복원, 세로는 88%로 약간 축소
+.event-create__phone-frame {
+  width: 320px;
+  max-height: 88%;
+  display: flex;
+  flex-direction: column;
+  background: #1c1c1e;
+  border-radius: 30px;
+  box-shadow:
+    0 0 0 5px #1c1c1e,
+    0 20px 50px rgba(0, 0, 0, 0.35);
+  position: relative;
+
+  // 우측 전원 버튼 (선택)
+  &::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: 115px;
+    width: 3px;
+    height: 65px;
+    background: #2c2c2e;
+    border-radius: 2px;
+  }
+}
+
+// 다이나믹 아일랜드 / 노치
+.event-create__phone-notch {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 104px;
+  height: 30px;
+  background: #000;
+  border-radius: 16px;
+  z-index: 10;
+}
+
+.event-create__phone-screen {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #fff;
+  border-radius: 30px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 38px;
+  box-sizing: border-box;
+}
+
+// 미리보기 내용 영역: 기본 스크롤 가능
+.event-create__preview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  padding-bottom: 24px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ----- 미리보기: BookletEventDetail 구조 (320px 폰) — NoticeCreate 미리보기 히어로와 동일 비율 -----
+.event-create__preview-hero {
+  width: 100%;
+  height: 50vh;
+  min-height: 180px;
+  position: relative;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+  /* 하단 텍스트 오버레이 위로 인디케이터 노출 */
+  .main-hero-carousel__dots {
+    bottom: 72px;
+  }
+}
+
+.event-create__preview-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.event-create__preview-hero-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.event-create__preview-hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px 16px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+/* 초대의글 탭 미리보기: 초대 카드 장식 배경만 제거(상단 메인 히어로는 유지) */
+.event-create__preview--greeting-tab {
+  .event-create__preview-greeting {
+    margin-top: 0;
+    padding: 0 0 16px;
+  }
+
+  .template-event-greeting {
+    padding: 0;
+  }
+
+  .template-event-greeting__card {
+    background-image: none !important; /* 인라인 스타일 덮음 */
+    border-radius: 0;
+  }
+}
+.event-create__preview-hero-sub {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 300;
+  margin: 0 0 4px 0;
+  opacity: 0.9;
+}
+.event-create__preview-hero-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: -0.02em;
+}
+
+// 탭 래퍼 (디자인별 색상 적용)
+.event-create__tabs-wrap {
+  width: 100%;
+}
+
+.event-create__tabs-wrap--classic .event-create__preview-tab.on {
+  color: #475569; border-bottom-color: #475569; background-color: #f1f5f9;
+}
+.event-create__tabs-wrap--modern .event-create__preview-tab.on {
+  color: #2563eb; border-bottom-color: #2563eb; background-color: #eff6ff;
+}
+.event-create__tabs-wrap--minimal .event-create__preview-tab.on {
+  color: #64748b; border-bottom-color: #64748b; background-color: #f8fafc;
+}
+.event-create__tabs-wrap--warm .event-create__preview-tab.on {
+  color: #b45309; border-bottom-color: #b45309; background-color: #fffbeb;
+}
+.event-create__tabs-wrap--forest .event-create__preview-tab.on {
+  color: #15803d; border-bottom-color: #15803d; background-color: #f0fdf4;
+}
+.event-create__tabs-wrap--rose .event-create__preview-tab.on {
+  color: #e11d48; border-bottom-color: #e11d48; background-color: #fff1f2;
+}
+.event-create__tabs-wrap--navy .event-create__preview-tab.on {
+  color: #1e3a8a; border-bottom-color: #1e3a8a; background-color: #eff6ff;
+}
+.event-create__tabs-wrap--violet .event-create__preview-tab.on {
+  color: #7c3aed; border-bottom-color: #7c3aed; background-color: #f5f3ff;
+}
+
+// 탭 — 유형에 따라 2~6열
+.event-create__preview-tabs {
+  display: grid;
+  width: 100%;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+.event-create__preview-tabs--n1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.event-create__preview-tabs--n2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.event-create__preview-tabs--n3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.event-create__preview-tabs--n4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.event-create__preview-tabs--n5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.event-create__preview-tabs--n6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.event-create__tab-select-booklet-type {
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.event-create__tab-select--readonly .event-create__tab-select-readonly-list {
+  margin: 12px 0 0;
+  padding-left: 1.25rem;
+  color: #374151;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.event-create__preview-tab {
+  min-width: 0;
+  padding: 12px 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+  border-bottom: 3px solid transparent;
+
+  &.on {
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
+    background-color: #eef2ff;
+  }
+}
+
+.event-create__preview-body {
+  padding: 16px 20px 24px;
+  min-height: 420px;
+  background: #fff;
+  font-size: 17px !important;
+  line-height: 1.65;
+
+  * {
+    font-size: 17px !important;
+  }
+
+  /* BookletEventTemplates/TemplateNotice — 중복 패딩만 제거 */
+  .notice-create__preview-body {
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+  }
+}
+
+// ----- 템플릿별 소개 탭 색상 -----
+.event-create__preview-body--classic {
+  .event-create__preview-section-label { color: #475569; }
+  .event-create__preview-welcome-sub { color: #64748b; }
+  .event-create__preview-welcome-title { color: #334155; }
+  .event-create__preview-worship-day { color: #94a3b8; }
+  .event-create__preview-worship-time { color: #475569; }
+  .event-create__preview-chip-label { color: #475569; }
+  .event-create__preview-chip-value { color: #334155; }
+  .event-create__preview-btn--secondary { border-color: #475569; color: #334155; }
+}
+
+.event-create__preview-body--modern {
+  .event-create__preview-section-label { color: #2563eb; }
+  .event-create__preview-welcome-sub { color: #3b82f6; }
+  .event-create__preview-welcome-title { color: #1d4ed8; }
+  .event-create__preview-worship-day { color: #93c5fd; }
+  .event-create__preview-worship-time { color: #2563eb; }
+  .event-create__preview-chip-label { color: #2563eb; }
+  .event-create__preview-chip-value { color: #1e40af; }
+  .event-create__preview-btn--secondary { border-color: #3b82f6; color: #1d4ed8; }
+}
+
+.event-create__preview-body--minimal {
+  .event-create__preview-section-label { color: #64748b; }
+  .event-create__preview-welcome-sub { color: #94a3b8; }
+  .event-create__preview-welcome-title { color: #475569; }
+  .event-create__preview-worship-day { color: #94a3b8; }
+  .event-create__preview-worship-time { color: #64748b; }
+  .event-create__preview-chip-label { color: #64748b; }
+  .event-create__preview-chip-value { color: #475569; }
+  .event-create__preview-btn--secondary { border-color: #94a3b8; color: #475569; }
+}
+
+.event-create__preview-body--warm {
+  .event-create__preview-section-label { color: #b45309; }
+  .event-create__preview-welcome-sub { color: #d97706; }
+  .event-create__preview-welcome-title { color: #92400e; }
+  .event-create__preview-worship-day { color: #d4a574; }
+  .event-create__preview-worship-time { color: #b45309; }
+  .event-create__preview-chip-label { color: #b45309; }
+  .event-create__preview-chip-value { color: #92400e; }
+  .event-create__preview-btn--secondary { border-color: #d97706; color: #92400e; }
+}
+
+.event-create__preview-body--forest {
+  .event-create__preview-section-label { color: #15803d; }
+  .event-create__preview-welcome-sub { color: #22c55e; }
+  .event-create__preview-welcome-title { color: #166534; }
+  .event-create__preview-worship-day { color: #86efac; }
+  .event-create__preview-worship-time { color: #15803d; }
+  .event-create__preview-chip-label { color: #15803d; }
+  .event-create__preview-chip-value { color: #166534; }
+  .event-create__preview-btn--secondary { border-color: #22c55e; color: #166534; }
+}
+
+.event-create__preview-body--rose {
+  .event-create__preview-section-label { color: #e11d48; }
+  .event-create__preview-welcome-sub { color: #f43f5e; }
+  .event-create__preview-welcome-title { color: #be123c; }
+  .event-create__preview-worship-day { color: #fda4af; }
+  .event-create__preview-worship-time { color: #e11d48; }
+  .event-create__preview-chip-label { color: #e11d48; }
+  .event-create__preview-chip-value { color: #be123c; }
+  .event-create__preview-btn--secondary { border-color: #f43f5e; color: #be123c; }
+}
+
+.event-create__preview-body--navy {
+  .event-create__preview-section-label { color: #1e3a8a; }
+  .event-create__preview-welcome-sub { color: #2563eb; }
+  .event-create__preview-welcome-title { color: #1e40af; }
+  .event-create__preview-worship-day { color: #93c5fd; }
+  .event-create__preview-worship-time { color: #1e3a8a; }
+  .event-create__preview-chip-label { color: #1e3a8a; }
+  .event-create__preview-chip-value { color: #1e40af; }
+  .event-create__preview-btn--secondary { border-color: #2563eb; color: #1e40af; }
+}
+
+.event-create__preview-body--violet {
+  .event-create__preview-section-label { color: #7c3aed; }
+  .event-create__preview-welcome-sub { color: #8b5cf6; }
+  .event-create__preview-welcome-title { color: #6d28d9; }
+  .event-create__preview-worship-day { color: #c4b5fd; }
+  .event-create__preview-worship-time { color: #7c3aed; }
+  .event-create__preview-chip-label { color: #7c3aed; }
+  .event-create__preview-chip-value { color: #6d28d9; }
+  .event-create__preview-btn--secondary { border-color: #8b5cf6; color: #6d28d9; }
+}
+
+// ----- 기본 정보 미리보기 (교회명, 담임, 교단, 주소, 연락처) -----
+.event-create__preview-info {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.event-create__preview-info-row {
+  display: flex;
+  align-items: flex-start;
+  min-height: 36px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 19px;
+  gap: 12px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+.event-create__preview-info-label {
+  flex: 0 0 56px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.event-create__preview-info-value {
+  flex: 1;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.event-create__preview-section-label {
+  display: flex;
+  align-items: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  .event-create__preview-chip-icon {
+    margin-right: 6px;
+  }
+}
+
+.event-create__preview-worship-list {
+  width: 100%;
+  
+  background: #fff;
+  border-radius: 0;
+  padding: 12px 20px;
+  margin: 0 -20px 16px -20px;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+.event-create__preview-worship-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 8px 0;
+  font-size: 18px;
+  border-bottom: 1px solid #f3f4f6;
+  width: 100%;
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.event-create__preview-worship-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+// 프로그램 미리보기: 상단 제목·일시 → 하단(이미지 좌 / 설명 우)
+.event-create__preview-program-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 0;
+  width: 100%;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 18px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.event-create__preview-program-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.event-create__preview-program-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+
+  &--split {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+
+    .event-create__preview-program-thumb-strip {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      width: auto;
+      max-width: 44%;
+    }
+
+    .event-create__preview-program-desc {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+
+.event-create__preview-program-thumb-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.event-create__preview-program-thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.event-create__preview-program-title {
+  font-size: 19px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+
+  &--placeholder {
+    color: #9ca3af;
+    font-weight: 500;
+  }
+}
+
+.event-create__preview-program-title-inline {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.event-create__preview-worship-desc {
+  margin: 0;
+  font-size: 18px;
+  color: #4b5563;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.event-create__preview-worship-desc--block {
+  width: 100%;
+  margin-top: 0;
+}
+
+// 나열형 미리보기: '-' 고정, 본문만 줄바꿈(이어지는 줄은 들여쓰기 효과)
+.event-create__preview-program-desc-list {
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 18px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.event-create__preview-program-desc-list-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.event-create__preview-program-desc-list-dash {
+  flex-shrink: 0;
+  width: 0.65em;
+  text-align: left;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.event-create__preview-program-desc-list-text {
+  flex: 1;
+  min-width: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.event-create__preview-program-desc-list-spacer {
+  display: block;
+  min-height: 0.2em;
+}
+
+.event-create__preview-worship-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+.event-create__preview-worship-daytime {
+  display: flex;
+  flex-direction: column;
+}
+.event-create__preview-worship-name {
+  font-weight: 700;
+  color: #1f2937;
+  flex-shrink: 0;
+}
+.event-create__preview-worship-day {
+  font-size: 16px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+.event-create__preview-worship-time {
+  font-size: 17px;
+  font-weight: 600;
+  color: #4f46e5;
+}
+.event-create__preview-worship-place {
+  color: #6b7280;
+  font-size: 17px;
+}
+.event-create__preview-worship-empty {
+  font-size: 18px;
+  color: #9ca3af;
+  margin: 0 0 16px 0;
+}
+
+// ----- 교회 소개 인사말 (Welcome Home, 제목, 내용) -----
+.event-create__preview-welcome {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.event-create__preview-welcome-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.event-create__preview-welcome-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+.event-create__preview-welcome-sub {
+  font-size: 16px;
+  font-weight: 700;
+  color: #4f46e5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+.event-create__preview-welcome-title {
+  font-size: 25px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.3;
+  margin: 0 0 8px 0;
+}
+.event-create__preview-welcome-desc {
+  font-size: 18px;
+  color: #4b5563;
+  line-height: 1.6;
+  font-weight: 300;
+  margin: 0;
+}
+
+.event-create__preview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.event-create__preview-chip {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.event-create__preview-chip-icon {
+  font-size: 14px;
+  margin-right: 8px;
+}
+.event-create__preview-chip-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  margin: 0 0 1px 0;
+}
+.event-create__preview-chip-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.event-create__preview-vision {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.event-create__preview-vision-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.event-create__preview-vision-icon {
+  font-size: 20px;
+  margin-right: 8px;
+}
+.event-create__preview-vision-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #312e81;
+  margin: 0;
+}
+.event-create__preview-vision-text {
+  font-size: 17px;
+  color: #3730a3;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.event-create__preview-actions {
+  margin-bottom: 16px;
+}
+.event-create__preview-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.event-create__preview-btn--primary {
+  background: #4f46e5;
+  color: #fff;
+}
+.event-create__preview-btn--naver {
+  background: #03c75a;
+  color: #fff;
+}
+.event-create__preview-btn--kakao {
+  background: #fee500;
+  color: #191919;
+}
+.event-create__preview-map-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.event-create__preview-btn--secondary {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+.event-create__preview-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+.event-create__preview-btn-row .event-create__preview-btn {
+  flex: 1;
+  margin-bottom: 0;
+}
+.event-create__preview-btn-row .event-create__preview-btn--naver,
+.event-create__preview-btn-row .event-create__preview-btn--kakao {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px 12px;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+.event-create__preview-btn-row .event-create__preview-map-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.event-create__preview-footer {
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+.event-create__preview-footer-sns {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
+
+  a {
+    color: #9ca3af;
+    font-size: 22px;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #4f46e5;
+    }
+  }
+}
+.event-create__preview-footer-blog-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.event-create__preview-footer-info {
+  font-size: 15px;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin: 0;
+  text-align: center;
+}
+
+.event-create__preview-program-detail-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  font-size: 19px;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #c7d2fe;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+// 섹션 제목 (인사말, 예배안내)
+.event-create__preview-section-title {
+  margin: 24px 0 12px;
+  padding: 8px 0;
+  font-size: 25px;
+  font-weight: 700;
+  color: #333;
+  border-top: 2px solid #333;
+  border-bottom: 2px solid #333;
+  text-align: center;
+}
+
+// 인사말
+.event-create__preview-greeting {
+  margin-top: 12px;
+}
+
+.event-create__preview-greeting-message {
+  font-size: 20px;
+  line-height: 1.6;
+  color: #444;
+  white-space: pre-wrap;
+  margin-bottom: 12px;
+}
+
+.event-create__preview-greeting-pastor {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.event-create__preview-greeting-career {
+  font-size: 19px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.event-create__preview-career-item {
+  margin-bottom: 2px;
+}
+
+// 순서 탭 미리보기 — 프로필 탭과 같이 바깥 패널 없음, 행마다 흰 카드 (TemplateEventOrder)
+.event-create__preview-worship {
+  padding: 0;
+  min-height: 200px;
+  margin-top: 12px;
+
+  .template-event-worship {
+    margin: 0;
+    color: #1f2937;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .template-event-worship__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .template-event-worship__item {
+    margin: 0;
+  }
+
+  .template-event-worship__card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  .template-event-worship__line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: baseline;
+    width: 100%;
+    min-width: 0;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+
+  .template-event-worship__title {
+    min-width: 0;
+    justify-self: start;
+    text-align: left;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .template-event-worship__sub {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: center;
+    text-align: center;
+    color: #475569;
+    font-size: 0.95em;
+    font-weight: 500;
+  }
+
+  .template-event-worship__charger {
+    min-width: 0;
+    justify-self: end;
+    text-align: right;
+    color: #334155;
+    font-size: 0.98em;
+  }
+
+  .template-event-worship__content {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: keep-all;
+  }
+
+  .template-event-worship__schedule-row-preview {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 14px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .template-event-worship__schedule-time {
+    font-weight: 700;
+    color: #b45309;
+    flex-shrink: 0;
+  }
+
+  .template-event-worship__schedule-sep {
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .template-event-worship__schedule-inline-body {
+    color: #374151;
+    word-break: keep-all;
+    min-width: 0;
+  }
+
+  .template-event-worship__concert-line1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #7c2d12;
+    text-align: center;
+  }
+
+  .template-event-worship__concert-line2 {
+    margin: 0;
+    font-size: 15px;
+    color: #57534e;
+    text-align: center;
+  }
+
+  .template-event-worship__concert-line3 {
+    margin: 0;
+    font-size: 14px;
+    color: #78716c;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .template-event-worship--empty .template-event-program__empty,
+  .template-event-worship--loading .template-event-program__hint {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 15px;
+    color: #6b7280;
+  }
+}
+
+.event-create__preview-worship-row {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 19px;
+  padding: 0 12px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.event-create__preview-worship-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-create__preview-worship-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.event-create__preview-worship-notice {
+  font-size: 18px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.event-create__preview-worship-divider {
+  width: 1px;
+  height: 24px;
+  background: #ddd;
+  margin: 0 10px;
+  flex-shrink: 0;
+}
+
+.event-create__preview-worship-time,
+.event-create__preview-worship-place {
+  flex: 0 0 60px;
+  text-align: center;
+  color: #555;
+}
+
+// 오시는길 (미리보기)
+.event-create__preview-mapbox {
+  margin-top: 24px;
+}
+
+.event-create__preview-maptitle-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-create__preview-maptitle-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+}
+
+.event-create__preview-maptitle-divider {
+  width: 2px;
+  height: 14px;
+  background: #333;
+}
+
+.event-create__preview-maptitle-address {
+  font-size: 20px;
+  color: #555;
+}
+
+.event-create__preview-mapbtns {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.event-create__preview-mapbtn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #cbd5e1;
+  }
+}
+
+.event-create__preview-mapbtn-img {
+  flex-shrink: 0;
+
+  img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+}
+
+.event-create__preview-mapbtn-text {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.event-create__preview-mapbtn-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 25px;
+}
+
+// ----- 오른쪽: 입력 폼 (가로 비율 6, 이 영역만 세로 스크롤) -----
+.event-create__form-wrap {
+  flex: 6;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: #fff;
+  padding: 50px 100px 100px 100px;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.04);
+  border-left: 2px solid #EAEAEA;
+  font-size: 18px;
+
+  @media (max-width: 900px) {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// 오른쪽: 탭 바로 위 — 전단지에 표시할 탭 선택 (소개 필수 + 선택 탭)
+.event-create__tab-select {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.event-create__tab-select-title {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.event-create__tab-select-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-create__tab-select-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.event-create__tab-select-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  &--locked {
+    opacity: 0.85;
+    cursor: default;
+
+    input {
+      cursor: not-allowed;
+    }
+  }
+}
+
+.event-create__tab-select-hint {
+  margin: 0;
+  font-size: 15px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+// 오른쪽 영역 상단 탭
+.event-create__form-tabs {
+  width: 100%;
+  display: flex;
+  gap: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 50px;
+}
+
+.event-create__form-tab {
+  flex: 1;
+  padding: 14px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #767676;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+
+  &:hover {
+    color: #555;
+  }
+
+  &.on {
+    color: #333;
+    border-bottom-color: #333;
+  }
+}
+
+.event-create__tab-placeholder {
+  padding: 48px 24px;
+  font-size: 18px;
+  color: #64748b;
+  text-align: center;
+}
+
+// 섬김이들: server-rows / server-row 스타일 (form-block과 동일 구조)
+.event-create__server-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+
+  .event-create__server-row {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+// 왼쪽 모바일 미리보기 내 섬김이들 (2.html 구조 - notice-detail__servers)
+.event-create__preview-pastor-block {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #6366f1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background-repeat: no-repeat;
+    background-image:
+      radial-gradient(circle 7px at 86% 16%, rgba(99, 102, 241, 0.42) 98%, transparent 100%),
+      radial-gradient(circle 6px at 12% 70%, rgba(99, 102, 241, 0.36) 98%, transparent 100%),
+      radial-gradient(circle 5px at 76% 88%, rgba(148, 163, 184, 0.45) 98%, transparent 100%),
+      radial-gradient(circle 6px at 30% 30%, rgba(99, 102, 241, 0.32) 98%, transparent 100%),
+      radial-gradient(circle 4px at 50% 52%, rgba(99, 102, 241, 0.28) 98%, transparent 100%),
+      radial-gradient(circle 5px at 58% 24%, rgba(99, 102, 241, 0.26) 98%, transparent 100%),
+      radial-gradient(circle 4px at 94% 58%, rgba(148, 163, 184, 0.38) 98%, transparent 100%);
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+.event-create__preview-pastor-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.event-create__preview-pastor-text {
+  font-size: 18px;
+  color: #1f2937;
+  line-height: 1.6;
+  margin: 0 0 14px 0;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+.event-create__preview-pastor-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  .event-create__preview-pastor-label {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .event-create__preview-pastor-name {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.event-create__preview-pastor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (min-width: 768px) {
+    &:has(.event-create__preview-pastor-photo) {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px 28px;
+    }
+  }
+}
+
+.event-create__preview-pastor-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-create__preview-pastor-greeting {
+  margin-bottom: 24px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.event-create__preview-pastor-photo {
+  margin: 8px 0;
+  max-width: 100%;
+
+  img {
+    @include bookletPastorPhotoImg();
+  }
+
+  @media (min-width: 768px) {
+    margin: 0;
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 220px;
+
+    img {
+      width: 100%;
+      max-width: 220px;
+      min-width: 0;
+    }
+  }
+}
+.event-create__preview-pastor-name {
+  font-weight: 700;
+  font-size: 20px;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+.event-create__preview-pastor-message {
+  margin-bottom: 14px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+.event-create__preview-pastor-career {
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.event-create__preview-servants {
+  .notice-detail__servers {
+    width: 100%;
+    max-width: none;
+    margin: 16px 0 24px;
+    box-sizing: border-box;
+  }
+  .notice-detail__servers-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .notice-detail__servers-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+  }
+  .notice-detail__servers-badge {
+    font-size: 16px;
+    font-weight: 500;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 2px 8px;
+    border-radius: 9999px;
+  }
+  .notice-detail__servers-featured {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #c7d2fe;
+    overflow: hidden;
+  }
+  .notice-detail__servers-featured-corner {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 48px;
+    height: 48px;
+    background: #eef2ff;
+    border-radius: 0 0 0 100%;
+    margin-right: -24px;
+    margin-top: -24px;
+  }
+  .notice-detail__servers-featured-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .notice-detail__servers-featured-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #eef2ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+  .notice-detail__servers-featured-icon {
+    font-size: 33px;
+    color: #4f46e5;
+  }
+  .notice-detail__servers-featured-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 2px 0;
+  }
+  .notice-detail__servers-featured-title {
+    font-size: 17px;
+    font-weight: 400;
+    color: #6b7280;
+  }
+  .notice-detail__servers-featured-quote {
+    width: 100%;
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 8px 0 10px;
+
+    p {
+      font-size: 17px;
+      color: #4b5563;
+      line-height: 1.5;
+      font-style: italic;
+      margin: 0;
+      white-space: pre-line;
+    }
+  }
+  .notice-detail__servers-featured-actions {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .notice-detail__servers-featured-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .notice-detail__servers-featured-btn--primary {
+    background: #4f46e5;
+    color: #fff;
+  }
+  .notice-detail__servers-featured-btn--secondary {
+    background: #fff;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+  }
+  .notice-detail__servers-team {
+    margin-bottom: 16px;
+  }
+  .notice-detail__servers-group + .notice-detail__servers-group {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .notice-detail__servers-group-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    margin: 0 0 8px 2px;
+  }
+  .notice-detail__servers-card-group-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 4px 0;
+  }
+  .notice-detail__servers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .notice-detail__servers-card {
+    display: flex;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid #f3f4f6;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .notice-detail__servers-card-avatar {
+    @include bookletServersAvatarSize();
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    overflow: hidden;
+
+    > img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+  .notice-detail__servers-card-icon {
+    font-size: 20px;
+  }
+  .notice-detail__servers-card-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .notice-detail__servers-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .notice-detail__servers-card-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 1px 0;
+  }
+  .notice-detail__servers-card-duty {
+    font-size: 16px;
+    font-weight: 400;
+    color: #6b7280;
+  }
+  .notice-detail__servers-card-desc {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+  }
+  .notice-detail__servers-card-envelope {
+    color: #9ca3af;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .notice-detail__servers-cta {
+    margin-top: 20px;
+  }
+  .notice-detail__servers-cta-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 14px;
+    background: #1f2937;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+  .notice-detail__servers-cta-icon {
+    font-size: 20px;
+  }
+  .notice-detail__servers-cta-info {
+    font-size: 15px;
+    color: #9ca3af;
+    text-align: center;
+    margin: 8px 0 0 0;
+  }
+  .notice-detail__empty-text {
+    padding: 16px;
+    font-size: 18px;
+    color: #94a3b8;
+    text-align: center;
+  }
+}
+
+.event-create__preview-placeholder,
+.event-create__preview-empty {
+  padding: 24px 16px;
+  font-size: 20px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+// 설교영상 미리보기: TemplateSermon + 스타일은 BookletEventDetail.scss의 .event-create__preview-sermon 블록
+
+// 갤러리 미리보기: TemplateGallery + 스타일은 BookletEventDetail.scss의 .event-create__preview-gallery 블록
+
+// 설교영상 / 갤러리 폼
+.event-create__sermon .event-create__server-row,
+.event-create__gallery .event-create__gallery-row {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-create__form-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.event-create__form-desc {
+  font-size: 18px;
+  color: #64748b;
+  margin: 0 0 24px 0;
+}
+
+.event-create__form-block {
+  margin-bottom: 100px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+
+.event-create__form-block-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.event-create__form-block-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+
+  .event-create__form-block-title {
+    margin: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.event-create__main-image-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-create__label:has(.event-create__main-image-wrap) {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.event-create__main-images-hint {
+  font-size: 18px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+}
+
+.event-create__main-images-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.event-create__main-image-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-create__main-image-slot-label {
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.event-create__main-image-slot-preview {
+  position: relative;
+  width: 100px;
+  height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.event-create__main-image-slot-remove {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 18px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.85);
+  }
+}
+
+.event-create__main-image-slot-dropzone {
+  width: 100px;
+  height: 140px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: #64748b;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+}
+
+.event-create__main-image-dropzone {
+  width: 130px;
+  height: 200px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: #64748b;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+}
+
+.event-create__gallery-dropzone {
+  width: 130px;
+  height: 200px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: #64748b;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+}
+
+.event-create__main-image-preview {
+  position: relative;
+  display: inline-block;
+
+  .event-create__main-image-remove {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
+  }
+}
+
+.event-create__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.event-create__worship-row {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+// 순서 탭: 제목 · 부제 · 담당 입력을 한 줄(그리드)로 배치
+.event-create__form-block--worship {
+  .event-create__order-style-picker {
+    margin-bottom: 18px;
+  }
+
+  .event-create__order-style-picker-label {
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .event-create__order-style-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .event-create__order-style-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+    margin: 0;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    &--selected {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+    }
+  }
+
+  .event-create__order-style-card-img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 8px;
+    background: #f1f5f9;
+  }
+
+  .event-create__order-style-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .event-create__order-style-card-desc {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #64748b;
+  }
+
+  @media (max-width: 900px) {
+    .event-create__order-style-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .event-create__order-style-card-img {
+      height: 140px;
+    }
+  }
+
+  .event-create__worship-fields-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 14px;
+    align-items: start;
+    width: 100%;
+  }
+
+  .event-create__worship-fields-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .event-create__worship-schedule-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 14px;
+    width: 100%;
+  }
+
+  .event-create__worship-schedule-datetime {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 auto;
+  }
+
+  .event-create__worship-schedule-select {
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+
+    &:first-of-type {
+      min-width: 132px;
+    }
+
+    &:nth-of-type(2),
+    &:nth-of-type(3) {
+      width: 72px;
+    }
+  }
+
+  .event-create__worship-schedule-content-input {
+    flex: 1 1 160px;
+    min-width: 120px;
+  }
+
+  .event-create__worship-concert-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .event-create__worship-concert-line {
+    width: 100%;
+
+    &--pair {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+  }
+
+  .event-create__worship-concert-dash {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 18px;
+    user-select: none;
+  }
+
+  .event-create__worship-fields-row .event-create__label--cast {
+    min-width: 0;
+  }
+
+  .event-create__label--worship-field-only {
+    gap: 0;
+  }
+
+  @media (max-width: 900px) {
+    .event-create__worship-fields-row {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// 한 줄: 타이틀(왼쪽) + 입력(오른쪽)
+.event-create__label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+
+  &--textarea {
+    align-items: flex-start;
+
+    .event-create__label-text {
+      padding-top: 10px;
+    }
+  }
+
+  &--textarea .event-create__career-desc-stack {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &:has(.event-create__religiousbody-row) {
+    align-items: flex-start;
+
+    .event-create__label-text {
+      padding-top: 10px;
+    }
+  }
+}
+
+.event-create__label-text {
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+// 교단 선택 (RecruitMinisterPost 참조: 이미지 + 체크)
+.event-create__religiousbody-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.event-create__religiousbody-item {
+  position: relative;
+  cursor: pointer;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #cbd5e1;
+  }
+
+  &--selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+}
+
+.event-create__religiousbody-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.event-create__religiousbody-checkmark {
+  display: none;
+}
+
+.event-create__religiousbody-imgtext {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: #475569;
+    text-align: center;
+    max-width: 72px;
+    line-height: 1.2;
+  }
+}
+
+.event-create__religiousbody-item--selected .event-create__religiousbody-imgtext p {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+// 주소 (다음 우편번호 검색)
+.event-create__address-field {
+  flex: 1;
+  min-width: 0;
+
+  .event-create__input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.event-create__postcode-wrap {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.event-create__input-with-icon {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+
+  .event-create__input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.event-create__date-mode-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-create__date-mode-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.event-create__date-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  color: #475569;
+  cursor: pointer;
+
+  input {
+    margin: 0;
+  }
+}
+
+.event-create__date-range-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.event-create__date-range-sep {
+  color: #64748b;
+  font-size: 18px;
+  font-weight: 600;
+}
+.event-create__form-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #64748b;
+  }
+}
+.event-create__input,
+.event-create__textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+}
+
+.event-create__textarea {
+  resize: vertical;
+  min-height: 80px;
+  white-space: pre-wrap;
+}
+
+.event-create__career-desc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.event-create__career-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.event-create__career-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+
+  input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+}
+
+.event-create__program-career-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.event-create__program-career-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  .event-create__input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.event-create__program-career-list-remove {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+}
+
+.event-create__program-career-list-add {
+  align-self: flex-start;
+  padding: 8px 14px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px dashed #93c5fd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #dbeafe;
+  }
+}
+
+// 시간: 시 / 분 셀렉트
+.event-create__time-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-create__time-selects {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-create__select {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+}
+
+.event-create__time-sep {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.event-create__add-worship {
+  margin-top: 12px;
+  padding: 10px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #dbeafe;
+  }
+}
+
+/** 프로그램 탭: 소개 탭과 연동되는 행사 일정 안내 → 프로그램 목록 */
+.event-create__form-block--program-schedule-hint {
+  margin-bottom: 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.event-create__form-block--program-entries {
+  margin-top: 28px;
+  padding-top: 4px;
+
+  .event-create__form-block-title {
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: #0f172a;
+  }
+}
+
+.event-create__program-section {
+  margin-bottom: 20px;
+
+  &--schedule {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+  }
+}
+
+.event-create__program-section-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.event-create__program-schedule-hint-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: #475569;
+
+  strong {
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.event-create__program-schedule-hint-date {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.event-create__preview-program-schedule {
+  font-size: 18px;
+  color: #64748b;
+  white-space: pre-wrap;
+}
+
+.event-create__program-schedule-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.event-create__label--schedule-combo {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-create__program-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #2563eb;
+  }
+
+  span {
+    min-width: 2.5em;
+  }
+}
+
+.event-create__program-images {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.event-create__program-images .event-create__label-text {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.event-create__program-images-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.event-create__program-images-hint {
+  flex: 1;
+  min-width: 140px;
+  max-width: 280px;
+  margin: 0;
+  padding-top: 2px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.event-create__program-images-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.event-create__program-image-chip {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &--pannable {
+    display: block;
+    padding: 0;
+
+    &.event-create__program-image-chip--pending {
+      width: 72px;
+      min-width: 72px;
+      height: 72px;
+    }
+  }
+
+  .event-create__program-image-pan-wrap {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+    border-radius: 8px;
+    overflow: hidden;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &--pending {
+    width: auto;
+    min-width: 72px;
+    height: auto;
+    padding: 8px 28px 8px 10px;
+    display: flex;
+    align-items: center;
+
+    &:has(img) {
+      width: 72px;
+      height: 72px;
+      padding: 0;
+    }
+  }
+}
+
+.event-create__program-image-pending-name {
+  font-size: 18px;
+  color: #64748b;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-create__program-image-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  font-size: 18px;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.55);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(220, 38, 38, 0.9);
+  }
+}
+
+.event-create__program-image-chip--pending .event-create__program-image-remove {
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+}
+
+.event-create__program-image-add {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.event-create__program-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.event-create__program-image-add-label {
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #dbeafe;
+  }
+}
+
+.event-create__nav-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  align-items: center;
+}
+
+.event-create__nav-btns--program {
+  justify-content: flex-start;
+}
+
+.event-create__nav-btns--greeting {
+  justify-content: flex-start;
+}
+
+.event-create__preview-greeting {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px 16px;
+}
+
+.event-create__nav-btns--cast {
+  justify-content: flex-start;
+}
+
+.event-create__preview-cast,
+.event-create__preview-program-tab {
+  padding: 0;
+  min-height: 200px;
+
+  .template-event-cast {
+    margin: 0;
+  }
+
+  /* EventCreate 미리보기: 바깥 패널 없음, 행마다 흰 카드 */
+  .template-event-cast--editor-preview {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  .template-event-cast__list--editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .template-event-cast--editor-preview.template-event-cast--empty {
+    padding: 20px 16px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px dashed #e5e7eb;
+    text-align: center;
+  }
+
+  /* TemplateServers / NoticeCreate 미리보기와 동일 레이아웃 — `.church_detail` 밖이라 여기서 정의 */
+  .notice-detail__servers-list {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .notice-detail__servers-card {
+    display: flex;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid #f3f4f6;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .notice-detail__servers-card-avatar {
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    overflow: hidden;
+
+    > img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .event-create__preview-program-card-avatar--stack {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .notice-detail__servers-card-icon {
+    font-size: 25px;
+  }
+
+  .notice-detail__servers-card-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .notice-detail__servers-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .notice-detail__servers-card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 2px 0;
+  }
+
+  .notice-detail__servers-card-duty {
+    font-size: 15px;
+    font-weight: 400;
+    color: #6b7280;
+  }
+
+  .notice-detail__servers-card-desc {
+    font-size: 15px;
+    color: #6b7280;
+    margin: 4px 0 0;
+    line-height: 1.45;
+  }
+
+  .template-event-cast__list--editor .notice-detail__servers-card.template-event-cast__card--editor {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  .template-event-cast__note {
+    white-space: pre-wrap;
+    word-break: keep-all;
+  }
+
+  /* 프로그램 탭 미리보기: 프로필 카드 좌측 영역에 이미지 1~N 세로 배치 */
+  .event-create__preview-program-card-images {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+
+    img {
+      flex: 1 1 0;
+      min-height: 44px;
+      width: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+  }
+
+  .event-create__preview-program-card-desc-list {
+    margin-top: 4px;
+  }
+}
+
+.event-create__preview-cast .notice-detail__servers-card-avatar {
+  @include bookletServersAvatarSize();
+}
+
+/* 프로그램 탭 미리보기: 사진 영역 = 카드 가로의 50% */
+.event-create__preview-program-tab {
+  .notice-detail__servers-card-avatar {
+    flex-shrink: 0;
+    flex: 0 0 50%;
+    width: 50%;
+    max-width: 50%;
+    min-width: 64px;
+    aspect-ratio: 104 / 120;
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  .event-create__preview-program-card-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .notice-detail__servers-card-name {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  p.notice-detail__servers-card-duty.event-create__preview-program-card-schedule {
+    display: block;
+    margin: 4px 0 0;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .event-create__preview-program-card-desc-long {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .event-create__preview-program-card-desc-line {
+    margin: 0;
+    font-size: inherit;
+    line-height: 1.45;
+    color: inherit;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .event-create__preview-program-card-desc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    margin-top: 6px;
+  }
+}
+
+.event-create__form-block--cast {
+  .event-create__cast-hint {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+}
+
+.event-create__cast-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.event-create__cast-row {
+  position: relative;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-create__label--cast {
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+
+  .event-create__label-text {
+    min-width: 0;
+    flex-shrink: 0;
+    padding-top: 0;
+  }
+
+  .event-create__input {
+    width: 100%;
+  }
+
+  &.event-create__label--textarea {
+    align-items: stretch;
+
+    .event-create__label-text {
+      padding-top: 0;
+    }
+  }
+}
+
+.event-create__textarea--cast {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.event-create__cast-image {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.event-create__cast-image-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+
+  img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+}
+
+.event-create__cast-image-remove {
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
+.event-create__cast-image-add {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.event-create__cast-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+.event-create__cast-image-add-label {
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.event-create__cast-remove {
+  align-self: flex-end;
+  margin-top: 4px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #fef2f2;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.event-create__prev-btn {
+  width: 150px;
+  padding: 14px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #e2e8f0;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.event-create__next-btn {
+  width: 150px;
+  padding: 14px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  background: #3b82f6;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #2563eb;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.event-create__next-tab-btn {
+  width: 120px;
+  padding: 14px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #e2e8f0;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.event-create__complete-wrap {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center;
+}
+
+.event-create__complete-btn {
+  min-width: 200px;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: #1e40af;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// 담임목사 약력: 행 단위 입력 + 추가/삭제
+.event-create__career-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-create__career-label {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.event-create__career-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-create__career-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .event-create__input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.event-create__career-remove {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+}
+
+.event-create__career-add {
+  margin-top: 4px;
+}
+
+.event-create__label--checkbox {
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+
+  input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4f46e5;
+  }
+  span {
+    font-size: 18px;
+    font-weight: 500;
+    color: #334155;
+  }
+}
+
+// 풋터: 오른쪽 스크롤 영역 안 (스크롤 1개로 폼 아래에서 노출)
+.event-create__footer-wrap {
+  margin-top: 32px;
+}

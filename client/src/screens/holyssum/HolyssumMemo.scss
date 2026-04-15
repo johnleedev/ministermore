@@ -1,0 +1,126 @@
+.holyssum-memo-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 16px 24px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.holyssum-memo-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.holyssum-memo-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1B1B1B;
+  color: #fff;
+  padding: 14px 20px;
+
+  .holyssum-memo-header-icon {
+    font-size: 1.25rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.holyssum-memo-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 20px;
+  padding: 10px 16px;
+  background: #1B1B1B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #333;
+  }
+}
+
+.holyssum-memo-body {
+  padding: 0 24px 24px;
+}
+
+.holyssum-memo-loading,
+.holyssum-memo-empty {
+  text-align: center;
+  color: #888;
+  padding: 32px;
+}
+
+.holyssum-memo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.holyssum-memo-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.holyssum-memo-item-header {
+  background: #f5f5f5;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #1B1B1B;
+  font-size: 1rem;
+}
+
+.holyssum-memo-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-top: 1px solid #eee;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: #999;
+  }
+}
+
+.holyssum-memo-save-all {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.holyssum-memo-save-btn {
+  padding: 8px 20px;
+  background: #1B1B1B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #333;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

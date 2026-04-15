@@ -1,0 +1,222 @@
+.holyssum-detail {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
+
+.holyssum-detail-loading,
+.holyssum-detail-error {
+  text-align: center;
+  color: #888;
+  padding: 32px;
+}
+
+.holyssum-detail-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.holyssum-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1B1B1B;
+  color: #fff;
+  padding: 14px 20px;
+
+  .holyssum-detail-header-icon {
+    font-size: 1.5rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.holyssum-detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 20px;
+  padding: 10px 16px;
+  background: #1B1B1B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #333;
+  }
+}
+
+.holyssum-detail-card-body {
+  padding: 24px;
+}
+
+.holyssum-detail-section {
+  margin-bottom: 28px;
+}
+
+.holyssum-detail-big-section {
+  margin-bottom: 32px;
+}
+
+.holyssum-detail-big-heading {
+  color: #1B1B1B;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 3px solid #1B1B1B;
+}
+
+.holyssum-detail-big-content {
+  padding-left: 4px;
+}
+
+.holyssum-detail-section-heading {
+  color: #333;
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.holyssum-detail-section-content {
+  padding-left: 4px;
+}
+
+.holyssum-detail-field {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+
+  .holyssum-detail-field-label {
+    color: #333;
+    flex-shrink: 0;
+  }
+
+  .holyssum-detail-field-value {
+    color: #333;
+    flex: 1;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+}
+
+.holyssum-detail-check-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.holyssum-detail-section--fixed-labels .holyssum-detail-field-label {
+  width: 100px;
+  min-width: 100px;
+}
+
+.holyssum-detail-check-item {
+  color: #666;
+
+  &.checked {
+    color: #1B1B1B;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+}
+
+.holyssum-detail-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #eee;
+}
+
+.holyssum-detail-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #1B1B1B;
+  background: #fff;
+  color: #1B1B1B;
+
+  &:hover {
+    background: #1B1B1B;
+    color: #fff;
+  }
+
+  &.primary {
+    background: #1B1B1B;
+    color: #fff;
+
+    &:hover {
+      background: #000;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .holyssum-detail {
+    padding: 16px 12px;
+  }
+
+  .holyssum-detail-header,
+  .holyssum-detail-card-body {
+    padding: 12px 16px;
+  }
+
+  .holyssum-detail-header h1,
+  .holyssum-detail-big-heading {
+    font-size: 1.1rem;
+  }
+
+  .holyssum-detail-actions {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+
+  .holyssum-detail-btn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .holyssum-detail {
+    padding: 12px 10px;
+  }
+
+  .holyssum-detail-header,
+  .holyssum-detail-card-body {
+    padding: 12px;
+  }
+
+  .holyssum-detail-section--fixed-labels .holyssum-detail-field-label {
+    width: auto;
+    min-width: auto;
+  }
+
+  .holyssum-detail-check-list {
+    gap: 8px 16px;
+  }
+
+  .holyssum-detail-actions {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .holyssum-detail-btn {
+    width: 100%;
+  }
+}
