@@ -59,12 +59,16 @@ const ChurchbookletbookletsRouter = require('./routers/service/bookletNotice/Chu
 const NoticeCreateBookletRouter = require('./routers/service/bookletNotice/NoticeCreateBooklet');
 const EventMainRouter = require('./routers/service/bookletEvent/EventMain');
 const EventCreateBookletRouter = require('./routers/service/bookletEvent/EventCreateBooklet');
+const BulletinMainRouter = require('./routers/service/bulletin/BulletinMain');
+const BulletinCreateRouter = require('./routers/service/bulletin/BulletinCreate');
 const PortoneBillingRouter = require('./routers/payment/PortoneBilling');
 const PortoneRequestPayRouter = require('./routers/payment/PortoneRequestPay');
 app.use('/bookletnoticemain', ChurchbookletbookletsRouter);
 app.use('/bookletnoticecreate', NoticeCreateBookletRouter);
 app.use('/bookleteventmain', EventMainRouter);
 app.use('/bookleteventcreate', EventCreateBookletRouter);
+app.use('/bulletinmain', BulletinMainRouter);
+app.use('/bulletincreate', BulletinCreateRouter);
 app.use('/paymentbilling', PortoneBillingRouter);
 app.use('/paymentrequestpay', PortoneRequestPayRouter);
 

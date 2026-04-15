@@ -5,7 +5,7 @@ import ServiceMain from './ServiceMain';
 
 import NoticeMain from './bookletNotice/NoticeMain';
 import EventMain from './bookletEvent/EventMain';
-import BulletinMain from './churchBulletin/BulletinMain';
+import BulletinMain from './bulletin/BulletinMain';
 
 import ChurchDetail from '../../exceptbooklets/bookletNotice/BookletNoticeDetail';
 
@@ -16,10 +16,10 @@ import NoticeTemplateSelect from './bookletNotice/createNotice/NoticeTemplateSel
 import EventTemplateSelect from './bookletEvent/createEvent/EventTemplateSelect';
 import NoticeComplete from './bookletNotice/createNotice/NoticeComplete';
 import EventComplete from './bookletEvent/createEvent/EventComplete';
-import BulletinTemplateSelect from './churchBulletin/createBulletin/BulletinTemplateSelect';
-import BulletinCreate from './churchBulletin/createBulletin/BulletinCreate';
-import BulletinComplete from './churchBulletin/createBulletin/BulletinComplete';
-
+import BulletinTemplateSelect from './bulletin/createBulletin/BulletinTemplateSelect';
+import BulletinCreate from './bulletin/createBulletin/BulletinCreate';
+import BulletinComplete from './bulletin/createBulletin/BulletinComplete';
+import HomepageMain from './homepage/HomepageMain';
 
 export default function ServiceRouter() {
   return (
@@ -44,6 +44,8 @@ export default function ServiceRouter() {
         <Route path="/bookletbulletintemplates" element={<BulletinTemplateSelect/>}/>
         <Route path="/bookletbulletincreate" element={<BulletinCreate/>}/>
         <Route path="/bookletbulletincomplete" element={<BulletinComplete/>}/>
+
+        <Route path="/homepage" element={<HomepageMain/>}/>
 
        
       </Routes>

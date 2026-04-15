@@ -36,6 +36,7 @@ const Header: React.FC = () => {
         {title:"모바일전단지(소개)", subUrl:"/service/notice"},
         {title:"모바일전단지(행사)", subUrl:"/service/event"},
         {title:"모바일주보", subUrl:"/service/bulletin"},
+        {title:"홈페이지", subUrl:"/service/homepage"},
       ]
     },
     { title: "커뮤니티", url:"/community", 

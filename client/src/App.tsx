@@ -38,7 +38,7 @@ function App() {
 
               <Route path="/booklet" element={<BookletDetailPage/>}/>
               <Route path="/eventbooklet" element={<BookletEventDetailPage/>}/>
-              <Route path="/bulletinbooklet" element={<BulletinDetailPage/>}/>
+              <Route path="/bulletin" element={<BulletinDetailPage/>}/>
 
               <Route path="/worship/*" element={<WorshipRouter/>}/>
               
@@ -46,8 +46,7 @@ function App() {
               
               <Route path="/company/*" element={<MainCompt/>}/>
               
-              <Route path="/service/*" element={<ServiceRouter/>}/>
-              
+              <Route path="/service/*" element={<ServiceRouter/>}/>             
               
 
               <Route path="/rollbook/*" element={<MainRollbook/>}/>

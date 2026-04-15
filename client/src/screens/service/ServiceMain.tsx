@@ -28,12 +28,12 @@ const SERVICES = [
     path: "/service/bulletin",
   },
   {
-    emoji: "✅",
-    titleLines: ["주일학교", "출석부"],
-    strong: "주일학교 출석 관리 서비스",
+    emoji: "🌐",
+    titleLines: ["홈페이지", "제작"],
+    strong: "교회 맞춤 홈페이지 제작",
     description:
-      "아이들의 출석 현황을 쉽고 빠르게 체크하고 정리할 수 있는 모바일 서비스입니다.",
-    path: "/rollbook",
+      "교회 정체성과 안내를 담은 웹사이트를 기획부터 제작까지 함께 구성해 드립니다.",
+    path: "/company",
   },
 ];
 

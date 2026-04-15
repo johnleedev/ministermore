@@ -77,7 +77,7 @@ export default function BulletinMain() {
   }, []);
 
   const openSample = useCallback(() => {
-    navigate("/bulletinbooklet?id=1&preview=1");
+    navigate("/bulletin?id=1&preview=1");
   }, [navigate]);
 
   const onApply = useCallback(() => {
