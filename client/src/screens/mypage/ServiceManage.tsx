@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './Mypage.scss';
-import './ChurchBulletinAdmin.scss';
+import './seviceComponent/ChurchBulletinAdmin.scss';
 import MypageMenu from './MypageMenu';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -8,112 +8,17 @@ import MainURL from '../../MainURL';
 import Loading from '../../components/Loading';
 import { useRecoilState } from 'recoil';
 import { recoilUserData } from '../../RecoilStore';
-
-interface BookletItem {
-  id: number;
-  title: string;
-  type: string;
-  churchName: string;
-  mainPastor: string;
-  imageMainName: string;
-}
-
-interface EventBookletItem {
-  id: number;
-  eventName: string;
-  date: string;
-  place: string;
-  address: string;
-  superViser: string;
-  imageMainName: string;
-}
-
-interface BulletinItem {
-  id: number;
-  churchName: string;
-  bulletinTitle: string;
-  bulletinDate: string;
-  imageMainName: string;
-}
-
-interface BulletinWorshipRow {
-  num: string;
-  title: string;
-  sub: string;
-  right: string;
-}
-
-interface BulletinEditorState {
-  id: number;
-  templateId: string;
-  churchName: string;
-  bulletinTitle: string;
-  bulletinDate: string;
-  imageMainName: string;
-  introText: string;
-  newsText: string;
-  quiry: string;
-  worshipRows: BulletinWorshipRow[];
-}
-
-interface DonorRow {
-  name: string;
-  type: string;
-}
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function normalizeBulletinDateKey(raw: string): string | null {
-  const t = String(raw || '').trim();
-  if (!t) return null;
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const kr = /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/.exec(t);
-  if (kr) return `${kr[1]}-${pad2(Number(kr[2]))}-${pad2(Number(kr[3]))}`;
-  return null;
-}
-
-function parsePartsFromDateKey(key: string): { y: number; m: number; d: number } | null {
-  const p = /^(\d{4})-(\d{2})-(\d{2})/.exec(key);
-  if (!p) return null;
-  return { y: +p[1], m: +p[2], d: +p[3] };
-}
-
-function formatKoreanFromDateKey(key: string | null): string {
-  if (!key) return '날짜 미지정';
-  const parts = parsePartsFromDateKey(key);
-  if (!parts) return '날짜 미지정';
-  return `${parts.y}년 ${parts.m}월 ${parts.d}일`;
-}
-
-function shortDateFromDateKey(key: string | null): string {
-  if (!key) return '--/--';
-  const parts = parsePartsFromDateKey(key);
-  if (!parts) return '--/--';
-  return `${pad2(parts.m)}/${pad2(parts.d)}`;
-}
-
-type CalCell = { kind: 'blank' } | { kind: 'day'; day: number; iso: string };
-
-function buildCalendarCells(year: number, month: number): CalCell[] {
-  const firstWeekday = new Date(year, month - 1, 1).getDay();
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const cells: CalCell[] = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push({ kind: 'blank' });
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({
-      kind: 'day',
-      day: d,
-      iso: `${year}-${pad2(month)}-${pad2(d)}`,
-    });
-  }
-  while (cells.length % 7 !== 0) cells.push({ kind: 'blank' });
-  return cells;
-}
-
-type ServiceType = 'mobile-church-notice' | 'mobile-event-notice' | 'church-bulletin';
+import type {
+  BookletItem,
+  BulletinEditorState,
+  BulletinWorshipRow,
+  BulletinItem,
+  DonorRow,
+  EventBookletItem,
+  ServiceType,
+} from './seviceComponent/serviceManageTypes';
+import { buildCalendarCells, normalizeBulletinDateKey, parsePartsFromDateKey } from './seviceComponent/serviceManageUtils';
+import ChurchBulletinAdmin from './seviceComponent/ChurchBulletinAdmin';
 
 const SERVICE_META: Record<
   ServiceType,
@@ -379,7 +284,7 @@ export default function ServiceManage() {
   };
 
   const handleViewEventBooklet = (eventMainId: number) => {
-    window.open(`/eventbooklet?id=${eventMainId}`, '_blank', 'noopener,noreferrer');
+    window.open(`/event?id=${eventMainId}`, '_blank', 'noopener,noreferrer');
   };
   const handleViewBulletin = (bulletinMainId: number) => {
     window.open(`/bulletin?id=${bulletinMainId}`, '_blank', 'noopener,noreferrer');
@@ -572,16 +477,16 @@ export default function ServiceManage() {
       <div className="inner">
         <MypageMenu />
         <div className="subpage__main">
-          {!(activeServiceType === 'church-bulletin' && bulletinList.length > 0) ? (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px',
-              }}
-            >
-              <div className="subpage__main__title">{serviceMeta.title}</div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            <div className="subpage__main__title">{serviceMeta.title}</div>
+            {activeServiceType !== 'church-bulletin' ? (
               <button
                 onClick={handleCreateBooklet}
                 style={{
@@ -598,10 +503,8 @@ export default function ServiceManage() {
               >
                 {serviceMeta.createLabel}
               </button>
-            </div>
-          ) : (
-            <div style={{ marginBottom: '12px' }} />
-          )}
+            ) : null}
+          </div>
 
           <div className="subpage__main__content">
             {loading ? (
@@ -614,625 +517,156 @@ export default function ServiceManage() {
                 (activeServiceType === 'mobile-event-notice' && eventBookletList.length > 0) ||
                 (activeServiceType === 'church-bulletin' && bulletinList.length > 0) ? (
                   activeServiceType === 'church-bulletin' ? (
-                    <div className="church-bulletin-admin">
-                      <div className="cba-window">
-                        <div className="cba-browser-bar">
-                          <div className="cba-traffic-lights" aria-hidden="true">
-                            <span className="red" />
-                            <span className="yellow" />
-                            <span className="green" />
-                          </div>
-                          <div className="cba-browser-search">church-bulletin-admin.local</div>
-                          <div className="cba-browser-actions" aria-hidden="true">
-                            <span>↶</span>
-                            <span>↷</span>
-                            <span>⋯</span>
-                          </div>
-                        </div>
-
-                        <div className="cba-app">
-                          <div className="cba-topbar">
-                            <div className="cba-title-wrap">
-                              <h1>온라인 주보 관리자</h1>
-                              <p>
-                                날짜별 예배리스트, 예배순서, 헌금자명단을 한 화면에서 편집하고 저장합니다.
-                              </p>
-                            </div>
-                            <div className="cba-topbar-right">
-                              <button type="button" className="cba-icon-btn" aria-label="알림">
-                                🔔
-                              </button>
-                              <button type="button" className="cba-icon-btn" aria-label="검색">
-                                ⌕
-                              </button>
-                              <div className="cba-avatar" aria-label="계정">
-                                관
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="cba-toolbar">
-                            <div className="cba-toolbar-left">
-                              <button type="button" className="cba-chip date-display">
-                                <span>
-                                  📅{' '}
-                                  <strong>
-                                    {editingBulletinId && bulletinEditor
-                                      ? formatKoreanFromDateKey(selectedDateKey)
-                                      : '주보를 선택하세요'}
-                                  </strong>
-                                </span>
-                                <span>⌄</span>
-                              </button>
-                              <div className="cba-status-badge">
-                                {bulletinSaving ? '저장 중...' : '저장 준비됨'}
-                              </div>
-                              <button type="button" className="cba-btn soft" onClick={handleCreateBooklet}>
-                                새 주보
-                              </button>
-                              {editingBulletinId ? (
-                                <button
-                                  type="button"
-                                  className="cba-btn danger"
-                                  onClick={() => handleDeleteBulletin(editingBulletinId)}
-                                >
-                                  주보 삭제
-                                </button>
-                              ) : null}
-                            </div>
-                            <div className="cba-toolbar-right">
-                              <button
-                                type="button"
-                                className="cba-btn ghost"
-                                disabled={!editingBulletinId}
-                                onClick={() =>
-                                  editingBulletinId && handleViewBulletin(editingBulletinId)
-                                }
-                              >
-                                미리보기
-                              </button>
-                              <button
-                                type="button"
-                                className="cba-btn primary"
-                                disabled={!bulletinEditor || bulletinSaving}
-                                onClick={handleSaveBulletin}
-                              >
-                                {bulletinSaving ? '저장 중...' : '저장'}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="cba-layout">
-                            <aside className="cba-card cba-sidebar">
-                              <div className="cba-calendar-popover">
-                                <div className="cba-calendar-head">
-                                  <button
-                                    type="button"
-                                    className="cba-mini-icon"
-                                    onClick={() => shiftCalMonth(-1)}
-                                    aria-label="이전 달"
-                                  >
-                                    ←
-                                  </button>
-                                  <strong>
-                                    {calYM.y}년 {calYM.m}월
-                                  </strong>
-                                  <button
-                                    type="button"
-                                    className="cba-mini-icon"
-                                    onClick={() => shiftCalMonth(1)}
-                                    aria-label="다음 달"
-                                  >
-                                    →
-                                  </button>
-                                </div>
-                                <div className="cba-weekdays">
-                                  {['일', '월', '화', '수', '목', '금', '토'].map((w) => (
-                                    <div key={w}>{w}</div>
-                                  ))}
-                                </div>
-                                <div className="cba-dates-grid">
-                                  {calendarCells.map((cell, ci) => {
-                                    if (cell.kind === 'blank') {
-                                      return (
-                                        <div key={`cal-blank-${ci}`} className="cba-date-cell muted" />
-                                      );
-                                    }
-                                    const has = bulletinIdByDateKey.has(cell.iso);
-                                    const active = selectedDateKey === cell.iso;
-                                    return (
-                                      <button
-                                        key={cell.iso}
-                                        type="button"
-                                        className={`cba-date-cell${has ? ' has-bulletin' : ' muted'}${
-                                          active ? ' active' : ''
-                                        }`}
-                                        onClick={() => {
-                                          if (!has) return;
-                                          const id = bulletinIdByDateKey.get(cell.iso);
-                                          if (id) handleEditBulletin(id);
-                                        }}
-                                      >
-                                        {cell.day}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              <div className="cba-sidebar-tabs">
-                                <button type="button" className="cba-tab active">
-                                  주보 날짜
-                                </button>
-                                <button type="button" className="cba-tab" disabled title="준비 중">
-                                  보관함
-                                </button>
-                              </div>
-
-                              <div className="cba-date-list">
-                                {bulletinList.map((item) => {
-                                  const dk = normalizeBulletinDateKey(item.bulletinDate);
-                                  const sameDay = dk ? bulletinCountByDateKey.get(dk) ?? 1 : 1;
-                                  const subtitle =
-                                    sameDay > 1
-                                      ? `${sameDay}건의 주보 · ${item.churchName || item.bulletinTitle || ''}`
-                                      : item.churchName || item.bulletinTitle || '제목 없음';
-                                  return (
-                                    <button
-                                      key={`bulletin-date-${item.id}`}
-                                      type="button"
-                                      className={`cba-date-item${
-                                        editingBulletinId === item.id ? ' active' : ''
-                                      }`}
-                                      onClick={() => handleEditBulletin(item.id)}
-                                    >
-                                      <div className="meta">
-                                        <strong>
-                                          {dk
-                                            ? formatKoreanFromDateKey(dk)
-                                            : item.bulletinDate || '날짜 없음'}
-                                        </strong>
-                                        <span>{subtitle}</span>
-                                      </div>
-                                      <span className="cba-count-badge">{sameDay > 1 ? sameDay : '주'}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </aside>
-
-                            <div className="cba-content-col">
-                              {editingBulletinId && bulletinEditorLoading ? (
-                                <div className="cba-card" style={{ minHeight: 200 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-                                    <Loading />
-                                  </div>
-                                </div>
-                              ) : editingBulletinId && bulletinEditor ? (
-                                <>
-                                  <section className="cba-card">
-                                    <div className="cba-section-head">
-                                      <div>
-                                        <h2>예배리스트</h2>
-                                        <p>
-                                          선택한 날짜에 운영되는 예배를 확인하고 예배순서를 편집할 수 있습니다.
-                                        </p>
-                                      </div>
-                                      <div className="cba-head-actions">
-                                        <button
-                                          type="button"
-                                          className="cba-btn danger"
-                                          onClick={() => {
-                                            if (
-                                              !window.confirm(
-                                                '선택한 예배를 목록에서 삭제할까요? (저장해야 서버에 반영됩니다.)'
-                                              )
-                                            )
-                                              return;
-                                            removeServiceName(selectedServiceIdx);
-                                          }}
-                                        >
-                                          삭제
-                                        </button>
-                                        <button type="button" className="cba-btn ghost" onClick={addServiceName}>
-                                          추가
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="cba-services">
-                                      {serviceNames.map((serviceName, idx) => (
-                                        <button
-                                          key={`service-${idx}`}
-                                          type="button"
-                                          className={`cba-service-card${
-                                            selectedServiceIdx === idx ? ' active' : ''
-                                          }`}
-                                          onClick={(e) => {
-                                            const t = e.target as HTMLElement;
-                                            if (t.closest('input,button')) return;
-                                            setSelectedServiceIdx(idx);
-                                          }}
-                                        >
-                                          <span className="cba-service-radio" aria-hidden />
-                                          <span className="cba-service-label">예배 {idx + 1}</span>
-                                          <h4>{serviceName.trim() || `예배 ${idx + 1}`}</h4>
-                                          <p>이름은 아래에서 바꿀 수 있습니다. 주보 공개 화면에서 확인하세요.</p>
-                                          <input
-                                            className="cba-service-field"
-                                            type="text"
-                                            value={serviceName}
-                                            onClick={(e) => e.stopPropagation()}
-                                            onChange={(e) => updateServiceName(idx, e.target.value)}
-                                            placeholder="예배 이름"
-                                          />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </section>
-
-                                  <section className="cba-card">
-                                    <div className="cba-section-head">
-                                      <div>
-                                        <h2>예배순서</h2>
-                                        <p>
-                                          <strong>
-                                            {serviceNames[selectedServiceIdx]?.trim() ||
-                                              `예배 ${selectedServiceIdx + 1}`}
-                                          </strong>
-                                          의 순서를 편집합니다. (현재 서버 구조상 순서는 주보당 한 세트입니다.)
-                                        </p>
-                                      </div>
-                                      <div className="cba-head-actions">
-                                        <button type="button" className="cba-btn soft" onClick={addWorshipRow}>
-                                          추가
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="cba-btn primary"
-                                          onClick={handleSaveBulletin}
-                                          disabled={bulletinSaving}
-                                        >
-                                          {bulletinSaving ? '저장 중...' : '저장'}
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="cba-mini-stat-grid">
-                                      <div className="cba-mini-stat">
-                                        <span>선택 날짜</span>
-                                        <strong>{shortDateFromDateKey(selectedDateKey)}</strong>
-                                      </div>
-                                      <div className="cba-mini-stat">
-                                        <span>순서 행 수</span>
-                                        <strong>{bulletinEditor.worshipRows.length}</strong>
-                                      </div>
-                                      <div className="cba-mini-stat">
-                                        <span>편집</span>
-                                        <strong style={{ color: 'var(--cba-success)' }}>정상</strong>
-                                      </div>
-                                    </div>
-
-                                    <div className="cba-order-table-wrap">
-                                      <table className="cba-table">
-                                        <thead>
-                                          <tr>
-                                            <th style={{ width: '8%' }}>#</th>
-                                            <th style={{ width: '22%' }}>순서명</th>
-                                            <th style={{ width: '18%' }}>유형</th>
-                                            <th>내용 / 비고</th>
-                                            <th style={{ width: '120px' }}>관리</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {bulletinEditor.worshipRows.map((row, idx) => (
-                                            <tr key={`w-${idx}-${row.num}`}>
-                                              <td>
-                                                <input
-                                                  className="cba-field"
-                                                  type="text"
-                                                  value={row.num}
-                                                  onChange={(e) =>
-                                                    updateWorshipRow(idx, { num: e.target.value })
-                                                  }
-                                                  placeholder="번호"
-                                                />
-                                              </td>
-                                              <td>
-                                                <input
-                                                  className="cba-field"
-                                                  type="text"
-                                                  value={row.title}
-                                                  onChange={(e) =>
-                                                    updateWorshipRow(idx, { title: e.target.value })
-                                                  }
-                                                  placeholder="순서명"
-                                                />
-                                              </td>
-                                              <td>
-                                                <input
-                                                  className="cba-field"
-                                                  type="text"
-                                                  value={row.sub}
-                                                  onChange={(e) =>
-                                                    updateWorshipRow(idx, { sub: e.target.value })
-                                                  }
-                                                  placeholder="유형"
-                                                />
-                                              </td>
-                                              <td>
-                                                <input
-                                                  className="cba-field"
-                                                  type="text"
-                                                  value={row.right}
-                                                  onChange={(e) =>
-                                                    updateWorshipRow(idx, { right: e.target.value })
-                                                  }
-                                                  placeholder="내용 · 시간 등"
-                                                />
-                                              </td>
-                                              <td>
-                                                <div className="cba-head-actions" style={{ margin: 0 }}>
-                                                  <button
-                                                    type="button"
-                                                    className="cba-text-btn delete"
-                                                    onClick={() => removeWorshipRow(idx)}
-                                                  >
-                                                    삭제
-                                                  </button>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-
-                                    <div className="cba-tfoot-actions">
-                                      <div className="cba-helper">
-                                        항목 추가 후 저장을 누르면 예배 순서가 반영됩니다.
-                                      </div>
-                                      <div className="cba-head-actions">
-                                        <button
-                                          type="button"
-                                          className="cba-btn ghost"
-                                          onClick={() =>
-                                            editingBulletinId && handleViewBulletin(editingBulletinId)
-                                          }
-                                        >
-                                          미리보기
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="cba-btn primary"
-                                          onClick={handleSaveBulletin}
-                                          disabled={bulletinSaving}
-                                        >
-                                          {bulletinSaving ? '저장 중...' : '저장'}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </section>
-                                </>
-                              ) : (
-                                <div className="cba-card">
-                                  <div className="noPosts" style={{ padding: '40px 16px' }}>
-                                    <p>왼쪽에서 관리할 교회주보를 선택해 주세요.</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            <aside className="cba-card cba-donor-panel">
-                              <div className="cba-section-head" style={{ marginBottom: 8 }}>
-                                <div>
-                                  <h3>헌금자명단</h3>
-                                  <p>선택한 주보의 헌금자 명단을 입력하고 관리합니다.</p>
-                                </div>
-                              </div>
-
-                              <input
-                                className="cba-search-input"
-                                type="search"
-                                placeholder="이름으로 검색"
-                                value={donorSearch}
-                                onChange={(e) => setDonorSearch(e.target.value)}
-                                disabled={!bulletinEditor}
-                              />
-
-                              <div className="cba-donor-labels">
-                                <div>이름</div>
-                                <div>구분</div>
-                                <div>관리</div>
-                              </div>
-
-                              {editingBulletinId && bulletinEditor ? (
-                                <>
-                                  <div className="cba-donor-list">
-                                    {donorRowsFiltered.map(({ row, originalIndex }) => (
-                                      <div key={`donor-${originalIndex}`} className="cba-donor-item">
-                                        <input
-                                          className="cba-field"
-                                          type="text"
-                                          value={row.name}
-                                          onChange={(e) =>
-                                            updateDonorRow(originalIndex, { name: e.target.value })
-                                          }
-                                          placeholder="헌금자명"
-                                        />
-                                        <select
-                                          className="cba-field"
-                                          value={row.type}
-                                          onChange={(e) =>
-                                            updateDonorRow(originalIndex, { type: e.target.value })
-                                          }
-                                        >
-                                          {['주정헌금', '십일조', '감사헌금', '선교헌금', '건축헌금'].map(
-                                            (type) => (
-                                              <option key={type} value={type}>
-                                                {type}
-                                              </option>
-                                            )
-                                          )}
-                                        </select>
-                                        <button
-                                          type="button"
-                                          className="cba-text-btn delete"
-                                          onClick={() => removeDonorRow(originalIndex)}
-                                        >
-                                          삭제
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="cba-head-actions" style={{ justifyContent: 'flex-end' }}>
-                                    <button type="button" className="cba-btn soft" onClick={addDonorRow}>
-                                      추가
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="cba-btn ghost"
-                                      onClick={() => handleViewBulletin(editingBulletinId)}
-                                    >
-                                      미리보기
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="cba-btn primary"
-                                      onClick={handleSaveBulletin}
-                                      disabled={bulletinSaving}
-                                    >
-                                      {bulletinSaving ? '저장 중...' : '저장'}
-                                    </button>
-                                  </div>
-                                </>
-                              ) : (
-                                <p className="cba-helper" style={{ margin: 0 }}>
-                                  주보를 선택하면 헌금자명단을 편집할 수 있습니다.
-                                </p>
-                              )}
-                            </aside>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <ChurchBulletinAdmin
+                      bulletinList={bulletinList}
+                      editingBulletinId={editingBulletinId}
+                      bulletinEditor={bulletinEditor}
+                      bulletinEditorLoading={bulletinEditorLoading}
+                      bulletinSaving={bulletinSaving}
+                      serviceNames={serviceNames}
+                      selectedServiceIdx={selectedServiceIdx}
+                      setSelectedServiceIdx={setSelectedServiceIdx}
+                      donorSearch={donorSearch}
+                      setDonorSearch={setDonorSearch}
+                      calYM={calYM}
+                      shiftCalMonth={shiftCalMonth}
+                      calendarCells={calendarCells}
+                      bulletinIdByDateKey={bulletinIdByDateKey}
+                      selectedDateKey={selectedDateKey}
+                      bulletinCountByDateKey={bulletinCountByDateKey}
+                      donorRowsFiltered={donorRowsFiltered}
+                      handleCreateBooklet={handleCreateBooklet}
+                      handleDeleteBulletin={handleDeleteBulletin}
+                      handleViewBulletin={handleViewBulletin}
+                      handleEditBulletin={handleEditBulletin}
+                      handleSaveBulletin={handleSaveBulletin}
+                      removeServiceName={removeServiceName}
+                      addServiceName={addServiceName}
+                      updateServiceName={updateServiceName}
+                      addWorshipRow={addWorshipRow}
+                      updateWorshipRow={updateWorshipRow}
+                      removeWorshipRow={removeWorshipRow}
+                      addDonorRow={addDonorRow}
+                      removeDonorRow={removeDonorRow}
+                      updateDonorRow={updateDonorRow}
+                    />
                   ) : (
-                  <div className="postingList">
-                    {activeServiceType === 'mobile-church-notice' &&
-                      bookletList.map((item) => (
-                      <div key={`church-${item.id}`} className="postingItem">
-                        <div className="postingHeader">
-                          <div className="postingTitle">
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                marginBottom: '5px',
-                              }}
-                            >
-                              <span className="categoryTag">교회 전단지</span>
-                              <h3 style={{ margin: 0 }}>
-                                {item.churchName || item.title || '제목 없음'}
-                              </h3>
+                    <div className="postingList">
+                      {activeServiceType === 'mobile-church-notice' &&
+                        bookletList.map((item) => (
+                          <div key={`church-${item.id}`} className="postingItem">
+                            <div className="postingHeader">
+                              <div className="postingTitle">
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    marginBottom: '5px',
+                                  }}
+                                >
+                                  <span className="categoryTag">교회 전단지</span>
+                                  <h3 style={{ margin: 0 }}>
+                                    {item.churchName || item.title || '제목 없음'}
+                                  </h3>
+                                </div>
+                                {item.mainPastor && (
+                                  <span className="postingDate">담임: {item.mainPastor}</span>
+                                )}
+                              </div>
+                              <div className="postingActions">
+                                <button
+                                  className="actionBtn viewBtn"
+                                  onClick={() => handleViewBooklet(item.id)}
+                                >
+                                  보기
+                                </button>
+                                <button
+                                  className="actionBtn editBtn"
+                                  onClick={() => handleEditBooklet(item.id)}
+                                >
+                                  수정
+                                </button>
+                                <button
+                                  className="actionBtn deleteBtn"
+                                  onClick={() => handleDeleteBooklet(item.id)}
+                                >
+                                  삭제
+                                </button>
+                              </div>
                             </div>
-                            {item.mainPastor && (
-                              <span className="postingDate">담임: {item.mainPastor}</span>
-                            )}
-                          </div>
-                          <div className="postingActions">
-                            <button
-                              className="actionBtn viewBtn"
-                              onClick={() => handleViewBooklet(item.id)}
-                            >
-                              보기
-                            </button>
-                            <button
-                              className="actionBtn editBtn"
-                              onClick={() => handleEditBooklet(item.id)}
-                            >
-                              수정
-                            </button>
-                            <button
-                              className="actionBtn deleteBtn"
-                              onClick={() => handleDeleteBooklet(item.id)}
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </div>
-                        <div className="postingInfo">
-                          <div className="infoRow">
-                            <span className="infoLabel">교회명:</span>
-                            <span className="infoValue">{item.churchName || '-'}</span>
-                          </div>
-                          <div className="infoRow">
-                            <span className="infoLabel">담임목사:</span>
-                            <span className="infoValue">{item.mainPastor || '-'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {activeServiceType === 'mobile-event-notice' &&
-                      eventBookletList.map((item) => (
-                      <div key={`event-${item.id}`} className="postingItem">
-                        <div className="postingHeader">
-                          <div className="postingTitle">
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                marginBottom: '5px',
-                              }}
-                            >
-                              <span className="categoryTag">행사 전단지</span>
-                              <h3 style={{ margin: 0 }}>{item.eventName || '행사명 없음'}</h3>
+                            <div className="postingInfo">
+                              <div className="infoRow">
+                                <span className="infoLabel">교회명:</span>
+                                <span className="infoValue">{item.churchName || '-'}</span>
+                              </div>
+                              <div className="infoRow">
+                                <span className="infoLabel">담임목사:</span>
+                                <span className="infoValue">{item.mainPastor || '-'}</span>
+                              </div>
                             </div>
-                            {(item.date || item.place) && (
-                              <span className="postingDate">
-                                {[item.date, item.place].filter(Boolean).join(' · ')}
-                              </span>
-                            )}
                           </div>
-                          <div className="postingActions">
-                            <button
-                              className="actionBtn viewBtn"
-                              onClick={() => handleViewEventBooklet(item.id)}
-                            >
-                              보기
-                            </button>
-                            <button
-                              className="actionBtn editBtn"
-                              onClick={() => handleEditEventBooklet(item.id)}
-                            >
-                              수정
-                            </button>
-                            <button
-                              className="actionBtn deleteBtn"
-                              onClick={() => handleDeleteEventBooklet(item.id)}
-                            >
-                              삭제
-                            </button>
+                        ))}
+                      {activeServiceType === 'mobile-event-notice' &&
+                        eventBookletList.map((item) => (
+                          <div key={`event-${item.id}`} className="postingItem">
+                            <div className="postingHeader">
+                              <div className="postingTitle">
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    marginBottom: '5px',
+                                  }}
+                                >
+                                  <span className="categoryTag">행사 전단지</span>
+                                  <h3 style={{ margin: 0 }}>{item.eventName || '행사명 없음'}</h3>
+                                </div>
+                                {(item.date || item.place) && (
+                                  <span className="postingDate">
+                                    {[item.date, item.place].filter(Boolean).join(' · ')}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="postingActions">
+                                <button
+                                  className="actionBtn viewBtn"
+                                  onClick={() => handleViewEventBooklet(item.id)}
+                                >
+                                  보기
+                                </button>
+                                <button
+                                  className="actionBtn editBtn"
+                                  onClick={() => handleEditEventBooklet(item.id)}
+                                >
+                                  수정
+                                </button>
+                                <button
+                                  className="actionBtn deleteBtn"
+                                  onClick={() => handleDeleteEventBooklet(item.id)}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+                            <div className="postingInfo">
+                              <div className="infoRow">
+                                <span className="infoLabel">행사명:</span>
+                                <span className="infoValue">{item.eventName || '-'}</span>
+                              </div>
+                              <div className="infoRow">
+                                <span className="infoLabel">일시:</span>
+                                <span className="infoValue">{item.date || '-'}</span>
+                              </div>
+                              <div className="infoRow">
+                                <span className="infoLabel">장소:</span>
+                                <span className="infoValue">{item.place || '-'}</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="postingInfo">
-                          <div className="infoRow">
-                            <span className="infoLabel">행사명:</span>
-                            <span className="infoValue">{item.eventName || '-'}</span>
-                          </div>
-                          <div className="infoRow">
-                            <span className="infoLabel">일시:</span>
-                            <span className="infoValue">{item.date || '-'}</span>
-                          </div>
-                          <div className="infoRow">
-                            <span className="infoLabel">장소:</span>
-                            <span className="infoValue">{item.place || '-'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        ))}
+                    </div>
                   )
                 ) : (
                   <div className="noPosts">

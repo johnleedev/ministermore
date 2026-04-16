@@ -13,6 +13,7 @@ router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 
 const { toTemplateInt, toTemplateStr, toChurchMainIdInt, insertChurchMainRow } = require('./bookletNoticeShared');
 
@@ -310,6 +311,57 @@ function serializeImageMainNameSlots(slots) {
   const a = Array.from({ length: MAIN_IMAGE_SLOT_COUNT }, (_, i) => String(slots[i] || '').trim() || '');
   if (a.every((x) => !x)) return '';
   return JSON.stringify(a);
+}
+
+function escapeHtml(raw) {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toEnglishFilenamePart(churchName) {
+  const asciiOnly = String(churchName || '')
+    .normalize('NFKD')
+    .replace(/[^\x00-\x7F]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  return asciiOnly || 'church';
+}
+
+function makeNoticeHtml({ churchMainId, churchName, imageUrl }) {
+  const safeChurchName = escapeHtml(churchName || '교회 소개');
+  const safeImageUrl = escapeHtml(imageUrl || '');
+  const linkUrl = `https://ministermore.co.kr/booklet?id=${churchMainId}`;
+  const safeLinkUrl = escapeHtml(linkUrl);
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=${safeLinkUrl}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+
+    <meta name="description" content="${safeChurchName}"/>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="${safeChurchName}">
+    <meta property="og:description" content="${safeChurchName}">
+    <meta property="og:image" content="${safeImageUrl}">
+    <meta property="og:url" content="${safeLinkUrl}">
+
+    <title>${safeChurchName}</title>
+
+  </head>
+  <body>
+    <script>window.location.replace("${safeLinkUrl}");</script>
+    <p>이동 중... <a href="${safeLinkUrl}">여기를 클릭하세요</a></p>
+  </body>
+</html>
+`;
 }
 
 router.post('/saveIntro', upload_intro, (req, res) => {
@@ -734,6 +786,58 @@ router.post('/saveGallery', upload_gallery.any(), (req, res) => {
           res.status(500).json({ success: false, message: err.message });
         });
     });
+  });
+});
+
+// 완료 시 공유용 HTML 생성 (build/hp/notice)
+router.post('/generateNoticeHtml', (req, res) => {
+  const churchMainId = toChurchMainIdInt(req.body?.churchMainId);
+  if (churchMainId == null) {
+    return res.status(400).json({ success: false, message: 'churchMainId가 필요합니다.' });
+  }
+
+  const query = `
+    SELECT i.churchName, i.imageMainName
+    FROM churchInfo i
+    WHERE i.churchMainId = ?
+    LIMIT 1
+  `;
+
+  bookletnoticedb.query(query, [churchMainId], (err, rows) => {
+    if (err) {
+      console.error('generateNoticeHtml query error:', err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: '전단지 정보를 찾을 수 없습니다.' });
+    }
+
+    const row = rows[0] || {};
+    const churchName = String(row.churchName || '').trim() || `교회소개${churchMainId}`;
+    const imageSlots = parseImageMainNameSlots(row.imageMainName);
+    const firstImage = imageSlots.find((name) => String(name || '').trim() !== '');
+    const imageUrl = firstImage
+      ? `https://www.ministermore.co.kr/images/bookletnotice/mainimages/${firstImage}`
+      : '';
+
+    const englishName = toEnglishFilenamePart(churchName);
+    const fileName = `id${churchMainId}${englishName}.html`;
+    const targetDir = path.resolve(__dirname, '../../../build/hp/notice');
+    const targetPath = path.join(targetDir, fileName);
+    const html = makeNoticeHtml({ churchMainId, churchName, imageUrl });
+
+    try {
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(targetPath, html, 'utf8');
+      return res.json({
+        success: true,
+        fileName,
+        filePath: `/hp/notice/${fileName}`,
+      });
+    } catch (writeErr) {
+      console.error('generateNoticeHtml write error:', writeErr);
+      return res.status(500).json({ success: false, message: writeErr.message });
+    }
   });
 });
 

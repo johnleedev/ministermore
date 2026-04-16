@@ -1191,6 +1191,30 @@ export default function EventCreate() {
     }
   };
 
+  const handleCompleteClick = async () => {
+    if (dirtyTabs[activeTab]) {
+      alert('변경 사항을 저장한 후 완료해 주세요.');
+      return;
+    }
+    if (!eventMainId) {
+      alert('먼저 저장을 완료해 주세요.');
+      return;
+    }
+    try {
+      setSaveLoading(true);
+      await axios.post(`${MainURL}/bookleteventcreate/generateEventHtml`, {
+        eventMainId,
+      });
+      navigate('/service/bookleteventcomplete');
+      window.scrollTo(0, 0);
+    } catch (e) {
+      console.error('행사 완료 HTML 생성 실패:', e);
+      alert('완료 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   const updateProgramItem = (index: number, field: keyof ProgramItem, value: string | string[] | boolean) => {
     setProgramData((prev) =>
       prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
@@ -2424,10 +2448,10 @@ export default function EventCreate() {
               <button
                 type="button"
                 className="event-create__complete-btn"
-                onClick={() => void handleSaveClick()}
-                disabled={!dirtyTabs[activeTab] || saveLoading}
+                onClick={handleCompleteClick}
+                disabled={dirtyTabs[activeTab] || saveLoading}
               >
-                {saveLoading ? '저장 중...' : '저장'}
+                {saveLoading ? '처리 중...' : '완료'}
               </button>
             </div>
           </section>

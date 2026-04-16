@@ -8,9 +8,19 @@ import mockupOrdination from "../../../images/bookletevent/mockups/4weLbRv9.jpeg
 import mockupNewcomer from "../../../images/bookletevent/mockups/LHik6kjh.jpeg";
 import mockupConcert from "../../../images/bookletevent/mockups/EhUOrZGh.jpeg";
 import mockupRetreat from "../../../images/bookletevent/mockups/mKljmC27.jpeg";
-import kakaosampleImage from "../../../images/booklet/kakaosample.png";
+import kakaoSampleOrdination from "../../../images/bookletevent/kakaosample/1.jpg";
+import kakaoSampleNewcomer from "../../../images/bookletevent/kakaosample/2.jpg";
+import kakaoSampleConcert from "../../../images/bookletevent/kakaosample/3.jpg";
+import kakaoSampleRetreat from "../../../images/bookletevent/kakaosample/4.jpg";
 
 type EventMainTabId = "ordination" | "newcomer" | "concert" | "retreat";
+
+const KAKAO_SAMPLE_BY_TAB: Record<EventMainTabId, string> = {
+  ordination: kakaoSampleOrdination,
+  newcomer: kakaoSampleNewcomer,
+  concert: kakaoSampleConcert,
+  retreat: kakaoSampleRetreat,
+};
 
 type ValueCard = { icon: string; title: string; text: string };
 type ProcessStep = { step: string; title: string; desc: string };
@@ -18,7 +28,7 @@ type HeroStat = { strong: string; span: string };
 
 type EventMainVariant = {
   id: EventMainTabId;
-  /** `/eventbooklet?id=…&preview=1` 샘플 링크에 사용 */
+  /** `/event?id=…&preview=1` 샘플 링크에 사용 */
   sampleBookletId: number;
   label: string;
   image: string;
@@ -412,7 +422,7 @@ export default function EventMain() {
   }, []);
 
   const openSample = useCallback(() => {
-    const url = `${window.location.origin}/eventbooklet?id=${variant.sampleBookletId}&preview=1`;
+    const url = `${window.location.origin}/event?id=${variant.sampleBookletId}&preview=1`;
     window.open(url, "_blank");
   }, [variant.sampleBookletId]);
 
@@ -502,9 +512,9 @@ export default function EventMain() {
               <button
                 type="button"
                 className="event-main__btn event-main__btn--primary"
-                onClick={() => scrollToId("features")}
+                onClick={openSample}
               >
-                샘플 안내
+                샘플 보기
               </button>
               <button
                 type="button"
@@ -512,13 +522,6 @@ export default function EventMain() {
                 onClick={onApply}
               >
                 제작하기
-              </button>
-              <button
-                type="button"
-                className="event-main__btn event-main__btn--secondary"
-                onClick={openSample}
-              >
-                샘플 바로 열기
               </button>
             </div>
             <div className="event-main__hero-stats">
@@ -606,8 +609,8 @@ export default function EventMain() {
               </div>
               <div className="event-main__process-preview">
                 <img
-                  src={kakaosampleImage}
-                  alt="카카오톡 공유 샘플 화면"
+                  src={KAKAO_SAMPLE_BY_TAB[variant.id]}
+                  alt={`${variant.label} 카카오톡 공유 샘플 화면`}
                   className="event-main__process-preview-image"
                 />
               </div>

@@ -1,9 +1,42 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useRecoilValue } from 'recoil';
+import axios from 'axios';
 import { FaCheckCircle } from 'react-icons/fa';
+import MainURL from '../../../../MainURL';
+import { recoilUserData } from '../../../../RecoilStore';
 import './BulletinComplete.scss';
 
 export default function BulletinComplete() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const userData = useRecoilValue(recoilUserData);
+  const userAccount = userData?.userAccount || '';
+  const [generating, setGenerating] = useState(false);
+
+  const bulletinMainId = useMemo(() => {
+    const idRaw = new URLSearchParams(location.search).get('id');
+    const n = Number(idRaw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [location.search]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!bulletinMainId && !userAccount) return;
+      try {
+        setGenerating(true);
+        await axios.post(`${MainURL}/bulletincreate/generateBulletinHtml`, {
+          ...(bulletinMainId ? { bulletinMainId } : {}),
+          ...(userAccount ? { userAccount } : {}),
+        });
+      } catch (e) {
+        console.error('주보 완료 HTML 생성 실패:', e);
+      } finally {
+        setGenerating(false);
+      }
+    };
+    void run();
+  }, [bulletinMainId, userAccount]);
 
   return (
     <div className="bulletin-complete">
@@ -20,6 +53,7 @@ export default function BulletinComplete() {
           <button
             type="button"
             className="bulletin-complete__btn bulletin-complete__btn--primary"
+            disabled={generating}
             onClick={() => navigate('/mypage/servicemanage')}
           >
             마이페이지로 이동
@@ -27,6 +61,7 @@ export default function BulletinComplete() {
           <button
             type="button"
             className="bulletin-complete__btn bulletin-complete__btn--secondary"
+            disabled={generating}
             onClick={() => navigate('/service')}
           >
             서비스 목록으로

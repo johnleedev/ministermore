@@ -37,7 +37,7 @@ function App() {
               <Route path="/ministerpage" element={<MinisterDetailPage/>}/>
 
               <Route path="/booklet" element={<BookletDetailPage/>}/>
-              <Route path="/eventbooklet" element={<BookletEventDetailPage/>}/>
+              <Route path="/event" element={<BookletEventDetailPage/>}/>
               <Route path="/bulletin" element={<BulletinDetailPage/>}/>
 
               <Route path="/worship/*" element={<WorshipRouter/>}/>

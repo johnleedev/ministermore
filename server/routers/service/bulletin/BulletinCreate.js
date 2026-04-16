@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 
 router.use(cors());
 router.use(express.json());
@@ -10,6 +12,75 @@ router.use(bodyParser.urlencoded({ extended: true }));
 
 const { bulletindb } = require('../../dbdatas/bulletindb');
 const { toInt, parseWorshipRows } = require('./bulletinShared');
+
+function escapeHtml(raw) {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toEnglishFilenamePart(name) {
+  const asciiOnly = String(name || '')
+    .normalize('NFKD')
+    .replace(/[^\x00-\x7F]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  return asciiOnly || 'bulletin';
+}
+
+function parseBulletinMainImageName(raw) {
+  if (raw == null || raw === '') return '';
+  const s = String(raw).trim();
+  if (!s) return '';
+  if (s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find((v) => String(v || '').trim() !== '');
+        return first ? String(first).trim() : '';
+      }
+    } catch (_) {
+      // noop
+    }
+  }
+  return s;
+}
+
+function makeBulletinHtml({ bulletinMainId, title, imageUrl }) {
+  const safeTitle = escapeHtml(title || '교회 주보');
+  const safeImageUrl = escapeHtml(imageUrl || '');
+  const linkUrl = `https://ministermore.co.kr/bulletin?id=${bulletinMainId}`;
+  const safeLinkUrl = escapeHtml(linkUrl);
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=${safeLinkUrl}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+
+    <meta name="description" content="${safeTitle}"/>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="${safeTitle}">
+    <meta property="og:description" content="${safeTitle}">
+    <meta property="og:image" content="${safeImageUrl}">
+    <meta property="og:url" content="${safeLinkUrl}">
+
+    <title>${safeTitle}</title>
+
+  </head>
+  <body>
+    <script>window.location.replace("${safeLinkUrl}");</script>
+    <p>이동 중... <a href="${safeLinkUrl}">여기를 클릭하세요</a></p>
+  </body>
+</html>
+`;
+}
 
 function insertMainRow(body, cb) {
   const userAccount = body?.userAccount || '';
@@ -134,6 +205,75 @@ router.post('/deleteBulletin', (req, res) => {
       });
     }
   );
+});
+
+router.post('/generateBulletinHtml', (req, res) => {
+  const bulletinMainId = toInt(req.body?.bulletinMainId || req.body?.id);
+  const userAccount = String(req.body?.userAccount || '').trim();
+
+  if (bulletinMainId == null && !userAccount) {
+    return res.status(400).json({ success: false, message: 'bulletinMainId 또는 userAccount가 필요합니다.' });
+  }
+
+  const byIdQuery = `
+    SELECT m.id, i.churchName, i.bulletinTitle, i.imageMainName
+    FROM bulletinMain m
+    LEFT JOIN bulletinInfo i ON i.bulletinMainId = m.id
+    WHERE m.id = ?
+    LIMIT 1
+  `;
+  const byUserQuery = `
+    SELECT m.id, i.churchName, i.bulletinTitle, i.imageMainName
+    FROM bulletinMain m
+    LEFT JOIN bulletinInfo i ON i.bulletinMainId = m.id
+    WHERE m.userAccount = ?
+    ORDER BY m.id DESC
+    LIMIT 1
+  `;
+  const query = bulletinMainId != null ? byIdQuery : byUserQuery;
+  const params = bulletinMainId != null ? [bulletinMainId] : [userAccount];
+
+  bulletindb.query(query, params, (err, rows) => {
+    if (err) {
+      console.error('generateBulletinHtml query error:', err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: '주보 정보를 찾을 수 없습니다.' });
+    }
+
+    const row = rows[0] || {};
+    const id = Number(row.id);
+    const title = String(row.bulletinTitle || row.churchName || '').trim() || `bulletin${id}`;
+    const fileNamePart = toEnglishFilenamePart(String(row.churchName || row.bulletinTitle || ''));
+    const fileName = `id${id}${fileNamePart}.html`;
+    const firstImage = parseBulletinMainImageName(row.imageMainName);
+    const imageUrl = firstImage
+      ? `https://www.ministermore.co.kr/images/bulletin/mainimages/${firstImage}`
+      : '';
+
+    const html = makeBulletinHtml({
+      bulletinMainId: id,
+      title,
+      imageUrl,
+    });
+
+    const targetDir = path.resolve(__dirname, '../../../build/hp/bulletin');
+    const targetPath = path.join(targetDir, fileName);
+    try {
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(targetPath, html, 'utf8');
+      return res.json({
+        success: true,
+        bulletinMainId: id,
+        fileName,
+        filePath: `/hp/bulletin/${fileName}`,
+      });
+    } catch (writeErr) {
+      console.error('generateBulletinHtml write error:', writeErr.message);
+      return res.status(500).json({ success: false, message: writeErr.message });
+    }
+  });
 });
 
 module.exports = router;

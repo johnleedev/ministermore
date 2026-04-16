@@ -131,7 +131,9 @@ export default function BulletinMain() {
               모바일 주보 서비스 · 상세페이지
             </div>
             <h1>
-              종이 주보보다 더 편리하게,
+              종이 주보보다
+              <br />
+              더 쉽고 편리하게
               <br />
               예배 안내를 모바일로
             </h1>
@@ -144,9 +146,9 @@ export default function BulletinMain() {
               <button
                 type="button"
                 className="bulletin-main__btn bulletin-main__btn--primary"
-                onClick={() => scrollToId("features")}
+                onClick={openSample}
               >
-                샘플 안내
+                샘플 보기
               </button>
               <button
                 type="button"
@@ -154,13 +156,6 @@ export default function BulletinMain() {
                 onClick={onApply}
               >
                 제작하기
-              </button>
-              <button
-                type="button"
-                className="bulletin-main__btn bulletin-main__btn--secondary"
-                onClick={openSample}
-              >
-                샘플 보기
               </button>
             </div>
             <div className="bulletin-main__hero-stats">

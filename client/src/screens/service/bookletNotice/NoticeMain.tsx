@@ -127,9 +127,9 @@ export default function NoticeMain() {
               <button
                 type="button"
                 className="notice-main__btn notice-main__btn--primary"
-                onClick={() => scrollToId("features")}
+                onClick={openSample}
               >
-                샘플 안내
+                샘플 보기
               </button>
               <button
                 type="button"
@@ -137,13 +137,6 @@ export default function NoticeMain() {
                 onClick={onApply}
               >
                 제작하기
-              </button>
-              <button
-                type="button"
-                className="notice-main__btn notice-main__btn--secondary"
-                onClick={openSample}
-              >
-                샘플 바로 열기
               </button>
             </div>
             <div className="notice-main__hero-stats">
@@ -205,9 +198,6 @@ export default function NoticeMain() {
             <h2 className="notice-main__sample-cta-title">
               실제 교회 소개 전단지 화면을 확인해 보세요
             </h2>
-            <p className="notice-main__sample-cta-desc">
-              샘플이 새 창(탭)에서 열립니다.
-            </p>
             <button
               type="button"
               className="notice-main__btn notice-main__btn--primary notice-main__btn--sample-large"

@@ -17,9 +17,16 @@
   --cba-shadow-sm: 0 6px 18px rgba(18, 32, 63, 0.06);
   --cba-radius-xl: 24px;
   --cba-radius-lg: 18px;
+  /* 하단 좌·우 패널: 좁은 화면에서 패딩·간격이 과하지 않도록 */
+  --cba-lower-gap: clamp(12px, 2.2vw, 20px);
+  --cba-lower-pad-x: clamp(12px, 2.2vw, 20px);
+  --cba-lower-pad-y: clamp(14px, 2vw, 20px);
 
   width: 100%;
-  margin: 0 0 24px;
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
   font-family:
     'Pretendard',
     'Noto Sans KR',
@@ -37,76 +44,21 @@
   }
 
   .cba-window {
-    width: min(1500px, 100%);
-    margin: 0 auto;
-    background: rgba(255, 255, 255, 0.7);
+    width: 100%;
+    max-width: none;
+    margin: 0;
     backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.7);
     border-radius: 30px;
-    box-shadow: var(--cba-shadow-lg);
     overflow: hidden;
     position: relative;
   }
 
-  .cba-browser-bar {
-    height: 52px;
-    border-bottom: 1px solid rgba(221, 228, 239, 0.8);
-    background: rgba(255, 255, 255, 0.72);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 18px;
-  }
-
-  .cba-traffic-lights {
-    display: flex;
-    gap: 8px;
-  }
-
-  .cba-traffic-lights span {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-
-  .cba-traffic-lights .red {
-    background: #ff5f57;
-  }
-
-  .cba-traffic-lights .yellow {
-    background: #ffbd2e;
-  }
-
-  .cba-traffic-lights .green {
-    background: #28c840;
-  }
-
-  .cba-browser-search {
-    width: min(560px, 48vw);
-    height: 34px;
-    border-radius: 999px;
-    background: #f3f6fb;
-    border: 1px solid #e5ebf4;
-    color: #97a3b7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    letter-spacing: 0.02em;
-  }
-
-  .cba-browser-actions {
-    display: flex;
-    gap: 10px;
-    color: #95a1b3;
-    font-size: 18px;
-  }
-
   .cba-app {
-    padding: 24px;
     display: grid;
-    gap: 20px;
+    gap: clamp(14px, 2.5vw, 20px);
+    /* window의 둥근 클립과 맞닿는 첫 줄 카드 테두리(상단)가 잘리지 않도록 안쪽 여백 */
+    padding: 3px;
+    min-width: 0;
   }
 
   .cba-topbar {
@@ -116,19 +68,8 @@
     gap: 16px;
   }
 
-  .cba-title-wrap h1 {
-    margin: 0;
-    font-size: 28px;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    font-weight: 800;
-    color: var(--cba-text);
-  }
-
-  .cba-title-wrap p {
-    margin: 8px 0 0;
-    color: var(--cba-text-muted);
-    font-size: 14px;
+  .cba-topbar--tools-only {
+    justify-content: flex-end;
   }
 
   .cba-topbar-right {
@@ -251,26 +192,147 @@
     font-size: 13px;
   }
 
-  .cba-layout {
+  .cba-upper-panel {
+    padding: 0;
+    /* border-radius + overflow:hidden 조합에서 바깥 테두리가 잘리는 현상 방지 */
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* 상단 패널: 배경 없음, 외곽·내부 박스 테두리만 */
+  .cba-upper-panel.cba-card {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid var(--cba-border);
+    border-radius: var(--cba-radius-xl);
+  }
+
+  .cba-upper-side .cba-toolbar {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cba-upper-split {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
     gap: 20px;
     align-items: start;
+    padding: 18px 22px 22px;
+  }
+
+  .cba-upper-cal {
+    min-width: 0;
+  }
+
+  .cba-upper-cal .cba-calendar-popover {
+    margin-bottom: 0;
+  }
+
+  .cba-upper-panel .cba-calendar-popover {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid var(--cba-border);
+  }
+
+  .cba-upper-panel .cba-toolbar {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid var(--cba-border);
+  }
+
+  .cba-upper-panel .cba-mini-icon {
+    background: transparent;
+  }
+
+  .cba-upper-panel .cba-status-badge {
+    background: transparent;
+  }
+
+  .cba-upper-panel .cba-tab {
+    background: transparent;
+  }
+
+  .cba-upper-panel .cba-tab.active {
+    background: transparent;
+    box-shadow: none;
+    border-color: var(--cba-accent);
+    color: var(--cba-accent);
+  }
+
+  .cba-upper-panel .cba-date-item {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid var(--cba-border);
+  }
+
+  .cba-upper-panel .cba-date-item.active {
+    background: transparent;
+    border-color: var(--cba-accent);
+  }
+
+  .cba-upper-panel .cba-count-badge {
+    background: transparent;
+    border: 1px solid var(--cba-line);
+  }
+
+  .cba-upper-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .cba-lower-layout {
+    display: grid;
+    /* 오른쪽 열은 내용 최소폭을 지키되, 고정 픽셀보다 뷰포트에 맞게 줄어듦 */
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+    gap: var(--cba-lower-gap);
+    row-gap: var(--cba-lower-gap);
+    align-items: start;
     position: relative;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cba-lower-main-wrap,
+  .cba-lower-donor-wrap {
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid var(--cba-border);
+    border-radius: clamp(14px, 2.5vw, var(--cba-radius-xl));
+    padding: var(--cba-lower-pad-y) var(--cba-lower-pad-x);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* 메인 열 실제 너비 기준으로 헤더·버튼 줄바꿈 (뷰포트 1500px대에서 좁은 1열일 때 대응) */
+  .cba-lower-main-wrap {
+    container-type: inline-size;
+    container-name: cba-lower-main;
+  }
+
+  .cba-main-col {
+    display: grid;
+    gap: var(--cba-lower-gap);
+    min-width: 0;
+  }
+
+  .cba-main-col > .cba-card {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .cba-card {
-    background: var(--cba-surface);
-    border: 1px solid rgba(221, 228, 239, 0.88);
-    border-radius: var(--cba-radius-xl);
-    box-shadow: var(--cba-shadow-md);
-    padding: 22px;
+    
   }
 
   .cba-sidebar {
     padding: 18px;
     position: relative;
-    min-height: 520px;
+    min-height: 0;
   }
 
   .cba-calendar-popover {
@@ -354,7 +416,7 @@
   .cba-sidebar-tabs {
     display: flex;
     gap: 10px;
-    margin: 16px 4px 14px;
+    margin: 0 4px 0;
   }
 
   .cba-tab {
@@ -385,8 +447,8 @@
   .cba-date-list {
     display: grid;
     gap: 10px;
-    margin-top: 10px;
-    max-height: 280px;
+    margin-top: 0;
+    max-height: min(320px, 42vh);
     overflow-y: auto;
   }
 
@@ -439,17 +501,25 @@
     font-weight: 700;
   }
 
-  .cba-content-col {
-    display: grid;
-    gap: 20px;
-  }
-
   .cba-section-head {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 18px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .cba-section-head > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: keep-all;
   }
 
   .cba-section-head h2,
@@ -471,17 +541,25 @@
     gap: 10px;
     flex-wrap: wrap;
     align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    justify-content: flex-end;
   }
 
   .cba-services {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
+    min-width: 0;
   }
 
   .cba-service-card {
     position: relative;
     padding: 18px;
+    min-width: 0;
+    max-width: 100%;
     border-radius: 18px;
     border: 1px solid var(--cba-border);
     background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
@@ -648,6 +726,22 @@
     gap: 14px;
     margin-top: 16px;
     flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .cba-tfoot-actions .cba-helper {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .cba-tfoot-actions .cba-head-actions {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-end;
   }
 
   .cba-helper {
@@ -705,9 +799,10 @@
 
   .cba-mini-stat-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 18px;
+    min-width: 0;
   }
 
   .cba-mini-stat {
@@ -739,24 +834,74 @@
     gap: 8px;
   }
 
+  /* 메인 열이 좁을 때(컨테이너 쿼리): 헤더 버튼을 다음 줄로 · 예배 카드 열 축소 */
+  @container cba-lower-main (max-width: 920px) {
+    .cba-main-col .cba-section-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .cba-main-col .cba-head-actions {
+      justify-content: flex-start;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .cba-main-col .cba-services {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @container cba-lower-main (max-width: 480px) {
+    .cba-main-col .cba-services {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @container cba-lower-main (max-width: 560px) {
+    .cba-main-col .cba-tfoot-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .cba-main-col .cba-tfoot-actions .cba-head-actions {
+      justify-content: flex-start;
+      width: 100%;
+    }
+  }
+
+  /* 뷰포트 ~1500px 이하: 마이페이지 75% 폭 등으로 메인 열이 좁아져 버튼이 삐져나오는 경우 보정 */
+  @media (max-width: 1500px) {
+    .cba-lower-main-wrap .cba-main-col .cba-section-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .cba-lower-main-wrap .cba-main-col .cba-head-actions {
+      width: 100%;
+      max-width: 100%;
+      justify-content: flex-start;
+    }
+
+    .cba-lower-main-wrap .cba-services {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+  }
+
+  /* 좁은 데스크톱: 좌·우 2열 대신 세로로 쌓아 빈 열 없이 자연스럽게 */
   @media (max-width: 1280px) {
-    .cba-layout {
-      grid-template-columns: 300px minmax(0, 1fr);
+    .cba-lower-layout {
+      grid-template-columns: 1fr;
     }
 
     .cba-donor-panel {
-      grid-column: 1 / -1;
       position: static;
     }
   }
 
   @media (max-width: 980px) {
-    .cba-layout {
+    .cba-upper-split {
       grid-template-columns: 1fr;
-    }
-
-    .cba-sidebar {
-      min-height: auto;
     }
 
     .cba-services {
@@ -773,9 +918,22 @@
     .cba-toolbar-right {
       justify-content: flex-start;
     }
+  }
 
-    .cba-browser-search {
-      width: 60%;
+  @media (max-width: 640px) {
+    .cba-mini-stat-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .cba-donor-labels {
+      display: none;
+    }
+
+    .cba-donor-item {
+      grid-template-columns: 1fr;
+      align-items: stretch;
     }
   }
 }

@@ -19,6 +19,7 @@ router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 
 const { toEventMainIdInt, getLegacyEventProgramsOrderParts, toTemplateInt } = require('./bookletEventShared');
 const { EVENT_ORDER_TABLE } = require('./bookletEventOrderShared');
@@ -32,6 +33,57 @@ const EVENT_BOOKLET_TYPE_IDS = new Set(['ordination', 'newcomer', 'concert', 're
 function normalizeBookletType(v) {
   const s = v == null ? '' : String(v).trim();
   return EVENT_BOOKLET_TYPE_IDS.has(s) ? s : '';
+}
+
+function escapeHtml(raw) {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toEnglishFilenamePart(name) {
+  const asciiOnly = String(name || '')
+    .normalize('NFKD')
+    .replace(/[^\x00-\x7F]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  return asciiOnly || 'event';
+}
+
+function makeEventHtml({ eventMainId, title, imageUrl }) {
+  const safeTitle = escapeHtml(title || '행사 전단지');
+  const safeImageUrl = escapeHtml(imageUrl || '');
+  const linkUrl = `https://ministermore.co.kr/event?id=${eventMainId}`;
+  const safeLinkUrl = escapeHtml(linkUrl);
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=${safeLinkUrl}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+
+    <meta name="description" content="${safeTitle}"/>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="${safeTitle}">
+    <meta property="og:description" content="${safeTitle}">
+    <meta property="og:image" content="${safeImageUrl}">
+    <meta property="og:url" content="${safeLinkUrl}">
+
+    <title>${safeTitle}</title>
+
+  </head>
+  <body>
+    <script>window.location.replace("${safeLinkUrl}");</script>
+    <p>이동 중... <a href="${safeLinkUrl}">여기를 클릭하세요</a></p>
+  </body>
+</html>
+`;
 }
 
 /** 스키마·테이블 생성은 DB에서 직접 관리. 기동 시 컬럼 보강·레거시 데이터 이관만 수행.
@@ -1008,6 +1060,58 @@ router.post('/saveWorship', (req, res) => {
       );
     };
     insertOne(0);
+  });
+});
+
+// 완료 시 공유용 HTML 생성 (build/hp/event)
+router.post('/generateEventHtml', (req, res) => {
+  const eventMainId = toEventMainIdInt(req.body?.eventMainId);
+  if (eventMainId == null) {
+    return res.status(400).json({ success: false, message: 'eventMainId가 필요합니다.' });
+  }
+
+  const query = `
+    SELECT eventName, imageMain
+    FROM eventInfo
+    WHERE bookletId = ?
+    LIMIT 1
+  `;
+
+  bookleteventdb.query(query, [String(eventMainId)], (err, rows) => {
+    if (err) {
+      console.error('generateEventHtml query error:', err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: '행사 정보를 찾을 수 없습니다.' });
+    }
+
+    const row = rows[0] || {};
+    const eventName = String(row.eventName || '').trim() || `event${eventMainId}`;
+    const imageSlots = parseImageMainNameSlots(row.imageMain);
+    const firstImage = imageSlots.find((name) => String(name || '').trim() !== '');
+    const imageUrl = firstImage
+      ? `https://www.ministermore.co.kr/images/bookletevent/mainimages/${firstImage}`
+      : '';
+
+    const englishName = toEnglishFilenamePart(eventName);
+    const fileName = `id${eventMainId}${englishName}.html`;
+    const targetDir = path.resolve(__dirname, '../../../build/hp/event');
+    const targetPath = path.join(targetDir, fileName);
+    const html = makeEventHtml({ eventMainId, title: eventName, imageUrl });
+
+    try {
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(targetPath, html, 'utf8');
+      return res.json({
+        success: true,
+        fileName,
+        filePath: `/hp/event/${fileName}`,
+      });
+    } catch (writeErr) {
+      console.error('generateEventHtml write error:', writeErr.message);
+      return res.status(500).json({ success: false, message: writeErr.message });
+    }
   });
 });
 

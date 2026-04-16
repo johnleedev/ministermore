@@ -775,13 +775,28 @@ export default function NoticeCreate() {
     }
   };
 
-  const handleCompleteClick = () => {
+  const handleCompleteClick = async () => {
     if (dirtyTabs[activeTab]) {
       alert('변경 사항을 저장한 후 완료해 주세요.');
       return;
     }
-    navigate('/service/bookletnoticecomplete');
-    window.scrollTo(0, 0);
+    if (!churchMainId) {
+      alert('먼저 저장을 완료해 주세요.');
+      return;
+    }
+    try {
+      setSaveLoading(true);
+      await axios.post(`${MainURL}/bookletnoticecreate/generateNoticeHtml`, {
+        churchMainId,
+      });
+      navigate('/service/bookletnoticecomplete');
+      window.scrollTo(0, 0);
+    } catch (e) {
+      console.error('완료 HTML 생성 실패:', e);
+      alert('완료 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleSaveClick = async () => {
@@ -2416,7 +2431,7 @@ export default function NoticeCreate() {
               type="button"
               className="notice-create__complete-btn"
               onClick={handleCompleteClick}
-              disabled={dirtyTabs[activeTab]}
+              disabled={dirtyTabs[activeTab] || saveLoading}
             >
               완료
             </button>
