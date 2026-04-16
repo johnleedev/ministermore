@@ -17,7 +17,6 @@ import EventTemplateSelect from './bookletEvent/createEvent/EventTemplateSelect'
 import NoticeComplete from './bookletNotice/createNotice/NoticeComplete';
 import EventComplete from './bookletEvent/createEvent/EventComplete';
 import BulletinTemplateSelect from './bulletin/createBulletin/BulletinTemplateSelect';
-import BulletinCreate from './bulletin/createBulletin/BulletinCreate';
 import BulletinComplete from './bulletin/createBulletin/BulletinComplete';
 import HomepageMain from './homepage/HomepageMain';
 
@@ -42,7 +41,6 @@ export default function ServiceRouter() {
         <Route path="/bookletnoticecomplete" element={<NoticeComplete/>}/>
 
         <Route path="/bookletbulletintemplates" element={<BulletinTemplateSelect/>}/>
-        <Route path="/bookletbulletincreate" element={<BulletinCreate/>}/>
         <Route path="/bookletbulletincomplete" element={<BulletinComplete/>}/>
 
         <Route path="/homepage" element={<HomepageMain/>}/>

@@ -19,6 +19,7 @@ export default function MypageMain() {
         <Route path="/resumemanage" element={<ResumeManage/>}/>
         <Route path="/resumeedit" element={<ResumeEdit/>}/>
         <Route path="/servicemanage" element={<ServiceManage/>}/>
+        <Route path="/servicemanage/:serviceType" element={<ServiceManage/>}/>
       </Routes>
       <Footer />
     </div>

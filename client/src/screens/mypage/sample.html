@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>온라인 주보 관리자</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255,255,255,0.94);
+      --surface-strong: #ffffff;
+      --surface-soft: #f7f9fc;
+      --border: #dde4ef;
+      --line: #e9eef5;
+      --text: #152033;
+      --text-muted: #677489;
+      --primary: #183b82;
+      --primary-strong: #102d67;
+      --primary-soft: #eef4ff;
+      --accent: #4f7df4;
+      --danger: #e35858;
+      --success: #1a936f;
+      --shadow-lg: 0 20px 60px rgba(18, 32, 63, 0.12);
+      --shadow-md: 0 12px 28px rgba(18, 32, 63, 0.08);
+      --shadow-sm: 0 6px 18px rgba(18, 32, 63, 0.06);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(79, 125, 244, 0.14), transparent 26%),
+        radial-gradient(circle at top right, rgba(24, 59, 130, 0.10), transparent 22%),
+        linear-gradient(180deg, #f8fbff 0%, #f2f6fb 100%);
+      padding: 28px;
+    }
+
+    .window {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 30px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .browser-bar {
+      height: 52px;
+      border-bottom: 1px solid rgba(221, 228, 239, 0.8);
+      background: rgba(255,255,255,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+    }
+
+    .traffic-lights { display: flex; gap: 8px; }
+    .traffic-lights span {
+      width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+    }
+    .traffic-lights .red { background: #ff5f57; }
+    .traffic-lights .yellow { background: #ffbd2e; }
+    .traffic-lights .green { background: #28c840; }
+
+    .browser-search {
+      width: min(560px, 48vw);
+      height: 34px;
+      border-radius: 999px;
+      background: #f3f6fb;
+      border: 1px solid #e5ebf4;
+      color: #97a3b7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+
+    .browser-actions {
+      display: flex;
+      gap: 10px;
+      color: #95a1b3;
+      font-size: 18px;
+    }
+
+    .app {
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .title-wrap p {
+      margin: 8px 0 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-btn,
+    .btn,
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      border-radius: 12px;
+      height: 42px;
+      padding: 0 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: 0.18s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .icon-btn {
+      width: 42px;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .btn:hover,
+    .icon-btn:hover,
+    .chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 20px rgba(18, 32, 63, 0.08);
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, #244d9d 0%, var(--primary) 100%);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .btn.ghost {
+      background: #fff;
+      color: var(--text);
+    }
+
+    .btn.soft {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: #d8e4ff;
+      box-shadow: none;
+    }
+
+    .btn.danger {
+      color: var(--danger);
+      background: #fff8f8;
+      border-color: #ffd7d7;
+      box-shadow: none;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #dce8ff, #c7d7ff);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      border: 1px solid #d7e2fb;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(221, 228, 239, 0.8);
+      border-radius: 20px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .date-display {
+      min-width: 210px;
+      justify-content: space-between;
+      padding: 0 14px;
+    }
+
+    .status-badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--primary);
+      border: 1px solid #dbe7ff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr) 360px;
+      gap: 20px;
+      align-items: start;
+      position: relative;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(221, 228, 239, 0.88);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      padding: 22px;
+    }
+
+    .sidebar {
+      padding: 18px;
+      position: relative;
+      min-height: 860px;
+    }
+
+    .calendar-popover {
+      background: #fff;
+      border: 1px solid #e2e9f4;
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 24px 50px rgba(14, 31, 65, 0.14);
+      margin-bottom: 16px;
+    }
+
+    .calendar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-weight: 800;
+    }
+
+    .mini-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      display: grid;
+      place-items: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .weekdays,
+    .dates-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+
+    .weekdays {
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .date-cell {
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      color: #405068;
+      cursor: pointer;
+    }
+
+    .date-cell.muted { color: #b0bac8; }
+    .date-cell.active {
+      background: linear-gradient(180deg, #5f8cff 0%, #4675ee 100%);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 18px rgba(79, 125, 244, 0.34);
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      gap: 10px;
+      margin: 16px 4px 14px;
+    }
+
+    .tab {
+      flex: 1;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: #f1f6ff;
+      border-color: #d8e5ff;
+      color: var(--primary);
+      box-shadow: inset 0 -2px 0 var(--primary);
+    }
+
+    .date-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .date-item {
+      border: 1px solid transparent;
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 6px 16px rgba(18, 32, 63, 0.05);
+      cursor: pointer;
+    }
+
+    .date-item .meta {
+      display: grid;
+      gap: 5px;
+    }
+
+    .date-item .meta strong {
+      font-size: 14px;
+    }
+
+    .date-item .meta span {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .date-item.active {
+      background: #eef4ff;
+      border-color: #d8e3fb;
+    }
+
+    .count-badge {
+      min-width: 28px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #f4f7fc;
+      color: var(--text-muted);
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .content-col { display: grid; gap: 20px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .section-head h2,
+    .section-head h3 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .head-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .service-card {
+      position: relative;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      cursor: pointer;
+      transition: 0.18s ease;
+      min-height: 138px;
+    }
+
+    .service-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .service-card.active {
+      border-color: #8db0ff;
+      box-shadow: 0 14px 28px rgba(79, 125, 244, 0.18);
+      background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+    }
+
+    .service-radio {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #c8d4ea;
+      background: #fff;
+    }
+
+    .service-card.active .service-radio {
+      border-color: #4f7df4;
+      box-shadow: inset 0 0 0 5px #4f7df4;
+    }
+
+    .service-card h4 {
+      margin: 30px 0 10px;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .service-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .service-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      background: #eef4ff;
+      border: 1px solid #d8e5ff;
+      border-radius: 999px;
+      padding: 7px 10px;
+    }
+
+    .order-table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fcfdff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 740px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f6f9fd;
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: left;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .field,
+    .select-field,
+    .search-input,
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      min-height: 44px;
+      padding: 10px 14px;
+      font: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .field:focus,
+    .select-field:focus,
+    .search-input:focus,
+    .textarea:focus {
+      border-color: #9cb8ff;
+      box-shadow: 0 0 0 4px rgba(79, 125, 244, 0.12);
+    }
+
+    .textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    .select-wrap::after {
+      content: '⌄';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7c89a0;
+      pointer-events: none;
+      font-size: 14px;
+    }
+
+    .select-field {
+      appearance: none;
+      padding-right: 34px;
+    }
+
+    .row-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .text-btn {
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .text-btn.edit {
+      color: var(--primary);
+      background: #eef4ff;
+      border-color: #d8e5ff;
+    }
+
+    .text-btn.delete {
+      color: var(--danger);
+      background: #fff6f6;
+      border-color: #ffd8d8;
+    }
+
+    .tfoot-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .helper {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .donor-panel {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .donor-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .donor-item {
+      display: grid;
+      grid-template-columns: 1fr 110px auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .donor-labels {
+      display: grid;
+      grid-template-columns: 1fr 110px 58px;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0 4px;
+    }
+
+    .mini-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .mini-stat {
+      border-radius: 16px;
+      background: #f8fbff;
+      border: 1px solid #e4ecf7;
+      padding: 14px;
+    }
+
+    .mini-stat span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .mini-stat strong {
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .toast {
+      position: fixed;
+      right: 28px;
+      bottom: 28px;
+      background: #122d67;
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: .22s ease;
+      z-index: 30;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1280px) {
+      .layout {
+        grid-template-columns: 300px minmax(0, 1fr);
+      }
+      .donor-panel {
+        grid-column: 1 / -1;
+        position: static;
+      }
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 14px; }
+      .app { padding: 16px; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { min-height: auto; }
+      .services { grid-template-columns: 1fr; }
+      .toolbar, .topbar { flex-direction: column; align-items: stretch; }
+      .topbar-right, .toolbar-right { justify-content: flex-start; }
+      .browser-search { width: 60%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="browser-bar">
+      <div class="traffic-lights" aria-hidden="true">
+        <span class="red"></span>
+        <span class="yellow"></span>
+        <span class="green"></span>
+      </div>
+      <div class="browser-search">church-bulletin-admin.local</div>
+      <div class="browser-actions" aria-hidden="true">
+        <span>↶</span>
+        <span>↷</span>
+        <span>⋯</span>
+      </div>
+    </div>
+
+    <div class="app">
+      <div class="topbar">
+        <div class="title-wrap">
+          <h1>온라인 주보 관리자</h1>
+          <p>날짜별 예배리스트, 예배순서, 헌금자명단을 한 화면에서 관리하는 관리자 페이지 시안</p>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" type="button" aria-label="알림">🔔</button>
+          <button class="icon-btn" type="button" aria-label="검색">⌕</button>
+          <div class="avatar" aria-label="관리자">관</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="chip date-display" id="currentDateButton" type="button">
+            <span>📅 <strong id="selectedDateLabel">2026년 4월 19일</strong></span>
+            <span>⌄</span>
+          </button>
+          <div class="status-badge">주일 예배 운영안 · 저장 준비됨</div>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn ghost" type="button" id="previewTopButton">미리보기</button>
+          <button class="btn primary" type="button" id="saveTopButton">저장</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="card sidebar">
+          <div class="calendar-popover">
+            <div class="calendar-head">
+              <button class="mini-icon" type="button">←</button>
+              <strong id="calendarTitle">2026년 4월</strong>
+              <button class="mini-icon" type="button">→</button>
+            </div>
+
+            <div class="weekdays">
+              <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            </div>
+
+            <div class="dates-grid" id="calendarGrid"></div>
+          </div>
+
+          <div class="sidebar-tabs">
+            <button class="tab active" type="button">주보 날짜</button>
+            <button class="tab" type="button">보관함</button>
+          </div>
+
+          <div class="date-list" id="dateList"></div>
+        </aside>
+
+        <div class="content-col">
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>예배리스트</h2>
+                <p>선택한 날짜에 운영되는 예배를 확인하고 예배순서를 편집할 수 있습니다.</p>
+              </div>
+              <div class="head-actions">
+                <button class="btn danger" type="button" id="removeServiceButton">삭제</button>
+                <button class="btn ghost" type="button" id="previewServiceButton">미리보기</button>
+              </div>
+            </div>
+
+            <div class="services" id="serviceCards"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>예배순서</h2>
+                <p><strong id="orderServiceTitle">주일1부예배</strong>의 순서를 편집합니다.</p>
+              </div>
+              <div class="head-actions">
+                <button class="btn soft" type="button" id="addRowButton">추가</button>
+                <button class="btn primary" type="button" id="saveOrderButton">저장</button>
+              </div>
+            </div>
+
+            <div class="mini-stat-grid" style="margin-bottom:18px;">
+              <div class="mini-stat">
+                <span>선택 날짜</span>
+                <strong id="statDate">04/19</strong>
+              </div>
+              <div class="mini-stat">
+                <span>예배 순서 수</span>
+                <strong id="statOrderCount">5</strong>
+              </div>
+              <div class="mini-stat">
+                <span>편집 상태</span>
+                <strong style="color: var(--success);">정상</strong>
+              </div>
+            </div>
+
+            <div class="order-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 26%;">순서명</th>
+                    <th style="width: 20%;">유형</th>
+                    <th>내용</th>
+                    <th style="width: 150px;">관리</th>
+                  </tr>
+                </thead>
+                <tbody id="orderTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="tfoot-actions">
+              <div class="helper">팁: 항목 추가 후 저장을 누르면 날짜별 예배순서를 관리할 수 있습니다.</div>
+              <div class="head-actions">
+                <button class="btn ghost" type="button" id="previewOrderButton">미리보기</button>
+                <button class="btn primary" type="button" id="saveBottomButton">저장</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="card donor-panel">
+          <div class="section-head" style="margin-bottom: 8px;">
+            <div>
+              <h3>헌금자명단</h3>
+              <p>선택한 날짜 기준으로 헌금자 명단을 입력하고 관리합니다.</p>
+            </div>
+          </div>
+
+          <input class="search-input" id="donorSearch" type="search" placeholder="이름으로 검색" />
+
+          <div class="donor-labels">
+            <div>이름</div>
+            <div>구분</div>
+            <div>관리</div>
+          </div>
+
+          <div class="donor-list" id="donorList"></div>
+
+          <div>
+            <label for="donorMemo" class="helper" style="display:block; margin-bottom:8px;">메모</label>
+            <textarea class="textarea" id="donorMemo" placeholder="예: 총 2부 예배 합산, 청년부 별도 집계"></textarea>
+          </div>
+
+          <div class="head-actions" style="justify-content:flex-end;">
+            <button class="btn soft" type="button" id="addDonorButton">추가</button>
+            <button class="btn ghost" type="button" id="previewDonorButton">미리보기</button>
+            <button class="btn primary" type="button" id="saveDonorButton">저장</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      selectedDate: '2026-04-19',
+      selectedService: '주일1부예배',
+      data: {
+        '2026-04-19': {
+          services: [
+            {
+              name: '주일1부예배',
+              desc: '오전 7:30 · 본당',
+              order: [
+                { title: '찬양', type: '인도', content: '경배와 찬양팀' },
+                { title: '기도', type: '기도', content: '이형윤 장로' },
+                { title: '성경봉독', type: '말씀', content: '요한복음 3:16-21' },
+                { title: '설교', type: '말씀', content: '하나님의 사랑과 은혜' },
+                { title: '축도', type: '마침', content: '담임목사' }
+              ]
+            },
+            {
+              name: '주일2부예배',
+              desc: '오전 11:00 · 본당',
+              order: [
+                { title: '찬양', type: '인도', content: '할렐루야 찬양대' },
+                { title: '대표기도', type: '기도', content: '안수집사 김민수' },
+                { title: '성경봉독', type: '말씀', content: '시편 23편' },
+                { title: '설교', type: '말씀', content: '선한 목자의 인도하심' },
+                { title: '봉헌기도', type: '헌금', content: '부목사' },
+                { title: '축도', type: '마침', content: '담임목사' }
+              ]
+            },
+            {
+              name: '오후예배',
+              desc: '오후 2:00 · 소예배실',
+              order: [
+                { title: '찬양', type: '인도', content: '청년부 찬양팀' },
+                { title: '기도', type: '기도', content: '청년부 리더' },
+                { title: '말씀나눔', type: '말씀', content: '로마서 12장' },
+                { title: '합심기도', type: '기도', content: '나라와 교회를 위해' },
+                { title: '주기도문', type: '마침', content: '다 함께' }
+              ]
+            }
+          ],
+          donors: [
+            { name: '이형윤', type: '십일조' },
+            { name: '박은주', type: '감사헌금' },
+            { name: '김도현', type: '주정헌금' },
+            { name: '이용은', type: '선교헌금' },
+            { name: '이재윤', type: '주정헌금' },
+            { name: '이나주', type: '감사헌금' }
+          ]
+        },
+        '2026-04-18': {
+          services: [
+            {
+              name: '토요기도회',
+              desc: '오후 8:00 · 본당',
+              order: [
+                { title: '찬양', type: '인도', content: '기도회 찬양팀' },
+                { title: '합심기도', type: '기도', content: '개인/가정/교회 기도제목' },
+                { title: '말씀', type: '말씀', content: '야고보서 5장' },
+                { title: '축복기도', type: '마침', content: '담당목사' }
+              ]
+            }
+          ],
+          donors: [
+            { name: '서미정', type: '감사헌금' },
+            { name: '정하늘', type: '주정헌금' }
+          ]
+        },
+        '2026-04-17': {
+          services: [
+            {
+              name: '새벽예배',
+              desc: '오전 5:30 · 본당',
+              order: [
+                { title: '찬송', type: '인도', content: '찬송가 288장' },
+                { title: '기도', type: '기도', content: '인도자' },
+                { title: '말씀', type: '말씀', content: '예레미야애가 3장' },
+                { title: '주기도문', type: '마침', content: '다 함께' }
+              ]
+            }
+          ],
+          donors: [
+            { name: '한주연', type: '주정헌금' }
+          ]
+        }
+      }
+    };
+
+    const calendarNumbers = [30,31,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,1,2,3];
+
+    const dateListEl = document.getElementById('dateList');
+    const serviceCardsEl = document.getElementById('serviceCards');
+    const orderTableBodyEl = document.getElementById('orderTableBody');
+    const donorListEl = document.getElementById('donorList');
+    const selectedDateLabelEl = document.getElementById('selectedDateLabel');
+    const orderServiceTitleEl = document.getElementById('orderServiceTitle');
+    const statDateEl = document.getElementById('statDate');
+    const statOrderCountEl = document.getElementById('statOrderCount');
+    const donorSearchEl = document.getElementById('donorSearch');
+    const toastEl = document.getElementById('toast');
+    const calendarGridEl = document.getElementById('calendarGrid');
+
+    function formatKoreanDate(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return `${y}년 ${m}월 ${d}일`;
+    }
+
+    function shortDate(iso) {
+      const [, m, d] = iso.split('-');
+      return `${m}/${d}`;
+    }
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+    }
+
+    function getSelectedDateData() {
+      return state.data[state.selectedDate] || { services: [], donors: [] };
+    }
+
+    function getSelectedService() {
+      const services = getSelectedDateData().services;
+      return services.find(s => s.name === state.selectedService) || services[0] || null;
+    }
+
+    function ensureValidService() {
+      const services = getSelectedDateData().services;
+      if (!services.length) {
+        state.selectedService = '';
+        return;
+      }
+      if (!services.some(s => s.name === state.selectedService)) {
+        state.selectedService = services[0].name;
+      }
+    }
+
+    function renderCalendar() {
+      calendarGridEl.innerHTML = '';
+      calendarNumbers.forEach((n, index) => {
+        const isMuted = index < 2 || index > 31;
+        const active = n === 19 && !isMuted;
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = `date-cell${isMuted ? ' muted' : ''}${active ? ' active' : ''}`;
+        cell.textContent = n;
+        if (!isMuted && state.data[`2026-04-${String(n).padStart(2,'0')}`]) {
+          cell.addEventListener('click', () => {
+            state.selectedDate = `2026-04-${String(n).padStart(2,'0')}`;
+            ensureValidService();
+            render();
+          });
+        }
+        calendarGridEl.appendChild(cell);
+      });
+    }
+
+    function renderDateList() {
+      dateListEl.innerHTML = '';
+      Object.keys(state.data)
+        .sort((a,b) => b.localeCompare(a))
+        .forEach(date => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = `date-item${date === state.selectedDate ? ' active' : ''}`;
+          item.innerHTML = `
+            <div class="meta">
+              <strong>${formatKoreanDate(date)}</strong>
+              <span>${state.data[date].services.length}개 예배 · 헌금자 ${state.data[date].donors.length}명</span>
+            </div>
+            <span class="count-badge">${state.data[date].services.length}</span>
+          `;
+          item.addEventListener('click', () => {
+            state.selectedDate = date;
+            ensureValidService();
+            render();
+          });
+          dateListEl.appendChild(item);
+        });
+    }
+
+    function renderServices() {
+      serviceCardsEl.innerHTML = '';
+      const { services } = getSelectedDateData();
+      services.forEach(service => {
+        const card = document.createElement('article');
+        card.className = `service-card${service.name === state.selectedService ? ' active' : ''}`;
+        card.innerHTML = `
+          <div class="service-radio" aria-hidden="true"></div>
+          <div class="service-label">예배 관리</div>
+          <h4>${service.name}</h4>
+          <p>${formatKoreanDate(state.selectedDate)}<br>${service.desc}</p>
+        `;
+        card.addEventListener('click', () => {
+          state.selectedService = service.name;
+          render();
+        });
+        serviceCardsEl.appendChild(card);
+      });
+    }
+
+    function renderOrderTable() {
+      const selectedService = getSelectedService();
+      orderTableBodyEl.innerHTML = '';
+      if (!selectedService) return;
+      selectedService.order.forEach((row, rowIndex) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input class="field" value="${row.title}" data-field="title" data-index="${rowIndex}" /></td>
+          <td>
+            <div class="select-wrap">
+              <select class="select-field" data-field="type" data-index="${rowIndex}">
+                ${['인도','기도','말씀','헌금','특송','마침'].map(type => `<option ${type===row.type?'selected':''}>${type}</option>`).join('')}
+              </select>
+            </div>
+          </td>
+          <td><input class="field" value="${row.content}" data-field="content" data-index="${rowIndex}" /></td>
+          <td>
+            <div class="row-actions">
+              <button class="text-btn edit" type="button" data-action="edit" data-index="${rowIndex}">편집</button>
+              <button class="text-btn delete" type="button" data-action="remove" data-index="${rowIndex}">삭제</button>
+            </div>
+          </td>
+        `;
+        orderTableBodyEl.appendChild(tr);
+      });
+
+      orderTableBodyEl.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', handleOrderFieldUpdate);
+        el.addEventListener('change', handleOrderFieldUpdate);
+      });
+
+      orderTableBodyEl.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', () => showToast('해당 순서를 편집 중입니다.'));
+      });
+
+      orderTableBodyEl.querySelectorAll('[data-action="remove"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const index = Number(btn.dataset.index);
+          selectedService.order.splice(index, 1);
+          render();
+          showToast('예배순서 항목을 삭제했습니다.');
+        });
+      });
+    }
+
+    function handleOrderFieldUpdate(e) {
+      const service = getSelectedService();
+      if (!service) return;
+      const index = Number(e.target.dataset.index);
+      const field = e.target.dataset.field;
+      service.order[index][field] = e.target.value;
+      statOrderCountEl.textContent = String(service.order.length);
+    }
+
+    function renderDonors() {
+      donorListEl.innerHTML = '';
+      const keyword = donorSearchEl.value.trim();
+      const { donors } = getSelectedDateData();
+      donors
+        .filter(d => !keyword || d.name.includes(keyword) || d.type.includes(keyword))
+        .forEach((donor, index) => {
+          const item = document.createElement('div');
+          item.className = 'donor-item';
+          item.innerHTML = `
+            <input class="field" value="${donor.name}" data-donor-index="${index}" data-donor-field="name" />
+            <div class="select-wrap">
+              <select class="select-field" data-donor-index="${index}" data-donor-field="type">
+                ${['주정헌금','십일조','감사헌금','선교헌금','건축헌금'].map(type => `<option ${type===donor.type?'selected':''}>${type}</option>`).join('')}
+              </select>
+            </div>
+            <button class="text-btn delete" type="button" data-donor-remove="${index}">삭제</button>
+          `;
+          donorListEl.appendChild(item);
+        });
+
+      donorListEl.querySelectorAll('[data-donor-field]').forEach(el => {
+        el.addEventListener('input', handleDonorUpdate);
+        el.addEventListener('change', handleDonorUpdate);
+      });
+
+      donorListEl.querySelectorAll('[data-donor-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const index = Number(btn.dataset.donorRemove);
+          getSelectedDateData().donors.splice(index, 1);
+          renderDonors();
+          showToast('헌금자 항목을 삭제했습니다.');
+        });
+      });
+    }
+
+    function handleDonorUpdate(e) {
+      const donor = getSelectedDateData().donors[Number(e.target.dataset.donorIndex)];
+      donor[e.target.dataset.donorField] = e.target.value;
+    }
+
+    function renderHeader() {
+      selectedDateLabelEl.textContent = formatKoreanDate(state.selectedDate);
+      const service = getSelectedService();
+      orderServiceTitleEl.textContent = service ? service.name : '예배 없음';
+      statDateEl.textContent = shortDate(state.selectedDate);
+      statOrderCountEl.textContent = String(service ? service.order.length : 0);
+    }
+
+    function render() {
+      ensureValidService();
+      renderHeader();
+      renderCalendar();
+      renderDateList();
+      renderServices();
+      renderOrderTable();
+      renderDonors();
+    }
+
+    document.getElementById('addRowButton').addEventListener('click', () => {
+      const service = getSelectedService();
+      if (!service) return;
+      service.order.push({ title: '새 순서', type: '인도', content: '내용을 입력하세요' });
+      render();
+      showToast('예배순서 항목을 추가했습니다.');
+    });
+
+    document.getElementById('addDonorButton').addEventListener('click', () => {
+      getSelectedDateData().donors.push({ name: '새 헌금자', type: '주정헌금' });
+      renderDonors();
+      showToast('헌금자 항목을 추가했습니다.');
+    });
+
+    ['saveTopButton','saveOrderButton','saveBottomButton','saveDonorButton'].forEach(id => {
+      document.getElementById(id).addEventListener('click', () => showToast('변경사항을 저장했습니다.'));
+    });
+
+    ['previewTopButton','previewServiceButton','previewOrderButton','previewDonorButton'].forEach(id => {
+      document.getElementById(id).addEventListener('click', () => showToast('미리보기 화면을 준비했습니다.'));
+    });
+
+    document.getElementById('removeServiceButton').addEventListener('click', () => {
+      const dateData = getSelectedDateData();
+      const idx = dateData.services.findIndex(s => s.name === state.selectedService);
+      if (idx >= 0) {
+        dateData.services.splice(idx, 1);
+        ensureValidService();
+        render();
+        showToast('선택한 예배를 삭제했습니다.');
+      }
+    });
+
+    donorSearchEl.addEventListener('input', renderDonors);
+
+    render();
+  </script>
+</body>
+</html>

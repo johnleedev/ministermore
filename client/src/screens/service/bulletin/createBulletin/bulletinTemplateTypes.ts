@@ -4,10 +4,11 @@ export type BulletinTemplateId = 'classic' | 'modern' | 'minimal';
 
 export const DEFAULT_BULLETIN_TEMPLATE: BulletinTemplateId = 'classic';
 
-export type BulletinEditorTabId = 'info' | 'order' | 'news';
+export type BulletinEditorTabId = 'main' | 'order' | 'news' | 'offering';
 
 export const BULLETIN_EDITOR_TABS: { id: BulletinEditorTabId; label: string }[] = [
-  { id: 'info', label: '기본' },
-  { id: 'order', label: '예배 순서' },
-  { id: 'news', label: '안내' },
+  { id: 'main', label: '메인' },
+  { id: 'order', label: '예배순서' },
+  { id: 'news', label: '교회소식' },
+  { id: 'offering', label: '헌금자명단' },
 ];

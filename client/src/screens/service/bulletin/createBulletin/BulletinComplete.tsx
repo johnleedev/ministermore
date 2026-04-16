@@ -11,17 +11,18 @@ export default function BulletinComplete() {
         <div className="bulletin-complete__icon">
           <FaCheckCircle />
         </div>
-        <h1 className="bulletin-complete__title">모바일 주보 작성이 완료되었습니다</h1>
-        <p className="bulletin-complete__desc">
-          이번 주 주보가 저장되었습니다. 필요하면 언제든 다시 수정할 수 있습니다.
-        </p>
+        <h1 className="bulletin-complete__title">결제가 완료되었습니다.</h1>
+        <h1 className="bulletin-complete__title">마이페이지에서 관리하시면 됩니다.</h1>
+        {/* <p className="bulletin-complete__desc">
+          결제가 완료되었습니다. 마이페이지에서 관리하시면 됩니다.
+        </p> */}
         <div className="bulletin-complete__btns">
           <button
             type="button"
             className="bulletin-complete__btn bulletin-complete__btn--primary"
-            onClick={() => navigate('/service/bookletbulletincreate')}
+            onClick={() => navigate('/mypage/servicemanage')}
           >
-            주보 수정하기
+            마이페이지로 이동
           </button>
           <button
             type="button"
