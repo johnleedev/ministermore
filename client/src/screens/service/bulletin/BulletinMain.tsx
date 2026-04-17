@@ -117,7 +117,7 @@ export default function BulletinMain() {
           <button
             type="button"
             className="bulletin-main__btn bulletin-main__btn--primary bulletin-main__btn--header"
-            onClick={() => scrollToId("contact")}
+            onClick={onApply}
           >
             제작하기
           </button>
