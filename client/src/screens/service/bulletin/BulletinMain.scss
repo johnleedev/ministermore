@@ -40,74 +40,6 @@ $radius-md: 14px;
     margin: 0 auto;
   }
 
-  // ----- Sticky page header (sample .header) -----
-  &__page-header {
-    position: sticky;
-    top: 0;
-    z-index: 90;
-    backdrop-filter: blur(14px);
-    background: rgba(255, 255, 255, 0.78);
-    border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-  }
-
-  &__page-header-inner {
-    height: 76px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-  }
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 800;
-    color: $navy;
-    letter-spacing: -0.4px;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font-size: 1rem;
-    font-family: inherit;
-  }
-
-  &__brand-mark {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, $navy, #2d4b7c);
-    display: grid;
-    place-items: center;
-    color: #fff;
-    font-size: 18px;
-    box-shadow: 0 10px 20px rgba(22, 36, 59, 0.18);
-  }
-
-  &__nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    color: #4b5563;
-    font-size: 15px;
-    font-weight: 600;
-
-    button {
-      background: none;
-      border: none;
-      padding: 0;
-      font: inherit;
-      color: inherit;
-      cursor: pointer;
-      font-weight: 600;
-
-      &:hover {
-        color: $navy;
-      }
-    }
-  }
-
   &__btn {
     display: inline-flex;
     align-items: center;
@@ -142,12 +74,6 @@ $radius-md: 14px;
         background: #fff;
         transform: translateY(-2px);
       }
-    }
-
-    &--header {
-      min-height: 48px;
-      padding: 0 20px;
-      font-size: 14px;
     }
 
     &--block {
@@ -657,6 +583,112 @@ $radius-md: 14px;
     margin-bottom: 18px;
   }
 
+  &__pricing-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 460px;
+    column-gap: 44px;
+    align-items: start;
+  }
+
+  &__pricing-copy-title {
+    margin: 16px 0 12px;
+    font-size: clamp(32px, 4vw, 48px);
+    line-height: 1.12;
+    letter-spacing: -1.4px;
+    color: $navy;
+  }
+
+  &__pricing-support {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  &__support-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(34, 53, 85, 0.16);
+    background: rgba(255, 255, 255, 0.82);
+    color: #4b5f7e;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__support-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $navy, $navy-mid);
+  }
+
+  &__pricing-card {
+    border-radius: 28px;
+    padding: 30px 26px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    border: 1px solid rgba(34, 53, 85, 0.16);
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+  }
+
+  &__pricing-label {
+    font-size: 15px;
+    color: #5d6f8c;
+    font-weight: 700;
+  }
+
+  &__pricing-price {
+    margin: 10px 0 0;
+    font-size: clamp(32px, 4.6vw, 46px);
+    line-height: 1.02;
+    color: $navy;
+    font-weight: 800;
+
+    span {
+      display: block;
+      margin-top: 8px;
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 600;
+    }
+  }
+
+  &__pricing-list {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 11px;
+
+    li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: #4f6078;
+      font-size: 14px;
+
+      &::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 7px;
+        background: linear-gradient(135deg, $gold, $navy-mid);
+        flex: 0 0 auto;
+      }
+    }
+  }
+
+  &__pricing-actions {
+    margin-top: 18px;
+
+    .bulletin-main__btn {
+      width: 100%;
+    }
+  }
+
   // ----- Features -----
   &__feature-list {
     display: grid;
@@ -1056,6 +1088,7 @@ $radius-md: 14px;
   .bulletin-main__benefit-grid,
   .bulletin-main__feature-item,
   .bulletin-main__card-grid-3,
+  .bulletin-main__pricing-shell,
   .bulletin-main__process-grid {
     grid-template-columns: 1fr;
   }
@@ -1078,17 +1111,13 @@ $radius-md: 14px;
   .bulletin-main__hero-stats {
     grid-template-columns: 1fr;
   }
+
+  .bulletin-main__pricing-card {
+    max-width: none;
+  }
 }
 
 @media (max-width: 768px) {
-  .bulletin-main__page-header-inner {
-    height: 70px;
-  }
-
-  .bulletin-main__nav {
-    display: none;
-  }
-
   .bulletin-main__section {
     padding: 72px 0;
   }

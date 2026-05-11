@@ -451,14 +451,14 @@ export default function NoticeCreate() {
     }
   }, [activeTab]);
 
-  // churchMain id는 URL에서만 사용 (NoticeTemplateSelect 결제 후 or ServiceManage 수정 시 전달)
+  // churchMain id는 URL에서만 사용 (NoticeApplyPay 결제 후 or ServiceManage 수정 시 전달)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
     if (id) {
       setChurchMainId(id);
     } else {
-      // id 없으면 템플릿 선택 페이지로 (전단지 만들기는 반드시 NoticeTemplateSelect 경유)
+      // id 없으면 템플릿 선택 페이지로 (전단지 만들기는 반드시 NoticeApplyPay 경유)
       navigate('/service/bookletnoticetemplates', { replace: true });
     }
   }, [location.search, navigate]);

@@ -57,7 +57,7 @@ HTTP 마운트 예(`app.js`): `/bookletnoticemain`, `/bookletnoticecreate`.
 
 ### churchMain (신규)
 
-전단지 단위 메타 정보. NoticeTemplateSelect에서 선택한 디자인 등 저장.
+전단지 단위 메타 정보. NoticeApplyPay에서 선택한 디자인 등 저장.
 
 | 항목 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|

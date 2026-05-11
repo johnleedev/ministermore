@@ -50,4 +50,4 @@ export interface DonorRow {
   type: string;
 }
 
-export type ServiceType = 'mobile-church-notice' | 'mobile-event-notice' | 'church-bulletin';
+export type ServiceType = 'mobile-church-notice' | 'mobile-event-notice';

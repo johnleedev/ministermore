@@ -11,6 +11,25 @@ const secretKey = require('../../secretKey');
 const argon2 = require('argon2');
 const nodemailer = require('nodemailer');
 
+function normalizeFirebaseToken(raw) {
+  const token = String(raw || '').trim();
+  return token || '';
+}
+
+function updateUserFirebaseToken(userAccount, token) {
+  const normalized = normalizeFirebaseToken(token);
+  if (!userAccount || !normalized) return;
+  commondb.query(
+    `UPDATE user SET token = ? WHERE userAccount = ?`,
+    [normalized, userAccount],
+    function (error) {
+      if (error) {
+        console.error('firebase token update error:', error);
+      }
+    }
+  );
+}
+
 
 // 카카오 & 네이버 홈페이지 로그인에서 토큰 요청시 발행 함수
 router.post('/loginsnstoken', async (req, res) => {
@@ -58,7 +77,7 @@ router.post('/loginsnstoken', async (req, res) => {
 
 // 카카오 & 네이버 로그인 로직
 router.post('/login', async (req, res) => {
-  var { url, AccessToken } = req.body;
+  var { url, AccessToken, token } = req.body;
 
   try {
     const apiURL = url.includes('kakao') ?
@@ -78,7 +97,7 @@ router.post('/login', async (req, res) => {
     // refreshToken 만들기
     const refreshToken = jwt.sign({ type: 'JWT', USER_ID: userEmail }, SECRET_KEY, {
       expiresIn: '30d',
-      issuer: 'churchbooklet'
+      issuer: 'ministermore'
     });
 
     // 회원인지 파악하기
@@ -100,12 +119,20 @@ router.post('/login', async (req, res) => {
         userData.refreshToken = refreshToken;
         userData.isUser = true;
         if ( userData.userURL === userURL ) {
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           res.json(userData);
           res.end();
         } else {
           commondb.query(
             `UPDATE user SET userURL = '${userURL}' WHERE userAccount = '${userData.userAccount}'`
           );
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           userData.userURL = userURL
           res.json(userData);
           res.end();
@@ -120,21 +147,24 @@ router.post('/login', async (req, res) => {
 router.post('/loginsocial/apple', async (req, res) => {
   
   const { userInfo } = req.body;
-  const { userFullName } = req.body;
+  const userFullName = req.body.userFullName || {};
+  const token = req.body.token;
 
   const userEmail = userInfo.email;
-  const familyName = userFullName.familyName;
-  const givenName = userFullName.givenName;
+  const familyName = userFullName.familyName ?? '';
+  const givenName = userFullName.givenName ?? '';
   
   try {
-    const userName = `${familyName}${givenName}`;
+    const userName = (familyName || givenName)
+      ? `${familyName}${givenName}`
+      : (userEmail || '').split('@')[0] || 'Apple';
     const SECRET_KEY = secretKey.key;
     const userURL = 'apple';
 
     // refreshToken 만들기
     const refreshToken = jwt.sign({ type: 'JWT', USER_ID: userEmail }, SECRET_KEY, {
       expiresIn: '30d',
-      issuer: 'churchbooklet'
+      issuer: 'ministermore'
     });
 
     // 회원인지 파악하기
@@ -159,12 +189,20 @@ router.post('/loginsocial/apple', async (req, res) => {
         userData.isUser = true;
 
         if ( userData.userURL === userURL ) {
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           res.json(userData);
           res.end();
         } else {
           commondb.query(
             `UPDATE user SET userURL = '${userURL}' WHERE userAccount = '${userData.userAccount}'`
           );
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           userData.userURL = userURL
           res.json(userData);
           res.end();
@@ -179,7 +217,7 @@ router.post('/loginsocial/apple', async (req, res) => {
 // 구글 로그인
 router.post('/loginsocial/google', async (req, res) => {
 
-  const { user } = req.body;
+  const { user, token } = req.body;
 
   try {
     const userEmail = user.email;
@@ -189,7 +227,7 @@ router.post('/loginsocial/google', async (req, res) => {
     // refreshToken 만들기
     const refreshToken = jwt.sign({ type: 'JWT', USER_ID: userEmail }, SECRET_KEY, {
       expiresIn: '30d',
-      issuer: 'churchbooklet'
+      issuer: 'ministermore'
     });
 
     // 회원인지 파악하기
@@ -211,12 +249,20 @@ router.post('/loginsocial/google', async (req, res) => {
         userData.isUser = true;
 
         if ( userData.userURL === userURL ) {
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           res.json(userData);
           res.end();
         } else {
           commondb.query(
             `UPDATE user SET userURL = '${userURL}' WHERE userAccount = '${userData.userAccount}'`
           );
+          updateUserFirebaseToken(userData.userAccount, token);
+          if (normalizeFirebaseToken(token)) {
+            userData.token = normalizeFirebaseToken(token);
+          }
           userData.userURL = userURL
           res.json(userData);
           res.end();
@@ -230,13 +276,13 @@ router.post('/loginsocial/google', async (req, res) => {
 
 // 이메일 로그인
 router.post('/loginemail', async (req, res) => {
-  const { loginAccount, loginPasswd, userURL } = req.body;
+  const { loginAccount, loginPasswd, userURL, token } = req.body;
   const resultData = {};
   const SECRET_KEY = secretKey.key;
   // refreshToken 만들기
   const refreshToken = jwt.sign({ type: 'JWT', USER_ID: loginAccount }, SECRET_KEY, {
     expiresIn: '30d',
-    issuer: 'churchbooklet'
+    issuer: 'ministermore'
   });
   try {
     commondb.query(`
@@ -254,6 +300,10 @@ router.post('/loginemail', async (req, res) => {
         try {
           if (await argon2.verify(userData.password, loginPasswd)) {
             if ( userData.userURL === userURL ) {
+              updateUserFirebaseToken(userData.userAccount, token);
+              if (normalizeFirebaseToken(token)) {
+                userData.token = normalizeFirebaseToken(token);
+              }
               userData.isUser = true;
               userData.refreshToken = refreshToken;
               res.json(userData);
@@ -262,6 +312,10 @@ router.post('/loginemail', async (req, res) => {
               commondb.query(
                 `UPDATE user SET userURL = '${userURL}' WHERE userAccount = '${userData.userAccount}'`
               );
+              updateUserFirebaseToken(userData.userAccount, token);
+              if (normalizeFirebaseToken(token)) {
+                userData.token = normalizeFirebaseToken(token);
+              }
               userData.isUser = true;
               userData.refreshToken = refreshToken;
               userData.userURL = userURL;
@@ -310,7 +364,7 @@ router.post('/verifytoken', (req,res)=>{
           } else {
             // 다시 발급해주기
             var refreshToken = jwt.sign({type: 'JWT', USER_ID : userAccount}, SECRET_KEY, {
-              expiresIn: '30d', issuer: 'churchbooklet'
+              expiresIn: '30d', issuer: 'ministermore'
             });
             userData.resultData = result[0];
             userData.refreshToken = refreshToken;
@@ -345,14 +399,14 @@ router.post('/verifytoken', (req,res)=>{
 // logister 회원 가입하기
 router.post('/logisterdo', async function(req, res, next){
   const { email, password, userNickname, userChurch, userSort, userDetail, userURL,
-          checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi } = req.body.userData;
+          checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi, token } = req.body.userData;
   
   const hashedtext = await argon2.hash(password);
   commondb.query(`
     INSERT IGNORE INTO user (userAccount, password, userNickName, userChurch, userSort, userDetail, userURL, 
-      checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi) VALUES 
+      checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi, token) VALUES 
     ('${email}', '${hashedtext}', '${userNickname}', '${userChurch}', '${userSort}', '${userDetail}', '${userURL}',
-    '${checkUsingPolicy}', '${checkPersonalInfo}', '${checkContentsRestrict}', '${checkInfoToOthers}', '${checkServiceNotifi}');
+    '${checkUsingPolicy}', '${checkPersonalInfo}', '${checkContentsRestrict}', '${checkInfoToOthers}', '${checkServiceNotifi}', '${normalizeFirebaseToken(token)}');
     `,function(error, result){
     if (error) {throw error}
     if (result.affectedRows > 0) {  
@@ -405,7 +459,7 @@ router.post('/loginaccountauth', async function(req, res){
     // refreshToken 만들기
     const refreshTokenCopy = jwt.sign({ type: 'JWT', USER_ID: email }, SECRET_KEY, {
       expiresIn: '30d',
-      issuer: 'churchbooklet'
+      issuer: 'ministermore'
     });
     const resultData = {num : random_code, refreshToken : refreshTokenCopy};
 

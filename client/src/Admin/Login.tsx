@@ -1,17 +1,9 @@
 
-import './Admin.scss'; 
+import './Admin.scss';
 import React, { useState } from 'react';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
-import MainURL from '../MainURL'; 
-import axios from 'axios';
-import { useCookies } from 'react-cookie';
 
 export default function AdminLogin( props: any) {
-
-  const [cookies, setCookie, removeCookie] = useCookies(['login']);
-
   let navigate = useNavigate();
 
   let [user, setuser] = useState('');
@@ -23,6 +15,7 @@ export default function AdminLogin( props: any) {
       alert('관리자 로그인 되었습니다.')
       navigate('/admin/main'); 
       sessionStorage.setItem('user', user);
+      window.scrollTo(0, 0);
     } else {
       alert('아이디,passwd이 잘못되었습니다. 다시 시도하세요.')
     }
@@ -41,38 +34,49 @@ export default function AdminLogin( props: any) {
   }
 
   return (
-    <div className="AdminContainer">
+    <div className="AdminContainer admin-login">
+      <div className="admin-login__panel">
+        <div className="admin-login__title-wrap">
+          <h1 className="admin-login__title">관리자 로그인</h1>
+          <p className="admin-login__subtitle">관리자 계정으로 로그인해 주세요.</p>
+        </div>
 
-      <div className="inner">
-      
-        <div  className="AdminContent">
-
-          <div className='admin_input_wrapper'>
-            <div className='admin_box'>
-              <div className='admin_content_text'>아이디</div>
-              <input className='admin_content_input' type='text' onChange={(e)=>{setuser(e.target.value)}}></input>
-            </div>
-
-            <div className='admin_box'>
-              <div className='admin_content_text'>비밀번호</div>
-              <input className='admin_content_input' type='password' 
-                onChange={(e)=>{setpasswd(e.target.value)}}
-                onKeyDown={(e)=>{if (e.key === 'Enter') {login();}}}
-              ></input>
-            </div>
-
+        <div className='admin-login__form'>
+          <div className='admin-login__field'>
+            <label className='admin-login__label' htmlFor="admin-login-id">아이디</label>
+            <input
+              id="admin-login-id"
+              className='admin-login__input'
+              type='text'
+              value={user}
+              placeholder="아이디를 입력하세요"
+              onChange={(e)=>{setuser(e.target.value)}}
+            />
           </div>
 
-          <button className='login_button' 
-              onClick={login}>로그인</button>
+          <div className='admin-login__field'>
+            <label className='admin-login__label' htmlFor="admin-login-password">비밀번호</label>
+            <input
+              id="admin-login-password"
+              className='admin-login__input'
+              type='password'
+              value={passwd}
+              placeholder="비밀번호를 입력하세요"
+              onChange={(e)=>{setpasswd(e.target.value)}}
+              onKeyDown={(e)=>{if (e.key === 'Enter') {login();}}}
+            />
+          </div>
 
-          <button className='login_button' 
-              onClick={()=>{navigate('/')}}>뒤로가기</button>
-        
+          <div className="admin-login__actions">
+            <button className='admin-login__button admin-login__button--primary' onClick={login}>
+              로그인
+            </button>
+            <button className='admin-login__button admin-login__button--ghost' onClick={()=>{navigate('/')}}>
+              뒤로가기
+            </button>
+          </div>
         </div>
       </div>
-     
-     
     </div>
   );
 }

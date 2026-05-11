@@ -31,7 +31,7 @@ export default function Login(props:any) {
   const [loginAccount, setLoginAccount] = useState('');
   const [loginPasswd, setLoginPasswd] = useState('');
 
-  const handleLogin = async () => {
+  const handleEmailLogin = async () => {
     await axios
      .post(`${MainURL}/login/loginemail`, {
       loginAccount : loginAccount,
@@ -69,7 +69,6 @@ export default function Login(props:any) {
      })
    };
 
-  
   return (
     <div className="login">
 
@@ -122,7 +121,7 @@ export default function Login(props:any) {
               onChange={(e) => {setLoginAccount(e.target.value)}} placeholder="이메일"
               onKeyDown={(e)=>{
                 if (loginAccount !== '' && loginPasswd !== '') {
-                  if (e.key === 'Enter') {handleLogin();}
+                  if (e.key === 'Enter') {handleEmailLogin();}
                 }
               }}
             />
@@ -130,17 +129,18 @@ export default function Login(props:any) {
               onChange={(e) => {setLoginPasswd(e.target.value)}} placeholder="비밀번호"
               onKeyDown={(e)=>{
                 if (loginAccount !== '' && loginPasswd !== '') {
-                  if (e.key === 'Enter') {handleLogin();}
+                  if (e.key === 'Enter') {handleEmailLogin();}
                 }
               }}
             /> 
           </div>
+          
 
           <div className="buttonbox">
             <div className="button"
               onClick={()=>{
                 setLoginPath('/');
-                handleLogin();
+                handleEmailLogin();
               }}
             >
               <p>로그인</p>

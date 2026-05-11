@@ -45,6 +45,16 @@ const PROCESS_STEPS = [
   },
 ];
 
+const PRICING_PILLS = ["주보 템플릿 기반", "매주 수정 용이", "모바일 예배 동선", "공유 링크 지원"];
+
+const PRICING_LIST = [
+  "모바일 주보 기본 템플릿 구성 제공",
+  "예배 순서·광고·헌금·새가족 안내 섹션 반영",
+  "주차별 콘텐츠 교체가 쉬운 구조로 제작",
+  "링크/QR 배포에 최적화된 접근 흐름",
+  "요청 기능 및 운영 범위에 따라 상세 비용 안내",
+];
+
 function OrderRows({
   rows,
 }: {
@@ -72,10 +82,6 @@ export default function BulletinMain() {
   const navigate = useNavigate();
   const isLogin = useRecoilValue(recoilLoginState);
 
-  const scrollToId = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
   const openSample = useCallback(() => {
     navigate("/bulletin?id=1&preview=1");
   }, [navigate]);
@@ -90,40 +96,6 @@ export default function BulletinMain() {
 
   return (
     <div className="bulletin-main">
-      <header className="bulletin-main__page-header">
-        <div className="bulletin-main__container bulletin-main__page-header-inner">
-          <button
-            type="button"
-            className="bulletin-main__brand"
-            onClick={() => scrollToId("top")}
-          >
-            <span className="bulletin-main__brand-mark">✦</span>
-            <span>모바일 주보</span>
-          </button>
-          <nav className="bulletin-main__nav" aria-label="페이지 내 메뉴">
-            <button type="button" onClick={() => scrollToId("about")}>
-              서비스 소개
-            </button>
-            <button type="button" onClick={() => scrollToId("features")}>
-              샘플
-            </button>
-            <button type="button" onClick={() => scrollToId("process")}>
-              이용 흐름
-            </button>
-            <button type="button" onClick={() => scrollToId("contact")}>
-              문의
-            </button>
-          </nav>
-          <button
-            type="button"
-            className="bulletin-main__btn bulletin-main__btn--primary bulletin-main__btn--header"
-            onClick={onApply}
-          >
-            제작하기
-          </button>
-        </div>
-      </header>
-
       <section id="top" className="bulletin-main__hero">
         <div className="bulletin-main__container bulletin-main__hero-grid">
           <div className="bulletin-main__hero-copy">
@@ -305,6 +277,48 @@ export default function BulletinMain() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="bulletin-main__section">
+        <div className="bulletin-main__container">
+          <div className="bulletin-main__pricing-shell">
+            <div className="bulletin-main__pricing-copy">
+              <div className="bulletin-main__badge">Pricing</div>
+              <h2 className="bulletin-main__pricing-copy-title">
+                매주 사용하는 모바일 주보를
+                <br />
+                합리적인 비용으로 도입하세요
+              </h2>
+              <div className="bulletin-main__pricing-support" aria-label="비용 섹션 포인트">
+                {PRICING_PILLS.map((p) => (
+                  <span key={p} className="bulletin-main__support-pill">
+                    <span className="bulletin-main__support-dot" aria-hidden />
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <aside className="bulletin-main__pricing-card" aria-label="모바일 주보 서비스 비용 안내">
+              <div>
+                <span className="bulletin-main__pricing-label">월간 구독</span>
+                <p className="bulletin-main__pricing-price">
+                  ₩5,500 ~ <span>/ 월 (VAT 포함)</span>
+                </p>
+              </div>
+              <ul className="bulletin-main__pricing-list">
+                {PRICING_LIST.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="bulletin-main__pricing-actions">
+                <button type="button" className="bulletin-main__btn bulletin-main__btn--primary"
+                 onClick={onApply}>
+                  제작하기
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </section>

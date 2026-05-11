@@ -1,0 +1,232 @@
+import React, { useCallback, useState } from 'react';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { DaumPostcodeEmbed } from 'react-daum-postcode';
+import { useDropzone } from 'react-dropzone';
+import imageCompression from 'browser-image-compression';
+import { CiCircleMinus } from 'react-icons/ci';
+import MainURL from '../../../MainURL';
+import { DropdownBox } from '../../../components/DropdownBox';
+import './Place.scss';
+
+const sortOptions = [
+  { value: '선택', label: '선택' },
+  { value: '기도원', label: '기도원' },
+  { value: '교회', label: '교회' },
+  { value: '펜션', label: '펜션' },
+  { value: '수련원/수양관/연수원', label: '수련원/수양관/연수원' },
+  { value: '리조트/호텔', label: '리조트/호텔' },
+];
+
+const regionOptions = [
+  { value: '선택', label: '선택' },
+  { value: '서울/경기도', label: '서울/경기도' },
+  { value: '강원도', label: '강원도' },
+  { value: '대전/충청도', label: '대전/충청도' },
+  { value: '광주/전라도', label: '광주/전라도' },
+  { value: '대구/부산/경상도', label: '대구/부산/경상도' },
+  { value: '제주도', label: '제주도' },
+];
+
+const sizeOptions = [
+  { value: '선택', label: '선택' },
+  { value: '50명이하', label: '50명이하' },
+  { value: '50~100명', label: '50~100명' },
+  { value: '100명이상', label: '100명이상' },
+];
+
+const PlaceRequest = () => {
+  const navigate = useNavigate();
+  const [placeName, setPlaceName] = useState('');
+  const [sort, setSort] = useState('선택');
+  const [region, setRegion] = useState('선택');
+  const [size, setSize] = useState('선택');
+  const [location, setLocation] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [homepage, setHomepage] = useState('');
+  const [userContact, setUserContact] = useState('');
+  const [inputImages, setInputImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imageLoading, setImageLoading] = useState(false);
+
+  const onCompletePost = (data: any) => {
+    setLocation(`${data.sido} ${data.sigungu}`);
+    setAddress(data.address);
+  };
+
+  const date = format(new Date(), 'yyMMddHHmmss');
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    try {
+      setImageLoading(true);
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1000,
+      };
+      const resizedFiles = await Promise.all(
+        acceptedFiles.map(async (file) => {
+          const resizingBlob = await imageCompression(file, options);
+          return resizingBlob;
+        })
+      );
+      const regexCopy = /[^\w!@#$%^&*()=+{}|;:'",.<>-]/g;
+      const fileCopies = resizedFiles.map((resizedFile, index) => {
+        const regex = acceptedFiles[index].name.replace(regexCopy, '');
+        const regexSlice = regex.slice(-15);
+        return new File([resizedFile], `${date}_${regexSlice}`, {
+          type: acceptedFiles[index].type,
+        });
+      });
+      const imageNames = acceptedFiles.map((file) => {
+        const regex = file.name.replace(regexCopy, '');
+        const regexSlice = regex.slice(-15);
+        return `${date}_${regexSlice}`;
+      });
+      setImageFiles(fileCopies);
+      setInputImages(imageNames);
+    } catch (error) {
+      console.error('이미지 리사이징 중 오류 발생:', error);
+    } finally {
+      setImageLoading(false);
+    }
+  }, [date]);
+  const { getRootProps, getInputProps } = useDropzone({ onDrop });
+
+  const deleteInputImage = (idx: number) => {
+    setImageFiles((prev) => prev.filter((_, index) => index !== idx));
+    setInputImages((prev) => prev.filter((_, index) => index !== idx));
+  };
+
+  const registerPost = async () => {
+    if (!placeName || sort === '선택' || region === '선택' || size === '선택' || !address || !userContact) {
+      alert('필수 항목을 입력해주세요.');
+      return;
+    }
+
+    const formData = new FormData();
+    imageFiles.forEach((file) => {
+      formData.append('img', file);
+    });
+
+    const params = {
+      placeName,
+      sort,
+      region,
+      location,
+      size,
+      address,
+      phone,
+      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+      homepage,
+      userContact,
+      postImage: JSON.stringify(inputImages),
+    };
+
+    const res = await axios.post(`${MainURL}/retreat/postsplace`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      params,
+    });
+
+    if (res.data) {
+      alert('요청되었습니다. 운영진이 검토후에 업로드 됩니다.');
+      window.scrollTo(0, 0);
+      navigate('/retreat/place');
+    } else {
+      alert('요청에 실패했습니다.');
+    }
+  };
+
+  return (
+    <div className="retreat">
+      <div className="inner">
+        <main className="subpage__main place-request">
+          <div className="subpage__main__title">
+            <h3>장소등록요청</h3>
+            <div className="place__detail-actions">
+              <button className="btn btn--secondary" type="button" onClick={() => navigate('/retreat/place')}>
+                목록으로
+              </button>
+            </div>
+          </div>
+
+          <div className="place-request__notice">
+            <p>등록 요청된 자료는 운영진 검토 후 업로드됩니다.</p>
+            <p>자료에 이상이 있을 경우 작성자 연락처로 연락드릴 수 있습니다.</p>
+          </div>
+
+          <div className="place-request__form">
+            <div className="inputbox">
+              <label>형식</label>
+              <DropdownBox widthmain="100%" height="46px" selectedValue={sort} options={sortOptions} handleChange={(e: any) => setSort(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>지역</label>
+              <DropdownBox widthmain="100%" height="46px" selectedValue={region} options={regionOptions} handleChange={(e: any) => setRegion(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>장소명</label>
+              <input type="text" value={placeName} onChange={(e) => setPlaceName(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>크기</label>
+              <DropdownBox widthmain="100%" height="46px" selectedValue={size} options={sizeOptions} handleChange={(e: any) => setSize(e.target.value)} />
+            </div>
+
+            <div className="inputbox inputbox--postcode">
+              <label>주소찾기</label>
+              <DaumPostcodeEmbed style={{ width: '100%', height: '320px' }} onComplete={onCompletePost} />
+            </div>
+
+            <div className="inputbox">
+              <label>위치</label>
+              <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>주소</label>
+              <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>장소연락처</label>
+              <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>홈페이지</label>
+              <input type="text" value={homepage} onChange={(e) => setHomepage(e.target.value)} />
+            </div>
+            <div className="inputbox">
+              <label>작성자 연락처</label>
+              <input type="text" value={userContact} onChange={(e) => setUserContact(e.target.value)} />
+            </div>
+
+            <div className="imageInputBox">
+              <div {...getRootProps()} className="imageDropzoneStyle">
+                <input {...getInputProps()} />
+                <p>{imageLoading ? '이미지 처리 중...' : imageFiles.length > 0 ? '+ 다시첨부하기' : '+ 사진첨부하기'}</p>
+              </div>
+              {imageFiles.map((item, index) => (
+                <div key={item.name} className="imagebox">
+                  <img src={URL.createObjectURL(item)} alt={item.name} />
+                  <p>{item.name}</p>
+                  <button type="button" onClick={() => deleteInputImage(index)}>
+                    <CiCircleMinus color="#ff0000" size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="buttonbox">
+              <button type="button" className="button" onClick={registerPost}>
+                등록 요청 하기
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default PlaceRequest;

@@ -1,0 +1,275 @@
+.homeinapp-payment {
+  background: #f6f8fb;
+  min-height: calc(100vh - 160px);
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+.homeinapp-payment__body {
+  padding: 40px 0 56px;
+}
+
+.homeinapp-payment__inner {
+  width: min(1200px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.homeinapp-payment__form-wrap {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  padding: 0 0 30px;
+}
+
+.homeinapp-payment__form-tabs {
+  width: 100%;
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 28px;
+}
+
+.homeinapp-payment__form-tab {
+  flex: 1;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+}
+
+.homeinapp-payment__form-tab.on {
+  color: #1f2937;
+  border-bottom-color: #1f2937;
+}
+
+.homeinapp-payment__form-block {
+  padding: 0 28px;
+}
+
+.homeinapp-payment__form-block-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.homeinapp-payment__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.homeinapp-payment__label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.homeinapp-payment__label--full {
+  grid-column: 1 / -1;
+}
+
+.homeinapp-payment__input,
+.homeinapp-payment__textarea {
+  width: 100%;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 12px 13px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+}
+
+.homeinapp-payment__input:focus,
+.homeinapp-payment__textarea:focus {
+  border-color: #94a3b8;
+}
+
+.homeinapp-payment__textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.homeinapp-payment__summary-wrap {
+  position: sticky;
+  top: 88px;
+}
+
+.homeinapp-payment__summary-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  padding: 24px 18px 18px;
+}
+
+.homeinapp-payment__form-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.homeinapp-payment__payment-block {
+  margin-top: 20px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.homeinapp-payment__plan-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px;
+}
+
+.homeinapp-payment__plan-cards {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.homeinapp-payment__plan-cards--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.homeinapp-payment__plan-card {
+  padding: 20px 18px 16px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.homeinapp-payment__plan-card--selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.homeinapp-payment__plan-card-name {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.homeinapp-payment__plan-card-price {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.homeinapp-payment__plan-card-billing {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.homeinapp-payment__plan-card-vat {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.homeinapp-payment__price-list {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.homeinapp-payment__price-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.homeinapp-payment__price-list dt,
+.homeinapp-payment__price-list dd {
+  margin: 0;
+}
+
+.homeinapp-payment__price-list .is-total {
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.homeinapp-payment__agree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.homeinapp-payment__footer-wrap {
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.homeinapp-payment__pay-btn,
+.homeinapp-payment__back-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.homeinapp-payment__pay-btn {
+  color: #fff;
+  background: #1e40af;
+}
+
+.homeinapp-payment__pay-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.homeinapp-payment__back-btn {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+@media (max-width: 900px) {
+  .homeinapp-payment__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .homeinapp-payment__summary-wrap {
+    position: static;
+  }
+
+  .homeinapp-payment__form-grid {
+    grid-template-columns: 1fr;
+  }
+}

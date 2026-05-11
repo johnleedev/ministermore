@@ -1,4 +1,4 @@
-// NoticeTemplateSelect – NoticeCreate와 동일한 좌(미리보기) / 우(폼) 레이아웃
+// NoticeApplyPay – NoticeCreate와 동일한 좌(미리보기) / 우(폼) 레이아웃
 // 왼쪽: notice-create__ 클래스 사용 (NoticeCreate.scss import)
 // 오른쪽: 타이틀 + 주문자정보 + 디자인 선택
 @import './NoticeCreate.scss';
@@ -10,10 +10,10 @@ $slate-800: #1e293b;
 $blue-600: #2563eb;
 $white: #ffffff;
 
-// NoticeTemplateSelect 루트: NoticeCreate와 동일 레이아웃
+// NoticeApplyPay 루트: NoticeCreate와 동일 레이아웃
 .notice-template-select {
-  height: calc(100vh - 150px);
-  overflow: hidden;
+  min-height: calc(100vh - 160px);
+  overflow: visible;
   background: #f5f5f5;
   box-sizing: border-box;
   display: flex;
@@ -23,33 +23,29 @@ $white: #ffffff;
 .notice-template-select__body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
 .notice-template-select__inner {
-  display: flex;
-  gap: 0;
-  width: 100%;
+  width: min(1200px, calc(100% - 40px));
   margin: 0;
-  padding: 0;
+  padding: 40px 0 56px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  align-items: stretch;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+  margin: 0 auto;
 
   @media (max-width: 900px) {
-    flex-direction: column;
-    overflow-y: auto;
+    width: min(1200px, calc(100% - 32px));
+    grid-template-columns: 1fr;
     padding: 16px;
-    gap: 16px;
   }
-}
-
-// ----- 왼쪽 미리보기: 탭 활성화 색상 (선택한 디자인에 따라 적용) -----
-.notice-template-select__tabs-wrap {
-  // notice-create__preview-tabs는 NoticeCreate.scss에서 정의됨
 }
 
 .notice-template-select__tabs-wrap--classic {
@@ -118,23 +114,34 @@ $white: #ffffff;
 
 // ----- 오른쪽: 폼 (타이틀 + 주문자정보 + 디자인 선택) -----
 .notice-template-select__form-wrap {
-  flex: 6;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
   background: #fff;
-  padding: 50px 100px 100px 100px;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.04);
-  border-left: 2px solid #eaeaea;
+  padding: 42px 40px 48px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
 
   @media (max-width: 900px) {
-    flex: 0 0 auto;
     width: 100%;
-    max-width: 500px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    padding: 32px 24px 80px;
+    padding: 32px 24px;
   }
+}
+
+.notice-template-select__summary-wrap {
+  position: sticky;
+  top: 24px;
+
+  @media (max-width: 900px) {
+    position: static;
+  }
+}
+
+.notice-template-select__summary-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  padding: 24px 18px 18px;
 }
 
 .notice-template-select__form-title {
@@ -215,36 +222,35 @@ $white: #ffffff;
 .notice-template-select__footer-wrap {
   padding-top: 24px;
   border-top: 1px solid $gray-200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.notice-template-select__next-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.notice-template-select__pay-btn,
+.notice-template-select__back-btn {
   width: 100%;
-  padding: 16px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  color: $white;
-  background: $blue-600;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+}
 
-  &:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
+.notice-template-select__pay-btn {
+  color: #fff;
+  background: #1e40af;
 
   &:disabled {
-    opacity: 0.55;
+    background: #94a3b8;
     cursor: not-allowed;
   }
+}
 
-  svg {
-    font-size: 14px;
-  }
+.notice-template-select__back-btn {
+  color: #334155;
+  background: #f1f5f9;
 }
 
 // ----- 결제 (디자인 선택 아래 인라인) -----
@@ -509,41 +515,31 @@ $white: #ffffff;
   margin: 0 0 18px 0;
 }
 
-.notice-template-select__plan-select {
-  margin-top: auto;
+.notice-template-select__price-list {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.notice-template-select__price-list div {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 12px 16px;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
   font-size: 14px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: inherit;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-
-  &--outline {
-    color: $slate-800;
-    background: $white;
-    border: 1px solid #cbd5e1;
-  }
-
-  &--outline.notice-template-select__plan-select--selected {
-    color: $white;
-    background: $blue-600;
-    border-color: $blue-600;
-  }
 }
 
-.notice-template-select__plan-card:hover .notice-template-select__plan-select--outline:not(.notice-template-select__plan-select--selected) {
-  background: #f8fafc;
-  border-color: #94a3b8;
+.notice-template-select__price-list dt,
+.notice-template-select__price-list dd {
+  margin: 0;
 }
 
-.notice-template-select__plan-card:hover .notice-template-select__plan-select--outline.notice-template-select__plan-select--selected {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+.notice-template-select__price-list .is-total {
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
 }
 
 .notice-template-select__plan-features {

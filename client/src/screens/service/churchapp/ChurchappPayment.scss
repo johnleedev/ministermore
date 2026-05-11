@@ -1,0 +1,275 @@
+.churchapp-payment {
+  background: #f6f8fb;
+  min-height: calc(100vh - 160px);
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+.churchapp-payment__body {
+  padding: 40px 0 56px;
+}
+
+.churchapp-payment__inner {
+  width: min(1200px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.churchapp-payment__form-wrap {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  padding: 0 0 30px;
+}
+
+.churchapp-payment__form-tabs {
+  width: 100%;
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 28px;
+}
+
+.churchapp-payment__form-tab {
+  flex: 1;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+}
+
+.churchapp-payment__form-tab.on {
+  color: #1f2937;
+  border-bottom-color: #1f2937;
+}
+
+.churchapp-payment__form-block {
+  padding: 0 28px;
+}
+
+.churchapp-payment__form-block-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.churchapp-payment__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.churchapp-payment__label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.churchapp-payment__label--full {
+  grid-column: 1 / -1;
+}
+
+.churchapp-payment__input,
+.churchapp-payment__textarea {
+  width: 100%;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 12px 13px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+}
+
+.churchapp-payment__input:focus,
+.churchapp-payment__textarea:focus {
+  border-color: #94a3b8;
+}
+
+.churchapp-payment__textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.churchapp-payment__summary-wrap {
+  position: sticky;
+  top: 88px;
+}
+
+.churchapp-payment__summary-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  padding: 24px 18px 18px;
+}
+
+.churchapp-payment__form-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.churchapp-payment__payment-block {
+  margin-top: 20px;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.churchapp-payment__plan-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px;
+}
+
+.churchapp-payment__plan-cards {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.churchapp-payment__plan-cards--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.churchapp-payment__plan-card {
+  padding: 20px 18px 16px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.churchapp-payment__plan-card--selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.churchapp-payment__plan-card-name {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.churchapp-payment__plan-card-price {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.churchapp-payment__plan-card-billing {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.churchapp-payment__plan-card-vat {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.churchapp-payment__price-list {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.churchapp-payment__price-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.churchapp-payment__price-list dt,
+.churchapp-payment__price-list dd {
+  margin: 0;
+}
+
+.churchapp-payment__price-list .is-total {
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.churchapp-payment__agree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.churchapp-payment__footer-wrap {
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.churchapp-payment__submit-btn,
+.churchapp-payment__back-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.churchapp-payment__submit-btn {
+  color: #fff;
+  background: #1e40af;
+}
+
+.churchapp-payment__submit-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.churchapp-payment__back-btn {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+@media (max-width: 900px) {
+  .churchapp-payment__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .churchapp-payment__summary-wrap {
+    position: static;
+  }
+
+  .churchapp-payment__form-grid {
+    grid-template-columns: 1fr;
+  }
+}

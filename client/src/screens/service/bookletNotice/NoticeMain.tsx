@@ -48,13 +48,19 @@ const PROCESS_STEPS = [
   },
 ];
 
+const PRICING_PILLS = ["템플릿 기반 제작", "교회 맞춤 편집", "모바일 최적화", "운영 지원"];
+
+const PRICING_LIST = [
+  "교회 소개형 모바일 페이지 기본 구성 제공",
+  "예배시간·오시는길·섬김이·설교 등 핵심 섹션 반영",
+  "브랜드 컬러 및 기본 디자인 톤 맞춤 적용",
+  "링크 공유/QR 안내 흐름 지원",
+  "추가 기능 및 페이지 범위에 따라 비용 조정 가능",
+];
+
 export default function NoticeMain() {
   const navigate = useNavigate();
   const isLogin = useRecoilValue(recoilLoginState);
-
-  const scrollToId = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  }, []);
 
   const openSample = useCallback(() => {
     const base = `${window.location.origin}/booklet?id=1`;
@@ -65,6 +71,7 @@ export default function NoticeMain() {
 
   const onApply = useCallback(() => {
     if (isLogin) {
+      window.scrollTo(0, 0);
       navigate("/service/bookletnoticetemplates");
     } else {
       alert("로그인이 필요합니다.");
@@ -73,40 +80,6 @@ export default function NoticeMain() {
 
   return (
     <div className="notice-main">
-      <header className="notice-main__page-header">
-        <div className="notice-main__container notice-main__page-header-inner">
-          <button
-            type="button"
-            className="notice-main__brand"
-            onClick={() => scrollToId("top")}
-          >
-            <span className="notice-main__brand-mark">✦</span>
-            <span>교회 모바일 소개</span>
-          </button>
-          <nav className="notice-main__nav" aria-label="페이지 내 메뉴">
-            <button type="button" onClick={() => scrollToId("about")}>
-              서비스 소개
-            </button>
-            <button type="button" onClick={() => scrollToId("features")}>
-              샘플
-            </button>
-            <button type="button" onClick={() => scrollToId("process")}>
-              이용 흐름
-            </button>
-            <button type="button" onClick={() => scrollToId("contact")}>
-              문의
-            </button>
-          </nav>
-          <button
-            type="button"
-            className="notice-main__btn notice-main__btn--primary notice-main__btn--header"
-            onClick={onApply}
-          >
-            제작하기
-          </button>
-        </div>
-      </header>
-
       <section id="top" className="notice-main__hero">
         <div className="notice-main__container notice-main__hero-grid">
           <div className="notice-main__hero-copy">
@@ -240,6 +213,47 @@ export default function NoticeMain() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+      <section id="pricing" className="notice-main__section">
+        <div className="notice-main__container">
+          <div className="notice-main__pricing-shell">
+            <div className="notice-main__pricing-copy">
+              <div className="notice-main__badge">Pricing</div>
+              <h2 className="notice-main__pricing-copy-title">
+                교회 소개 페이지를
+                <br />
+                월 구독제로 사용해보세요
+              </h2>
+              <div className="notice-main__pricing-support" aria-label="비용 섹션 포인트">
+                {PRICING_PILLS.map((p) => (
+                  <span key={p} className="notice-main__support-pill">
+                    <span className="notice-main__support-dot" aria-hidden />
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <aside className="notice-main__pricing-card" aria-label="교회 소개 서비스 비용 안내">
+              <div>
+                <span className="notice-main__pricing-label">월간 구독</span>
+                <p className="notice-main__pricing-price">
+                  ₩10,000<span>/ 월 (VAT 10% 별도)</span>
+                </p>
+              </div>
+              <ul className="notice-main__pricing-list">
+                {PRICING_LIST.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="notice-main__pricing-actions">
+                <button type="button" className="notice-main__btn notice-main__btn--primary" 
+                  onClick={onApply}>
+                  제작하기
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </section>

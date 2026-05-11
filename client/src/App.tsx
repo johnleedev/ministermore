@@ -1,17 +1,18 @@
 import './App.scss';
 import { Routes, Route } from 'react-router-dom';
 import Main from './screens/main/Main';
-import AdminMain from './Admin/AdminMain';
+import AdminMain from './Admin/AdminRouter';
 import { RecoilRoot } from 'recoil';
 import MainCompt from './screens/company/MainCompt';
 import ServiceRouter from './screens/service/ServiceRouter';
 import CommunityRouter from './screens/community/CommunityRouter';
-import MypageMain from './screens/mypage/MypageMain';
+import MypageMain from './screens/mypage/MypageRouter';
 import MainRollbook from './screens/rollbook/MainRollbook';
 import WorshipRouter from './screens/worship/WorshipRouter';
 import MainLogin from './screens/login/MainLogin';
 import RecruitRouter from './screens/recruit/RecruitRouter';
 import MinisterRouter from './screens/minister/MinisterRouter';
+import RetreatRouter from './screens/retreat/RetreatRouter';
 
 import MinisterDetailPage from './exceptbooklets/minister/MinisterDetail';
 import BookletDetailPage from './exceptbooklets/bookletNotice/BookletNoticeDetail';
@@ -35,6 +36,7 @@ function App() {
 
               <Route path="/minister/*" element={<MinisterRouter/>}/>
               <Route path="/ministerpage" element={<MinisterDetailPage/>}/>
+              <Route path="/retreat/*" element={<RetreatRouter/>}/>
 
               <Route path="/booklet" element={<BookletDetailPage/>}/>
               <Route path="/event" element={<BookletEventDetailPage/>}/>

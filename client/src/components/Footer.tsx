@@ -23,6 +23,7 @@ export default function Footer (props:any) {
             <div className='divider'></div>
             <div onClick={()=>{
                navigate(`/admin`);
+               window.scrollTo(0, 0);
             }}>
               <li className='link'>관리자</li>
             </div>

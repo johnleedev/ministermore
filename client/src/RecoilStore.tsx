@@ -54,3 +54,4 @@ export const recoilNaverLoginData = atom({
     // REDIRECT_URI_Auth : 'http://localhost:3000/login/loginsns'
   },
 });
+

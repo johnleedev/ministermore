@@ -262,12 +262,6 @@ export default function Main(props:any) {
         누적 방문자수: <b>{uniqueVisitors}</b>명 / 총 접속수: <b>{totalVisits}</b>회
       </div> */}
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        viewport={{ once: true, amount: 0.2 }}
-      >
       <div className="main__box1">
 				<div className="inner">
          
@@ -366,7 +360,6 @@ export default function Main(props:any) {
 
 				</div>	
   		</div>
-      </motion.div>
 
      <div className="main_adv_banner" style={{borderBottom:'1px solid #BDBDBD'}}>
         <a className='instarAdv'
@@ -456,15 +449,15 @@ export default function Main(props:any) {
             <div className="main_bottom_box"
               onClick={()=>{
                 window.scrollTo(0, 0);
-                navigate('/recruit');
+                navigate('/service');
               }}
             >
               <div className="main_left_icon">
                 <BsFileEarmarkPerson />
               </div>
               <div className="main_middle_text">
-                <h1>사역정보</h1>
-                <p>원하시는 사역지&사역자 정보를</p>
+                <h1>서비스</h1>
+                <p>원하시는 모바일 서비스를</p>
                 <p>찾아보세요</p>
               </div>
               <div className="main_right_link">

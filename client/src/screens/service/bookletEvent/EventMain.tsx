@@ -43,6 +43,14 @@ type EventMainVariant = {
   about: { badge: string; h2: string; p: string };
   sampleCta: { title: string; desc: string };
   process: { badge: string; h2: string; p: string; steps: [ProcessStep, ProcessStep, ProcessStep, ProcessStep] };
+  pricing: {
+    title: React.ReactNode;
+    label: string;
+    price: string;
+    priceSub: string;
+    pills: [string, string, string, string];
+    items: [string, string, string, string, string];
+  };
   cta: { h3: React.ReactNode; p: string };
 };
 
@@ -123,6 +131,26 @@ const VARIANTS: EventMainVariant[] = [
           title: "현장 참석",
           desc: "현장에서는 QR 등으로 빠르게 안내받고, 이후에도 링크로 자료를 공유할 수 있습니다.",
         },
+      ],
+    },
+    pricing: {
+      title: (
+        <>
+          임직식 모바일 전단지를
+          <br />
+          합리적인 비용으로 시작하세요
+        </>
+      ),
+      label: "임직식 모바일 전단지 제작비",
+      price: "₩50,000 ",
+      priceSub: "(VAT 10% 별도)",
+      pills: ["임직식 맞춤 구성", "모바일 최적화", "공유 링크 지원", "운영 안내 포함"],
+      items: [
+        "임직 대상·순서·장소 등 핵심 정보 페이지 구성",
+        "교회 일정에 맞춘 기본 문구/섹션 편집 포함",
+        "카카오·문자·QR 공유 흐름 반영",
+        "행사 직전 변경 내용 빠른 수정 지원",
+        "신청/문의 추가 기능은 범위에 따라 비용 조정",
       ],
     },
     cta: {
@@ -215,6 +243,26 @@ const VARIANTS: EventMainVariant[] = [
         },
       ],
     },
+    pricing: {
+      title: (
+        <>
+          새신자 초청 페이지를
+          <br />
+          목적에 맞게 제작하세요
+        </>
+      ),
+      label: "새신자초청 모바일 전단지 제작비",
+      price: "₩50,000 ",
+      priceSub: "(VAT 10% 별도)",
+      pills: ["초청 행사 맞춤", "시리즈 일정 구성", "모바일 안내 최적화", "공유 동선 설계"],
+      items: [
+        "행사 일정·장소·프로그램 안내 섹션 구성",
+        "새가족 안내 흐름에 맞춘 콘텐츠 구조 설계",
+        "문자/카카오 공유에 최적화된 화면 제작",
+        "기본 수정 및 안내 운영 지원",
+        "등록 폼/추가 연동은 범위에 따라 비용 조정",
+      ],
+    },
     cta: {
       h3: (
         <>
@@ -302,6 +350,26 @@ const VARIANTS: EventMainVariant[] = [
           title: "현장 참여",
           desc: "현장에서는 QR 체크인 등으로 빠르게 입장하고, 이후에도 링크로 자료를 공유할 수 있습니다.",
         },
+      ],
+    },
+    pricing: {
+      title: (
+        <>
+          음악회 홍보 페이지를
+          <br />
+          보기 좋게 제작하세요
+        </>
+      ),
+      label: "음악회 모바일 전단지 제작비",
+        price: "₩50,000 ",
+      priceSub: "(VAT 10% 별도)",
+      pills: ["공연 정보 중심", "모바일 포스터 대체", "참석 동선 지원", "브랜드 톤 반영"],
+      items: [
+        "공연 소개·출연·장소·시간 정보 시각화",
+        "행사 성격에 맞춘 분위기형 디자인 구성",
+        "모바일 공유와 접근성 최적화",
+        "리마인더 안내용 콘텐츠 구조 제공",
+        "신청/결제 연동 추가 시 범위에 따라 비용 조정",
       ],
     },
     cta: {
@@ -393,6 +461,26 @@ const VARIANTS: EventMainVariant[] = [
         },
       ],
     },
+    pricing: {
+      title: (
+        <>
+          수련회·집회 페이지를
+          <br />
+          운영 흐름에 맞게 제작하세요
+        </>
+      ),
+      label: "수련회·집회 모바일 전단지 제작비",
+      price: "₩50,000 ",
+      priceSub: "(VAT 10% 별도)",
+      pills: ["일정/준비물 안내", "참가자 동선 지원", "공지 업데이트 용이", "모바일 현장 활용"],
+      items: [
+        "기간·장소·프로그램·준비물 안내 구조 반영",
+        "참가자 동선과 공지 전달에 맞춘 화면 구성",
+        "문자/카카오/QR 공유 흐름 지원",
+        "행사 전후 변경사항 반영을 위한 기본 수정 포함",
+        "체크인/신청 연동은 범위에 따라 비용 조정",
+      ],
+    },
     cta: {
       h3: (
         <>
@@ -417,10 +505,6 @@ export default function EventMain() {
     [activeTab]
   );
 
-  const scrollToId = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
   const openSample = useCallback(() => {
     const url = `${window.location.origin}/event?id=${variant.sampleBookletId}&preview=1`;
     window.open(url, "_blank");
@@ -428,6 +512,7 @@ export default function EventMain() {
 
   const onApply = useCallback(() => {
     if (isLogin) {
+      window.scrollTo(0, 0);
       navigate("/service/bookleteventtemplates");
     } else {
       alert("로그인이 필요합니다.");
@@ -436,40 +521,6 @@ export default function EventMain() {
 
   return (
     <div className="event-main">
-      <header className="event-main__page-header">
-        <div className="event-main__container event-main__page-header-inner">
-          <button
-            type="button"
-            className="event-main__brand"
-            onClick={() => scrollToId("top")}
-          >
-            <span className="event-main__brand-mark">✦</span>
-            <span>모바일 행사 전단지</span>
-          </button>
-          <nav className="event-main__nav" aria-label="페이지 내 메뉴">
-            <button type="button" onClick={() => scrollToId("about")}>
-              서비스 소개
-            </button>
-            <button type="button" onClick={() => scrollToId("features")}>
-              샘플
-            </button>
-            <button type="button" onClick={() => scrollToId("process")}>
-              이용 흐름
-            </button>
-            <button type="button" onClick={() => scrollToId("contact")}>
-              문의
-            </button>
-          </nav>
-          <button
-            type="button"
-            className="event-main__btn event-main__btn--primary event-main__btn--header"
-            onClick={onApply}
-          >
-            제작하기
-          </button>
-        </div>
-      </header>
-
       <div
         className="event-main__scenario-tabs-wrap"
         role="tablist"
@@ -615,6 +666,45 @@ export default function EventMain() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="event-main__section">
+        <div className="event-main__container">
+          <div className="event-main__pricing-shell">
+            <div className="event-main__pricing-copy">
+              <div className="event-main__badge">Pricing</div>
+              <h2 className="event-main__pricing-copy-title">{variant.pricing.title}</h2>
+              <div className="event-main__pricing-support" aria-label="비용 섹션 포인트">
+                {variant.pricing.pills.map((p) => (
+                  <span key={p} className="event-main__support-pill">
+                    <span className="event-main__support-dot" aria-hidden />
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <aside className="event-main__pricing-card" aria-label={`${variant.label} 서비스 비용 안내`}>
+              <div>
+                <span className="event-main__pricing-label">{variant.pricing.label}</span>
+                <p className="event-main__pricing-price">
+                  {variant.pricing.price}
+                  <span>{variant.pricing.priceSub}</span>
+                </p>
+              </div>
+              <ul className="event-main__pricing-list">
+                {variant.pricing.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="event-main__pricing-actions">
+                <button type="button" className="event-main__btn event-main__btn--primary"
+                 onClick={onApply}>
+                  제작하기
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </section>

@@ -12,13 +12,18 @@ import ChurchDetail from '../../exceptbooklets/bookletNotice/BookletNoticeDetail
 import Footer from '../../components/Footer';
 import NoticeCreate from './bookletNotice/createNotice/NoticeCreate';
 import EventCreate from './bookletEvent/createEvent/EventCreate';
-import NoticeTemplateSelect from './bookletNotice/createNotice/NoticeTemplateSelect';
-import EventTemplateSelect from './bookletEvent/createEvent/EventTemplateSelect';
+import NoticeApplyPay from './bookletNotice/createNotice/NoticeApplyPay';
+import EventApplyPay from './bookletEvent/createEvent/EventApplyPay';
 import NoticeComplete from './bookletNotice/createNotice/NoticeComplete';
 import EventComplete from './bookletEvent/createEvent/EventComplete';
-import BulletinTemplateSelect from './bulletin/createBulletin/BulletinTemplateSelect';
+import BulletinApplyPay from './bulletin/createBulletin/BulletinApplyPay';
 import BulletinComplete from './bulletin/createBulletin/BulletinComplete';
 import HomepageMain from './homepage/HomepageMain';
+import HomeinappMain from './homeinapp/HomeinappMain';
+import HomeinappPayment from './homeinapp/HomeinappPayment';
+import HomeinappComplete from './homeinapp/HomeinappComplete';
+import ChurchappMain from './churchapp/ChurchappMain';
+import ChurchappPayment from './churchapp/ChurchappPayment';
 
 export default function ServiceRouter() {
   return (
@@ -33,17 +38,23 @@ export default function ServiceRouter() {
 
         <Route path="/churchdetail" element={<ChurchDetail/>}/>
 
-        <Route path="/bookletnoticetemplates" element={<NoticeTemplateSelect/>}/>
-        <Route path="/bookleteventtemplates" element={<EventTemplateSelect/>}/>
+        <Route path="/bookletnoticetemplates" element={<NoticeApplyPay/>}/>
+        <Route path="/bookleteventtemplates" element={<EventApplyPay/>}/>
         <Route path="/bookletnoticecreate" element={<NoticeCreate/>}/>
         <Route path="/bookleteventcreate" element={<EventCreate/>}/>
         <Route path="/bookleteventcomplete" element={<EventComplete/>}/>
         <Route path="/bookletnoticecomplete" element={<NoticeComplete/>}/>
 
-        <Route path="/bookletbulletintemplates" element={<BulletinTemplateSelect/>}/>
+        <Route path="/bookletbulletintemplates" element={<BulletinApplyPay/>}/>
         <Route path="/bookletbulletincomplete" element={<BulletinComplete/>}/>
 
         <Route path="/homepage" element={<HomepageMain/>}/>
+        <Route path="/homeinapp" element={<HomeinappMain/>}/>
+        <Route path="/homeinapp/payment" element={<HomeinappPayment/>}/>
+        <Route path="/homeinapp/complete" element={<HomeinappComplete/>}/>
+        
+        <Route path="/churchapp" element={<ChurchappMain/>}/>
+        <Route path="/churchapp/payment" element={<ChurchappPayment/>}/>
 
        
       </Routes>

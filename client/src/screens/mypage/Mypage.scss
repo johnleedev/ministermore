@@ -4,6 +4,24 @@
   align-items: center;
 };
 
+/* 전체 너비(좌측 마이페이지 메뉴 없음): 교회주보, 홈인앱알림 등 */
+.mypage.mypage--service-full {
+  > .inner {
+    display: block;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    .subpage__main {
+      width: 100%;
+    }
+  }
+}
+
+.mypage.mypage--service-plain {
+  background: #fff;
+}
+
 .mypage {
   padding-top: 50px;
 

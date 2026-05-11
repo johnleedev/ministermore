@@ -54,7 +54,7 @@ export default function BulletinComplete() {
             type="button"
             className="bulletin-complete__btn bulletin-complete__btn--primary"
             disabled={generating}
-            onClick={() => navigate('/mypage/servicemanage')}
+            onClick={() => navigate('/mypage/church-bulletin')}
           >
             마이페이지로 이동
           </button>

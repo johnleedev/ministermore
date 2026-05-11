@@ -1,4 +1,4 @@
-// EventTemplateSelect – EventCreate와 동일한 좌(미리보기) / 우(폼) 레이아웃
+// EventApplyPay – EventCreate와 동일한 좌(미리보기) / 우(폼) 레이아웃
 // 왼쪽: event-create__ 클래스 사용 (EventCreate.scss import)
 // 오른쪽: 주문자정보 + 디자인 선택
 @import './EventCreate.scss';
@@ -11,10 +11,10 @@ $slate-800: #1e293b;
 $blue-600: #2563eb;
 $white: #ffffff;
 
-// EventTemplateSelect 루트: EventCreate와 동일 레이아웃
+// EventApplyPay 루트: EventCreate와 동일 레이아웃
 .event-template-select {
-  height: calc(100vh - 150px);
-  overflow: hidden;
+  min-height: calc(100vh - 160px);
+  overflow: visible;
   background: #f5f5f5;
   box-sizing: border-box;
   display: flex;
@@ -24,27 +24,28 @@ $white: #ffffff;
 .event-template-select__body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
 .event-template-select__inner {
-  display: flex;
-  gap: 0;
-  width: 100%;
+  width: min(1200px, calc(100% - 40px));
   margin: 0;
-  padding: 0;
+  padding: 40px 0 56px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  align-items: stretch;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+  margin: 0 auto;
 
   @media (max-width: 900px) {
-    flex-direction: column;
-    overflow-y: auto;
+    width: min(1200px, calc(100% - 32px));
+    grid-template-columns: 1fr;
     padding: 16px;
-    gap: 16px;
   }
 }
 
@@ -119,23 +120,34 @@ $white: #ffffff;
 
 // ----- 오른쪽: 폼 (타이틀 + 주문자정보 + 디자인 선택) -----
 .event-template-select__form-wrap {
-  flex: 6;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
   background: #fff;
-  padding: 50px 100px 100px 100px;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.04);
-  border-left: 2px solid #eaeaea;
+  padding: 42px 40px 48px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
 
   @media (max-width: 900px) {
-    flex: 0 0 auto;
     width: 100%;
-    max-width: 500px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    padding: 32px 24px 80px;
+    padding: 32px 24px;
   }
+}
+
+.event-template-select__summary-wrap {
+  position: sticky;
+  top: 24px;
+
+  @media (max-width: 900px) {
+    position: static;
+  }
+}
+
+.event-template-select__summary-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  padding: 24px 18px 18px;
 }
 
 .event-template-select__form-title {
@@ -423,37 +435,63 @@ $white: #ffffff;
 .event-template-select__footer-wrap {
   padding-top: 24px;
   border-top: 1px solid $gray-200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.event-template-select__next-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.event-template-select__pay-btn,
+.event-template-select__back-btn {
   width: 100%;
-  padding: 16px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  color: $white;
-  background: $blue-600;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+}
 
-  &:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
+.event-template-select__pay-btn {
+  color: #fff;
+  background: #1e40af;
 
   &:disabled {
-    opacity: 0.55;
+    background: #94a3b8;
     cursor: not-allowed;
-  }
-
-  svg {
-    font-size: 14px;
   }
 }
 
-// ----- 결제 UI (NoticeTemplateSelect 와 동일 패턴, 클래스 접두사만 event-) -----
+.event-template-select__back-btn {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+.event-template-select__price-list {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.event-template-select__price-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.event-template-select__price-list dt,
+.event-template-select__price-list dd {
+  margin: 0;
+}
+
+.event-template-select__price-list .is-total {
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+// ----- 결제 UI (NoticeApplyPay 와 동일 패턴, 클래스 접두사만 event-) -----
 @import './_eventPaymentUiFromNotice.scss';

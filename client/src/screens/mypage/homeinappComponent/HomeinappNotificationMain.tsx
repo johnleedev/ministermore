@@ -1,0 +1,455 @@
+import { useEffect, useMemo, useState } from 'react';
+import '../Mypage.scss';
+import './HomeinappNotificationMain.scss';
+import { useRecoilState } from 'recoil';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { recoilUserData } from '../../../RecoilStore';
+import MainURL from '../../../MainURL';
+
+const DEFAULT_TITLE = '수요예배 안내';
+const DEFAULT_MESSAGE =
+  '오늘 저녁 7시 30분, 예수사랑교회 본당에서 수요예배가 진행됩니다. 은혜로운 시간이 되시기를 바랍니다.';
+type NotificationHistoryItem = {
+  id: number;
+  church_id: string;
+  adminLoginId?: string;
+  title: string;
+  content: string;
+  sent_at: string;
+  readCount?: number;
+};
+type ChurchInfoRow = {
+  id?: string;
+  churchName?: string;
+  representatives?: string;
+  phoneNumber?: string;
+  userAccount?: string;
+  created_at?: string;
+  portonePaymentId?: string;
+  portonePaidAmount?: number;
+  portoneOrderName?: string;
+  portonePlan?: string;
+  schedulePaymentId?: string;
+  billingKey?: string;
+  portonePaidAt?: string;
+  portoneTimeToPay?: string;
+  portoneScheduleId?: string;
+};
+
+export default function HomeinappNotificationMain() {
+  const navigate = useNavigate();
+  const [userData] = useRecoilState(recoilUserData);
+  const [churchName, setChurchName] = useState<string>('');
+  const [adminName, setAdminName] = useState<string>('');
+  const [churchInfo, setChurchInfo] = useState<ChurchInfoRow | null>(null);
+  const [title, setTitle] = useState(DEFAULT_TITLE);
+  const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [isSending, setIsSending] = useState(false);
+  const [churchUsersCount, setChurchUsersCount] = useState<number>(0);
+  const [churchUsersActiveCount, setChurchUsersActiveCount] = useState<number>(0);
+  const [historyRows, setHistoryRows] = useState<NotificationHistoryItem[]>([]);
+  const [kpiStats, setKpiStats] = useState<{
+    todaySentCount: number;
+    avgOpenRate7d: number;
+    openRateDenominator: number;
+  } | null>(null);
+  const [bodyModal, setBodyModal] = useState<{ title: string; content: string } | null>(null);
+
+  const fetchNotificationSummary = async (churchId: string) => {
+    const res = await axios.get(`${MainURL}/homeinappmain/notifications/summary/${encodeURIComponent(churchId)}`);
+    const payload = res.data;
+    if (!payload?.success) return;
+    const raw = Array.isArray(payload?.data?.history) ? payload.data.history : [];
+    // notifications.readCount (DB 컬럼) — 드라이버에 따라 키가 readcount로 올 수 있어 정규화
+    setHistoryRows(
+      raw.map((row: NotificationHistoryItem & { readcount?: string | number }) => ({
+        ...row,
+        readCount: Number(row.readCount ?? row.readcount ?? 0) || 0,
+      }))
+    );
+    const s = payload?.data?.stats;
+    if (s && typeof s === 'object') {
+      setKpiStats({
+        todaySentCount: Number(s.todaySentCount ?? 0) || 0,
+        avgOpenRate7d: Number(s.avgOpenRate7d ?? 0) || 0,
+        openRateDenominator: Math.max(1, Number(s.openRateDenominator ?? 1) || 1),
+      });
+    } else {
+      setKpiStats(null);
+    }
+  };
+
+  useEffect(() => {
+    const userAccount = String(userData?.userAccount || '').trim();
+    if (!userAccount) return;
+
+    let mounted = true;
+    axios
+      .get(`${MainURL}/homeinappmain/getChurchByUser/${encodeURIComponent(userAccount)}`)
+      .then((res) => {
+        if (!mounted) return;
+        const payload = res.data;
+        if (payload?.success && payload?.data) {
+          setChurchInfo(payload.data as ChurchInfoRow);
+          setChurchName(String(payload.data.churchName || '').trim());
+          const reps = String(payload.data.representatives || '').trim();
+          const firstRep = reps.split(',').map((v: string) => v.trim()).find(Boolean) || '';
+          if (firstRep) setAdminName(firstRep);
+        }
+      })
+      .catch((err) => {
+        console.error('homeinapp churches fetch fail:', err);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userData?.userAccount]);
+
+  useEffect(() => {
+    const churchId = String(churchInfo?.id || '').trim();
+    if (!churchId) return;
+
+    let mounted = true;
+    axios
+      .get(`${MainURL}/homeinappmain/users/${encodeURIComponent(churchId)}`)
+      .then((res) => {
+        if (!mounted) return;
+        const payload = res.data;
+        if (!payload?.success) return;
+        const summary = payload.summary || {};
+        setChurchUsersCount(Number(summary.total || 0));
+        setChurchUsersActiveCount(Number(summary.active || 0));
+      })
+      .catch((err) => {
+        console.error('homeinapp users fetch fail:', err);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [churchInfo?.id]);
+
+  useEffect(() => {
+    const churchId = String(churchInfo?.id || '').trim();
+    if (!churchId) return;
+
+    let mounted = true;
+    fetchNotificationSummary(churchId)
+      .then(() => {
+        if (!mounted) return;
+      })
+      .catch((err) => {
+        console.error('homeinapp notifications summary fetch fail:', err);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [churchInfo?.id]);
+
+  const church = (churchName && churchName.trim()) || (userData?.authChurch?.trim() || '예수사랑교회');
+  const admin = (adminName && adminName.trim()) || (userData?.userNickName?.trim() || '김동현');
+
+  const previewMessage = useMemo(
+    () => (message || '알림 메시지가 여기에 표시됩니다.').slice(0, 70),
+    [message]
+  );
+  const previewTitle = useMemo(() => (title || '알림 제목').trim() || '알림 제목', [title]);
+  const stats = useMemo(() => {
+    const todayN = kpiStats?.todaySentCount ?? 0;
+    const avgOpen = kpiStats?.avgOpenRate7d ?? 0;
+    const denom = kpiStats?.openRateDenominator ?? 1;
+    return [
+      {
+        label: '앱 설치 성도',
+        value: `${churchUsersCount.toLocaleString()}명`,
+        meta: `활성 ${churchUsersActiveCount.toLocaleString()}명`,
+      },
+      {
+        label: '금일 발송 건수',
+        value: `${todayN.toLocaleString()}건`,
+        meta: '오늘 00:00~현재 (알림 발송 기록 기준)',
+      },
+      {
+        label: '평균 오픈율',
+        value: `${avgOpen.toFixed(1)}%`,
+        meta: `최근 7일 · 건당 오픈수 ÷ 활성 ${denom.toLocaleString()}명 (최대 100%)`,
+      },
+    ];
+  }, [churchUsersActiveCount, churchUsersCount, kpiStats]);
+
+  const onSend = async () => {
+    if (isSending) return;
+
+    const churchId = String(churchInfo?.id || '').trim();
+    const pushTitle = String(title || '').trim();
+    const pushMessage = String(message || '').trim();
+
+    if (!churchId) {
+      window.alert('교회 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    if (!pushTitle || !pushMessage) {
+      window.alert('제목과 메시지를 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      const response = await axios.post(`${MainURL}/homeinappmain/sendPushByChurch`, {
+        churchId,
+        adminLoginId: String(userData?.userAccount || '').trim(),
+        title: pushTitle,
+        content: pushMessage,
+      });
+
+      const result = response?.data?.result;
+      const successCount = Number(result?.successCount || 0);
+      const total = Number(result?.total || 0);
+      const cleanedCount = Number(result?.cleanedCount || 0);
+      window.alert(
+        cleanedCount > 0
+          ? `푸시 발송 완료: ${successCount} / ${total}건\n무효 토큰 정리: ${cleanedCount}건`
+          : `푸시 발송 완료: ${successCount} / ${total}건`
+      );
+      await fetchNotificationSummary(churchId);
+    } catch (error: any) {
+      console.error('homeinapp push send fail:', error);
+      const messageText =
+        error?.response?.data?.message || error?.response?.data?.error || '푸시 발송 중 오류가 발생했습니다.';
+      window.alert(messageText);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="mypage mypage--service-full mypage--service-plain">
+      <div className="inner">
+        <div className="subpage__main">
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            <div className="subpage__main__title">홈인앱알림</div>
+            <button
+              type="button"
+              onClick={() => {
+                navigate('/mypage/servicemanage/mobile-church-notice');
+                window.scrollTo(0, 0);
+              }}
+              style={{
+                padding: '12px 24px',
+                background: '#333',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '5px',
+                fontSize: '16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              서비스관리
+            </button>
+          </div>
+          <div className="subpage__main__content">
+            <div className="main__content">
+              <div className="hipush-root hipush-root--flat" lang="ko">
+                <div className="hipush-main">
+                  <div className="hipush-topbar">
+                    <div className="hipush-church-text">
+                      <small>현재 교회</small>
+                      <strong>{church}</strong>
+                    </div>
+                    <div className="hipush-top-info">
+                      <strong>{`관리자 ${admin || '—'}님`}</strong>
+                      <span>{`${userData?.userAccount || '-'}`}</span>
+                    </div>
+                  </div>
+
+                  <section className="hipush-hero" aria-labelledby="hipush-hero-title">
+                    <div>
+                      <h2 id="hipush-hero-title">푸시 알림 발송</h2>
+                      <p>
+                        메시지 작성, 최근 발송 이력 확인까지 한 번에 관리할 수 있습니다.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="hipush-stats" aria-label="지표">
+                    {stats.map((s) => (
+                      <article key={s.label} className="hipush-card hipush-stat-card">
+                        <div className="hipush-stat-label">{s.label}</div>
+                        <div className="hipush-stat-value">{s.value}</div>
+                        <div className="hipush-stat-meta">{s.meta}</div>
+                      </article>
+                    ))}
+                  </section>
+
+                  <section className="hipush-content-grid" aria-label="푸시 발송·분석">
+                    <article className="hipush-card hipush-compose-card">
+                      <div className="hipush-section-title">
+                        <h3>새 푸시 발송</h3>
+                        <span className="hipush-mini-badge">Church Scoped</span>
+                      </div>
+
+                      <div className="hipush-compose-body">
+                        <div className="hipush-form-grid">
+                          <div>
+                            <label className="hipush-label" htmlFor="hipush-title">
+                              제목
+                            </label>
+                            <input
+                              className="hipush-input"
+                              id="hipush-title"
+                              type="text"
+                              value={title}
+                              onChange={(e) => setTitle(e.target.value)}
+                              autoComplete="off"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="hipush-label" htmlFor="hipush-message">
+                              메시지
+                            </label>
+                            <textarea
+                              className="hipush-textarea"
+                              id="hipush-message"
+                              value={message}
+                              onChange={(e) => setMessage(e.target.value)}
+                            />
+                          </div>
+
+                          <div className="hipush-form-actions">
+                            <button className="hipush-btn-primary" type="button" onClick={onSend} disabled={isSending}>
+                              {isSending ? '발송 중...' : '발송하기'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="hipush-preview-panel">
+                          <div className="hipush-preview-copy">
+                            <strong>앱 푸시 미리보기</strong>
+                          </div>
+                          <div className="hipush-phone-mini">
+                            <div className="hipush-screen">
+                              <div className="hipush-notch" />
+                              <div className="hipush-notif">
+                                <strong>{previewTitle}</strong>
+                                <span>{previewMessage}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+
+                    <div className="hipush-side-col">
+                      <article className="hipush-card hipush-history">
+                        <div className="hipush-card-head">
+                          <h3>최근 발송 이력</h3>
+                        </div>
+                        <div className="hipush-table-wrap">
+                          <table className="hipush-table hipush-table--history">
+                            <thead>
+                              <tr>
+                                <th>발송일시</th>
+                                <th>제목</th>
+                                <th>오픈수</th>
+                                <th>상태</th>
+                                <th className="hipush-th-action" aria-label="본문" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {historyRows.map((r) => {
+                                const sentAt = new Date(r.sent_at);
+                                const sentAtText = Number.isNaN(sentAt.getTime())
+                                  ? '-'
+                                  : `${sentAt.getFullYear()}.${String(sentAt.getMonth() + 1).padStart(2, '0')}.${String(
+                                      sentAt.getDate()
+                                    ).padStart(2, '0')} ${String(sentAt.getHours()).padStart(2, '0')}:${String(
+                                      sentAt.getMinutes()
+                                    ).padStart(2, '0')}`;
+                                return (
+                                  <tr key={r.id}>
+                                    <td>{sentAtText}</td>
+                                    <td>{r.title}</td>
+                                    <td>{Number(r.readCount ?? 0).toLocaleString()}</td>
+                                    <td>
+                                      <span className="hipush-status">발송 완료</span>
+                                    </td>
+                                    <td className="hipush-td-action">
+                                      <button
+                                        type="button"
+                                        className="hipush-btn-ghost"
+                                        onClick={() =>
+                                          setBodyModal({ title: r.title, content: String(r.content || '') })
+                                        }
+                                      >
+                                        본문보기
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {historyRows.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5}>발송 이력이 없습니다.</td>
+                                </tr>
+                              ) : null}
+                            </tbody>
+                          </table>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {bodyModal ? (
+        <div
+          className="hipush-modal-backdrop"
+          role="presentation"
+          onClick={() => setBodyModal(null)}
+        >
+          <div
+            className="hipush-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hipush-body-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="hipush-modal__head">
+              <h2 id="hipush-body-modal-title" className="hipush-modal__title">
+                {bodyModal.title}
+              </h2>
+              <button type="button" className="hipush-modal__close" onClick={() => setBodyModal(null)} aria-label="닫기">
+                ×
+              </button>
+            </div>
+            <div className="hipush-modal__body">
+              <p className="hipush-modal__text">{bodyModal.content || '내용이 없습니다.'}</p>
+            </div>
+            <div className="hipush-modal__foot">
+              <button type="button" className="hipush-btn-primary" onClick={() => setBodyModal(null)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

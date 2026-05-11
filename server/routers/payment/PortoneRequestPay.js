@@ -15,6 +15,10 @@ router.use(cors());
 const { bookleteventdb } = require('../dbdatas/bookletdb');
 const { templateIdStrFromBody, normalizeVisibleTabsArray } = require('../service/bookletEvent/bookletEventMerge');
 const { toTemplateInt } = require('../service/bookletEvent/bookletEventShared');
+const {
+  findHomeinappOrderByPaymentId,
+  insertHomeinappOrderWithPayment,
+} = require('../service/homeinapp/homeinappPaymentService');
 const { PORTONE_API_SECRET, PORTONE_STORE_ID } = require('./portonedata');
 
 /** `totalAmount` 미전달 시에만 사용 (구 클라이언트 호환). 가능하면 요청 본문 `totalAmount`로 검증하세요. */
@@ -25,6 +29,9 @@ const FALLBACK_EXPECTED_AMOUNT_KRW = parseInt(
 const EVENT_ORDER_NAME = '행사 전단지 제작';
 /** 원 단위 이상 방지 (조작 완화) */
 const MAX_EVENT_AMOUNT_KRW = 100_000_000;
+const HOMEINAPP_ORDER_NAME = '홈인앱 상세페이지 제작';
+const FALLBACK_HOMEINAPP_AMOUNT_KRW = parseInt(process.env.HOMEINAPP_AMOUNT_VAT_KRW || '108900', 10) || 108900;
+const MAX_HOMEINAPP_AMOUNT_KRW = 100_000_000;
 
 const EVENT_BOOKLET_TYPE_IDS = new Set(['ordination', 'newcomer', 'concert', 'retreat']);
 
@@ -351,6 +358,139 @@ router.post('/event/complete-browser', async (req, res) => {
     });
   } catch (e) {
     console.error('complete-browser handler', e);
+    return res.status(500).json({ ok: false, message: e?.message || String(e) });
+  }
+});
+
+router.post('/homeinapp/complete-browser', async (req, res) => {
+  const {
+    paymentId,
+    txId,
+    totalAmount: totalAmountBody,
+    churchName,
+    ordererName,
+    ordererPhone,
+    ordererEmail,
+    memo,
+    userAccount,
+  } = req.body ?? {};
+
+  const pid = paymentId != null ? String(paymentId).trim() : '';
+  if (!pid) {
+    return res.status(400).json({ ok: false, message: 'paymentId가 필요합니다.' });
+  }
+
+  const churchNameNorm = churchName != null ? String(churchName).trim() : '';
+  const ordererNameNorm = ordererName != null ? String(ordererName).trim() : '';
+  const ordererPhoneNorm = ordererPhone != null ? String(ordererPhone).replace(/\s/g, '') : '';
+  const ordererEmailNorm = ordererEmail != null ? String(ordererEmail).trim() : '';
+  const memoNorm = memo != null ? String(memo) : '';
+  const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
+
+  if (!churchNameNorm || !ordererNameNorm || !ordererPhoneNorm) {
+    return res.status(400).json({ ok: false, message: '교회명, 주문자명, 전화번호는 필수입니다.' });
+  }
+
+  try {
+    const payRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(pid)}`, {
+      headers: { Authorization: `PortOne ${PORTONE_API_SECRET}` },
+    });
+    const payRaw = await payRes.text();
+    let payParsed = null;
+    try {
+      payParsed = payRaw ? JSON.parse(payRaw) : null;
+    } catch {
+      payParsed = null;
+    }
+
+    if (!payRes.ok) {
+      const msg =
+        (payParsed && (payParsed.message || payParsed.pgMessage)) || '결제 정보를 조회할 수 없습니다.';
+      return res.status(400).json({ ok: false, message: msg, details: payParsed });
+    }
+
+    const record = pickPaymentRecord(payParsed);
+    if (!isPaidStatus(record)) {
+      const st = record && typeof record === 'object' ? String(record.status ?? '') : '';
+      return res.status(400).json({
+        ok: false,
+        message: st ? `결제가 완료 상태가 아닙니다. (${st})` : '결제가 완료 상태가 아닙니다.',
+        details: payParsed,
+      });
+    }
+
+    const portoneTotal = getAmountTotal(record);
+    if (portoneTotal == null || Number.isNaN(portoneTotal)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'PortOne 결제에서 금액을 확인할 수 없습니다.',
+        details: payParsed,
+      });
+    }
+
+    let expectedKrw =
+      totalAmountBody != null && String(totalAmountBody).trim() !== ''
+        ? parseInt(String(totalAmountBody).trim(), 10)
+        : FALLBACK_HOMEINAPP_AMOUNT_KRW;
+    if (!Number.isFinite(expectedKrw) || expectedKrw < 1) {
+      return res.status(400).json({ ok: false, message: 'totalAmount 값이 올바르지 않습니다.' });
+    }
+    if (expectedKrw > MAX_HOMEINAPP_AMOUNT_KRW) {
+      return res.status(400).json({ ok: false, message: '허용되지 않는 결제 금액입니다.' });
+    }
+    if (portoneTotal !== expectedKrw) {
+      return res.status(400).json({
+        ok: false,
+        message: '결제 금액이 서비스 금액과 일치하지 않습니다.',
+        expected: expectedKrw,
+        actual: portoneTotal,
+      });
+    }
+
+    if (PORTONE_STORE_ID && record && typeof record === 'object' && record.storeId) {
+      if (String(record.storeId) !== String(PORTONE_STORE_ID)) {
+        return res.status(400).json({ ok: false, message: '스토어 정보가 일치하지 않습니다.' });
+      }
+    }
+
+    const existingId = await findHomeinappOrderByPaymentId(pid);
+    if (existingId != null) {
+      return res.status(409).json({
+        ok: false,
+        message: '이 결제로 이미 홈인앱 주문이 생성되었습니다.',
+        homeinappMainId: existingId,
+        paymentId: pid,
+      });
+    }
+
+    const paidAtResolved = pickPaidAt(payParsed);
+    const orderNameResolved = getOrderNameFromRecord(record) || HOMEINAPP_ORDER_NAME;
+
+    const homeinappMainId = await insertHomeinappOrderWithPayment({
+      userAccount: userAccountNorm,
+      churchName: churchNameNorm,
+      ordererName: ordererNameNorm,
+      ordererPhone: ordererPhoneNorm,
+      ordererEmail: ordererEmailNorm,
+      memo: memoNorm,
+      paymentStatus: 'PAID',
+      portonePaymentId: pid,
+      portoneTxId: txId,
+      portonePaidAmount: portoneTotal,
+      portoneOrderName: orderNameResolved,
+      portonePaidAt: paidAtResolved,
+    });
+
+    return res.json({
+      ok: true,
+      paymentId: pid,
+      txId: txId != null ? String(txId) : undefined,
+      homeinappMainId,
+      portonePaidAt: paidAtResolved,
+      portoneOrderName: orderNameResolved,
+    });
+  } catch (e) {
+    console.error('homeinapp complete-browser handler', e);
     return res.status(500).json({ ok: false, message: e?.message || String(e) });
   }
 });

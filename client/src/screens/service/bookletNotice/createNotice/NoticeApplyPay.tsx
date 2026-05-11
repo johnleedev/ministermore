@@ -9,17 +9,10 @@ import {
   FaChevronRight,
   FaCheck,
   FaExclamationCircle,
-  FaInstagram,
   FaTimes,
-  FaYoutube,
-  FaFacebookF,
 } from 'react-icons/fa';
-import naverlogo from '../../../../images/login/naver.png';
-import kakaologo from '../../../../images/login/kakao.png';
-import naverbloglogo from '../../../../images/naverblog.png';
-import './NoticeTemplateSelect.scss';
+import './NoticeApplyPay.scss';
 import type { NoticeTemplateId } from './noticeTemplateTypes';
-import { TEMPLATE_INTRO_ORDER, type IntroBlockId } from './noticeTemplateTypes';
 import * as PortOne from '@portone/browser-sdk/v2';
 
 
@@ -30,7 +23,7 @@ export type { NoticeTemplateId };
 const DEFAULT_NOTICE_TEMPLATE: NoticeTemplateId = 'classic';
 
 /** 월 이용료 공급가액(원) */
-const PLAN_MONTHLY_PRICE = 1000;
+const PLAN_MONTHLY_PRICE = 10000;
 /** 부가세율 (10%) */
 const PLAN_MONTHLY_VAT_RATE = 0.1;
 /** 부가세 포함 실결제 금액 (원, 정수) */
@@ -95,16 +88,6 @@ function getOrCreateNoticeCustomerId(userAccount: string): string {
   }
 }
 
-function formatTimeForDisplay(timeStr: string): string {
-  if (!timeStr || !timeStr.includes(':')) return '오전 11:00';
-  const [h, m] = timeStr.split(':');
-  const hour = parseInt(h || '11', 10);
-  const minute = m?.padStart(2, '0') || '00';
-  if (hour < 12) return `오전 ${hour}:${minute}`;
-  if (hour === 12) return `오후 12:${minute}`;
-  return `오후 ${hour - 12}:${minute}`;
-}
-
 type CardPanParts = [string, string, string, string];
 
 const EMPTY_CARD_PAN: CardPanParts = ['', '', '', ''];
@@ -124,6 +107,26 @@ type BillingErrorPayload = {
 
 const BILLING_ERROR_FALLBACK =
   '결제를 완료할 수 없습니다. 카드 정보와 입력 내용을 확인한 뒤 잠시 후 다시 시도해 주세요.';
+
+async function recordServiceApply(payload: {
+  serviceType: string;
+  orderName: string;
+  userAccount: string;
+  ordererName: string;
+  ordererPhone: string;
+  amount: number;
+  vat: number;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentId?: string;
+  billingKey?: string;
+}) {
+  try {
+    await axios.post(`${MainURL}/serviceapply/record`, payload);
+  } catch (err) {
+    console.error('failed to record service apply (notice):', err);
+  }
+}
 
 /** 서버·PG·네트워크 원문을 사용자용 한글 안내로 바꿈 (영문·코드는 그대로 노출하지 않음) */
 function billingErrorToKorean(payload: BillingErrorPayload | undefined, axiosMessage?: string): string {
@@ -233,7 +236,7 @@ function billingErrorToKorean(payload: BillingErrorPayload | undefined, axiosMes
   return withScheduleNote(BILLING_ERROR_FALLBACK);
 }
 
-export default function NoticeTemplateSelect() {
+export default function NoticeApplyPay() {
   const navigate = useNavigate();
   const userData = useRecoilValue(recoilUserData);
   const userAccount = userData?.userAccount || '';
@@ -271,7 +274,7 @@ export default function NoticeTemplateSelect() {
   };
 
   const handlePaymentSubmit = async () => {
-    // setPaymentLoading(true);
+    setPaymentLoading(true);
     try {
       const customerId = getOrCreateNoticeCustomerId(userAccount);
       const customer = {
@@ -286,70 +289,69 @@ export default function NoticeTemplateSelect() {
         plan: 'monthly',
       };
 
-      // const cardnum = cardNumberParts.join('');
-      // const expM = cardExpiryMonth.trim();
-      // const expY = cardExpiryYear.trim();
-      // const birthBiz = cardBirthOrBiz.trim();
-      // const pwd2 = cardPasswordTwoDigits.trim();
-      // if (!cardnum || !expM || !expY || !birthBiz || pwd2.length !== 2) {
-      //   openErrorAlert(
-      //     '카드번호(16자리), 유효기간(월·년), 생년월일(또는 사업자번호), 카드 비밀번호 앞 2자리를 모두 입력해 주세요.',
-      //     '입력 정보 확인',
-      //   );
-      //   return;
-      // }
+      const cardnum = cardNumberParts.join('');
+      const expM = cardExpiryMonth.trim();
+      const expY = cardExpiryYear.trim();
+      const birthBiz = cardBirthOrBiz.trim();
+      const pwd2 = cardPasswordTwoDigits.trim();
+      if (!cardnum || !expM || !expY || !birthBiz || pwd2.length !== 2) {
+        openErrorAlert(
+          '카드번호(16자리), 유효기간(월·년), 생년월일(또는 사업자번호), 카드 비밀번호 앞 2자리를 모두 입력해 주세요.',
+          '입력 정보 확인',
+        );
+        return;
+      }
 
       // 포트원 sdk 결제 --------------------------------------------------------------
 
-      const issueResponse = await PortOne.requestIssueBillingKey({
-        storeId: "store-ca1b10da-c69c-4054-90ca-9410bf6ecbed",
-        channelKey: "channel-key-9115b093-e87f-41bc-a761-2f69d7fc6f2b",
-        billingKeyMethod: "CARD",
-        customer: {
-          fullName: ordererName.trim() || userAccount || '주문자',
-          phoneNumber: ordererPhone.trim().replace(/\s/g, '') || '01000000000',
-          email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
-        },
-        currency: "CURRENCY_KRW",
-        displayAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
-        issueName: orderTitle.trim(),
-        issueId: customerId,
+      // const issueResponse = await PortOne.requestIssueBillingKey({
+      //   storeId: "store-ca1b10da-c69c-4054-90ca-9410bf6ecbed",
+      //   channelKey: "channel-key-9115b093-e87f-41bc-a761-2f69d7fc6f2b",
+      //   billingKeyMethod: "CARD",
+      //   customer: {
+      //     fullName: ordererName.trim() || userAccount || '주문자',
+      //     phoneNumber: ordererPhone.trim().replace(/\s/g, '') || '01000000000',
+      //     email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
+      //   },
+      //   currency: "CURRENCY_KRW",
+      //   displayAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
+      //   issueName: orderTitle.trim(),
+      //   issueId: customerId,
         
-      });
+      // });
       
-      console.log('issueResponse', issueResponse);
+      
 
-      const billingRes = await axios.post(
-        `${MainURL}/paymentbilling/billingkey`,
-        {
-          billingKey: issueResponse?.billingKey, 
-          transactionType: "issue",
-          customerId,
-          customer,
-          amount: PLAN_MONTHLY_PRICE_WITH_VAT,
-          customData,
-          orderTitle: orderTitle.trim(),
-        },
-      );
-     
-
-      // const billingRes = await axios.post<NoticeBillingKeySuccessResponse>(
+      // const billingRes = await axios.post(
       //   `${MainURL}/paymentbilling/billingkey`,
       //   {
+      //     billingKey: issueResponse?.billingKey, 
+      //     transactionType: "issue",
       //     customerId,
       //     customer,
-      //     customData,
       //     amount: PLAN_MONTHLY_PRICE_WITH_VAT,
-      //     cardnum,
-      //     expM,
-      //     expY,
-      //     birthBiz,
-      //     pwd2,
+      //     customData,
       //     orderTitle: orderTitle.trim(),
       //   },
       // );
+     
 
-      // console.log('billingRes', billingRes);
+      const billingRes = await axios.post<NoticeBillingKeySuccessResponse>(
+        `${MainURL}/paymentbilling/billingkey`,
+        {
+          customerId,
+          customer,
+          customData,
+          amount: PLAN_MONTHLY_PRICE_WITH_VAT,
+          cardnum,
+          expM,
+          expY,
+          birthBiz,
+          pwd2,
+          orderTitle: orderTitle.trim(),
+        },
+      );
+
 
       const payload = billingRes.data;
       if (!payload?.ok || !payload.paymentId || !payload.schedulePaymentId || !payload.billingKey) {
@@ -361,12 +363,27 @@ export default function NoticeTemplateSelect() {
         return;
       }
 
+      await recordServiceApply({
+        serviceType: 'bookletNotice',
+        orderName: orderTitle.trim() || '교회 전단지 제작',
+        userAccount,
+        ordererName: ordererName.trim(),
+        ordererPhone: ordererPhone.trim().replace(/\s/g, ''),
+        amount: PLAN_MONTHLY_PRICE,
+        vat: Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE),
+        totalAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
+        paymentStatus: 'paid',
+        paymentId: payload.paymentId,
+        billingKey: payload.billingKey,
+      });
+
       const id = payload.churchMainId;
+      window.alert('결제가 되었습니다');
       navigate(`/service/bookletnoticecreate?id=${id}`);
-      // setPaymentSuccessState({
-      //   churchMainId: Number(payload.churchMainId),
-      //   billingDayOfMonth: new Date().getDate(),
-      // });
+      setPaymentSuccessState({
+        churchMainId: Number(payload.churchMainId),
+        billingDayOfMonth: new Date().getDate(),
+      });
     } catch (err) {
       /** 400은 대부분 PortOne 빌링키/첫결제/예약 실패(churchMain INSERT는 500·409). 원인은 `response.data` 참고. */
       if (axios.isAxiosError(err) && err.response?.data) {
@@ -495,159 +512,11 @@ export default function NoticeTemplateSelect() {
 
   const showPaymentSuccess = paymentSuccessState !== null;
 
-  const introOrder = TEMPLATE_INTRO_ORDER['classic'] as IntroBlockId[];
-  const sampleWorship = { worshipName: '주일예배', dayOfWeek: '일요일', time: '11:00', place: '본당', notice: '' };
-  const TAB_LIST = [
-    { id: 'info' as const, label: '소개' },
-    { id: 'servers' as const, label: '섬김이들' },
-    { id: 'sermon' as const, label: '설교영상' },
-    { id: 'gallery' as const, label: '갤러리' },
-  ] as const;
-
   return (
     <div className="notice-template-select">
       <div className="notice-template-select__body">
         <div className="notice-template-select__inner">
-          {/* 왼쪽: 모바일 미리보기 (NoticeCreate와 동일 구조·스타일) */}
-          <aside className="notice-create__preview-wrap">
-            <div className="notice-create__phone-frame">
-              <div className="notice-create__phone-notch" />
-              <div className="notice-create__phone-screen">
-                <div className="notice-create__preview">
-                  <div className="notice-create__preview-hero">
-                    <div className="notice-create__preview-hero-placeholder">메인 이미지</div>
-                    <div className="notice-create__preview-hero-overlay">
-                      <p className="notice-create__preview-hero-sub">교단</p>
-                      <h1 className="notice-create__preview-hero-title">교회 로고</h1>
-                    </div>
-                  </div>
-
-                  {/* 탭: 소개 | 섬김이들 | 설교영상 | 갤러리 (선택 색상 적용) */}
-                  <div className={`notice-template-select__tabs-wrap notice-template-select__tabs-wrap--${DEFAULT_NOTICE_TEMPLATE}`}>
-                    <div className="notice-create__preview-tabs">
-                      {TAB_LIST.map((tab) => (
-                        <div
-                          key={tab.id}
-                          className={`notice-create__preview-tab ${tab.id === 'info' ? 'on' : ''}`}
-                        >
-                          {tab.label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className={`notice-create__preview-body notice-create__preview-body--${DEFAULT_NOTICE_TEMPLATE}`}>
-                    {introOrder.map((blockId: IntroBlockId) => {
-                      if (blockId === 'greeting') {
-                        return (
-                          <div key="greeting" className="notice-create__preview-welcome">
-                            <p className="notice-create__preview-welcome-sub">Welcome Home</p>
-                            <h2 className="notice-create__preview-welcome-title">
-                              함께 예배하고 이웃을 사랑하는 공동체
-                            </h2>
-                            <p className="notice-create__preview-welcome-desc">
-                              하나님을 사랑하고 이웃을 내 몸과 같이 사랑하는 것을 삶으로 실천합니다. 따뜻한 환대와 깊이 있는 말씀이 있는 곳, 교회에 오신 여러분을 환영합니다.
-                            </p>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'worship') {
-                        return (
-                          <div key="worship">
-                            <div className="notice-create__preview-section-label">
-                              <span className="notice-create__preview-chip-icon">🕐</span>
-                              예배 안내
-                            </div>
-                            <div className="notice-create__preview-worship-list">
-                              <div className="notice-create__preview-worship-item">
-                                <div className="notice-create__preview-worship-line notice-create__preview-worship-line--primary">
-                                  <span className="notice-create__preview-worship-name">{sampleWorship.worshipName}</span>
-                                  <span className="notice-create__preview-worship-time">
-                                    {formatTimeForDisplay(sampleWorship.time)}
-                                  </span>
-                                </div>
-                                <div className="notice-create__preview-worship-line notice-create__preview-worship-line--meta">
-                                  <span className="notice-create__preview-worship-place">{sampleWorship.place}</span>
-                                  <span className="notice-create__preview-worship-day">{sampleWorship.dayOfWeek}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'sns') {
-                        return (
-                          <div
-                            key="sns"
-                            className="notice-create__preview-footer-sns notice-create__preview-footer-sns--above-location"
-                          >
-                            <a href="#" aria-label="인스타그램">
-                              <FaInstagram />
-                            </a>
-                            <a href="#" aria-label="유튜브">
-                              <FaYoutube />
-                            </a>
-                            <a href="#" aria-label="페이스북">
-                              <FaFacebookF />
-                            </a>
-                            <a href="#" aria-label="블로그">
-                              <img src={naverbloglogo} alt="블로그" className="notice-create__preview-footer-blog-img" />
-                            </a>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'location') {
-                        return (
-                          <div key="location" className="notice-create__preview-chips">
-                            <div className="notice-create__preview-chip">
-                              <span className="notice-create__preview-chip-icon">📍</span>
-                              <div>
-                                <p className="notice-create__preview-chip-label">위치</p>
-                                <p className="notice-create__preview-chip-value">서울시 강남구</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'mapActions') {
-                        return (
-                          <div key="mapActions">
-                            <div className="notice-create__preview-actions">
-                              <div className="notice-create__preview-btn-row">
-                                <a href="#" className="notice-create__preview-btn notice-create__preview-btn--naver">
-                                  <img src={naverlogo} alt="네이버" className="notice-create__preview-map-icon" />
-                                  네이버 지도
-                                </a>
-                                <a href="#" className="notice-create__preview-btn notice-create__preview-btn--kakao">
-                                  <img src={kakaologo} alt="카카오" className="notice-create__preview-map-icon" />
-                                  카카오 지도
-                                </a>
-                              </div>
-                              <div className="notice-create__preview-btn-row">
-                                <div className="notice-create__preview-btn notice-create__preview-btn--secondary">
-                                  📞 문의하기
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                    <div className="notice-create__preview-footer">
-                      <p className="notice-create__preview-footer-info">
-                        02-1234-5678 | 서울시 강남구
-                        <br />
-                        © {new Date().getFullYear()} 교회 All Rights Reserved.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* 오른쪽: 타이틀 + 주문자정보 + 결제 */}
+          {/* 왼쪽: 타이틀 + 주문자정보 */}
           <section className="notice-template-select__form-wrap">
             <h2 className="notice-template-select__form-title">타이틀</h2>
             <div className="notice-template-select__form-block notice-template-select__form-block--title">
@@ -696,108 +565,131 @@ export default function NoticeTemplateSelect() {
               </div>
             </div>
 
-            <h2 className="notice-template-select__form-title">결제</h2>
-            <div className="notice-template-select__payment-block">
-              <h3 className="notice-template-select__plan-section-title">구독 플랜 안내</h3>
-              <div className="notice-template-select__plan-cards notice-template-select__plan-cards--single">
-                <div className="notice-template-select__plan-card notice-template-select__plan-card--selected">
-                  <p className="notice-template-select__plan-card-name">월간 플랜</p>
-                  <p className="notice-template-select__plan-card-price">
-                    {PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원
-                  </p>
-                  <p className="notice-template-select__plan-card-billing">1인 / 월 1회 결제</p>
-                  <p className="notice-template-select__plan-card-vat">(부가세 10% 별도)</p>
-                  <span className="notice-template-select__plan-select notice-template-select__plan-select--outline notice-template-select__plan-select--selected">
-                    이 플랜 선택
-                  </span>
-                </div>
+            <h2 className="notice-template-select__form-title">서비스 안내</h2>
+            <div className="notice-template-select__plan-features">
+              <div className="notice-template-select__plan-feature-col">
+                <p className="notice-template-select__plan-feature-heading">전단지 제작</p>
+                <ul className="notice-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>모바일·PC 반응형 미리보기</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>교회 맞춤 템플릿 적용</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>예배·안내 블록 자유 구성</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>실시간 저장 및 이어하기</span>
+                  </li>
+                </ul>
               </div>
-
-              <div className="notice-template-select__plan-features">
-                <div className="notice-template-select__plan-feature-col">
-                  <p className="notice-template-select__plan-feature-heading">전단지 제작</p>
-                  <ul className="notice-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>모바일·PC 반응형 미리보기</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>교회 맞춤 템플릿 적용</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>예배·안내 블록 자유 구성</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>실시간 저장 및 이어하기</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="notice-template-select__plan-feature-col">
-                  <p className="notice-template-select__plan-feature-heading">공유·연락</p>
-                  <ul className="notice-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>링크·QR로 손쉬운 공유</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>SNS·지도 버튼 연결</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>문의처·교회 정보 표시</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>성도에게 익숙한 카드형 UI</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="notice-template-select__plan-feature-col">
-                  <p className="notice-template-select__plan-feature-heading">운영 지원</p>
-                  <ul className="notice-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>주문·결제 내역 연동</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>제작 외부 페이지와 동일 구조</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>타이틀·주문자 정보 관리</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>포트원 월 정기결제(빌링키)</span>
-                    </li>
-                  </ul>
-                </div>
+              <div className="notice-template-select__plan-feature-col">
+                <p className="notice-template-select__plan-feature-heading">공유·연락</p>
+                <ul className="notice-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>링크·QR로 손쉬운 공유</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>SNS·지도 버튼 연결</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>문의처·교회 정보 표시</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>성도에게 익숙한 카드형 UI</span>
+                  </li>
+                </ul>
               </div>
-
+              <div className="notice-template-select__plan-feature-col">
+                <p className="notice-template-select__plan-feature-heading">운영 지원</p>
+                <ul className="notice-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>주문·결제 내역 연동</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>제작 외부 페이지와 동일 구조</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>타이틀·주문자 정보 관리</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>포트원 월 정기결제(빌링키)</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <div className="notice-template-select__footer-wrap">
-              <button
-                type="button"
-                className="notice-template-select__next-btn"
-                onClick={() => {
-                  // setPaymentSuccessState(null);
-                  // setPaymentModalOpen(true);
-                  handlePaymentSubmit();
-                }}
-                disabled={paymentLoading}
-              >
-                결제 후 제작하기
-                <FaChevronRight />
-              </button>
-            </div>
+          </section>
 
-            {paymentModalOpen && (
+          <aside className="notice-template-select__summary-wrap">
+            <div className="notice-template-select__summary-card">
+              <h2 className="notice-template-select__form-title">결제</h2>
+              <div className="notice-template-select__payment-block">
+                <h3 className="notice-template-select__plan-section-title">구독 플랜 안내</h3>
+                <div className="notice-template-select__plan-cards notice-template-select__plan-cards--single">
+                  <div className="notice-template-select__plan-card notice-template-select__plan-card--selected">
+                    <p className="notice-template-select__plan-card-name">월간 플랜</p>
+                    <p className="notice-template-select__plan-card-price">
+                      {PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원
+                    </p>
+                    <p className="notice-template-select__plan-card-billing">1인 / 월 1회 결제</p>
+                    <p className="notice-template-select__plan-card-vat">(부가세 10% 별도)</p>
+                  </div>
+                </div>
+                <dl className="notice-template-select__price-list">
+                  <div>
+                    <dt>상품 금액</dt>
+                    <dd>{PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div>
+                    <dt>부가세 (10%)</dt>
+                    <dd>{Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE).toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div className="is-total">
+                    <dt>총 결제금액</dt>
+                    <dd>{PLAN_MONTHLY_PRICE_WITH_VAT.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                </dl>
+
+              </div>
+
+              <div className="notice-template-select__footer-wrap">
+                <button
+                  type="button"
+                  className="notice-template-select__pay-btn"
+                  onClick={() => {
+                    // handlePaymentSubmit();
+                    setPaymentModalOpen(true);
+                  }}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading ? '결제 처리 중...' : '결제하기'}
+                </button>
+                <button
+                  type="button"
+                  className="notice-template-select__back-btn"
+                  onClick={() => navigate('/service/bookletnoticetemplates')}
+                >
+                  이전으로
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          {paymentModalOpen && (
               <div
                 className="notice-template-select__modal-backdrop"
                 role="presentation"
@@ -898,7 +790,7 @@ export default function NoticeTemplateSelect() {
                                   <input
                                     ref={setPanInputRef(index)}
                                     id={`notice-modal-card-pan-${index}`}
-                                    type="text"
+                                    type={index === 1 || index === 2 ? 'password' : 'text'}
                                     inputMode="numeric"
                                     autoComplete={index === 0 ? 'cc-number' : 'off'}
                                     spellCheck={false}
@@ -1014,9 +906,7 @@ export default function NoticeTemplateSelect() {
                   )}
                 </div>
               </div>
-            )}
-
-          </section>
+          )}
         </div>
       </div>
 

@@ -21,10 +21,18 @@ const Header: React.FC = () => {
     },
     // { title: "사역자", url:"/minister", 
     //   links: [
-    //     {title:"페이지", subUrl:"/minister"}, 
+    //     {title:"프로필페이지", subUrl:"/minister"}, 
     //     // {title:"사역지", subUrl:"/worship"}, 
     //   ]
     // },
+    { title: "수련회", url:"/retreat", 
+      links: [
+        {title:"수련회장소", subUrl:"/retreat/place"}, 
+        {title:"장소후기", subUrl:"/retreat/review"}, 
+        {title:"수련회강사", subUrl:"/retreat/casting"}, 
+        {title:"등업신청", subUrl:"/retreat/grade"}, 
+      ]
+    },
     { title: "예배사역", url:"/worship", 
       links: [
         {title:"적용찬양찾기", subUrl:"/worship"}, 
@@ -35,8 +43,10 @@ const Header: React.FC = () => {
       links: [
         {title:"모바일전단지(소개)", subUrl:"/service/notice"},
         {title:"모바일전단지(행사)", subUrl:"/service/event"},
-        {title:"모바일주보", subUrl:"/service/bulletin"},
-        {title:"홈페이지", subUrl:"/service/homepage"},
+        {title:"홈인앱", subUrl:"/service/homeinapp"},
+        {title:"교회어플", subUrl:"/service/churchapp"},
+        // {title:"홈페이지", subUrl:"/service/homepage"},
+        // {title:"모바일주보", subUrl:"/service/bulletin"},     
       ]
     },
     { title: "커뮤니티", url:"/community", 
@@ -182,11 +192,9 @@ const Header: React.FC = () => {
                               <span className="mobile_menu-announce">로그인해 주세요</span>
                               <div className="mobile_menu-button_wrap">
                                   <div className="header-button" onClick={()=>{
-                                    alert('모바일 환경에서, 일부 기기가 카카오 로그인이 불안정함에 따라, 카카오 로그인이 안될시에는 네이버 로그인을 해주세요.')
                                     navigate("/login"); toggleMenu();
                                   }}>로그인</div>
                                   <div className="header-button" onClick={()=>{
-                                    alert('모바일 환경에서, 일부 기기가 카카오 회원가입이 불안정함에 따라, 카카오 회원가입이 안될시에는 네이버 회원가입을 해주세요.')
                                     navigate("/login/logister"); toggleMenu();}}
                                   >회원가입</div>
                               </div>

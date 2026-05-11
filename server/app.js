@@ -12,11 +12,13 @@ var cors = require('cors');
 // 라우터들
 const LoginRouter = require('./routers/common/login');
 const MypageRouter = require('./routers/common/Mypage');
+const PushNotificationRouter = require('./routers/common/pushNotification');
 app.use('/login', LoginRouter);
 app.use('/mypage', MypageRouter);
+app.use('/pushnotifi', PushNotificationRouter);
 
-const HolyssumRouter = require('./routers/holyssum/holyssum');
-app.use('/holyssum', HolyssumRouter);
+// const HolyssumRouter = require('./routers/holyssum/holyssum');
+// app.use('/holyssum', HolyssumRouter);
 
 const RecruitMinisterRouter = require('./routers/recruit/RecruitMinister');
 const RecruitChurchRouter = require('./routers/recruit/RecruitChurch');
@@ -28,6 +30,12 @@ app.use('/recruitinstitute', RecruitInstituteRouter);
 app.use('/recruitwork', RecruitWorkRouter);
 
 
+const MinisterRouter = require('./routers/minister/Minister');
+app.use('/minister', MinisterRouter);
+
+const MinisterEditRouter = require('./routers/minister/MinisterEdit');
+app.use('/ministeredit', MinisterEditRouter);
+
 const SongsRouter = require('./routers/worship/Songs');
 app.use('/worshipsongs', SongsRouter);
 const SongWorkRouter = require('./routers/worship/SongWork');
@@ -35,6 +43,15 @@ app.use('/worshipsongswork', SongWorkRouter);
 
 const ResumeRouter = require('./routers/resume/Resume');
 app.use('/resume', ResumeRouter);
+
+const RetreatPlaceRouter = require('./routers/retreat/Place');
+const RetreatReviewRouter = require('./routers/retreat/Review');
+const RetreatUpgradeRouter = require('./routers/retreat/Upgrade');
+const RetreatCastingRouter = require('./routers/retreat/Casting');
+app.use('/retreat', RetreatPlaceRouter);
+app.use('/retreatreview', RetreatReviewRouter);
+app.use('/retreatupgrade', RetreatUpgradeRouter);
+app.use('/retreatcasting', RetreatCastingRouter);
 
 
 var NoticeBoardRouter = require('./routers/board/NoticeBoard');
@@ -61,6 +78,8 @@ const EventMainRouter = require('./routers/service/bookletEvent/EventMain');
 const EventCreateBookletRouter = require('./routers/service/bookletEvent/EventCreateBooklet');
 const BulletinMainRouter = require('./routers/service/bulletin/BulletinMain');
 const BulletinCreateRouter = require('./routers/service/bulletin/BulletinCreate');
+const HomeinappMainRouter = require('./routers/service/homeinapp/HomeinappMain');
+const ServiceApplyRouter = require('./routers/service/serviceapply');
 const PortoneBillingRouter = require('./routers/payment/PortoneBilling');
 const PortoneRequestPayRouter = require('./routers/payment/PortoneRequestPay');
 app.use('/bookletnoticemain', ChurchbookletbookletsRouter);
@@ -69,6 +88,9 @@ app.use('/bookleteventmain', EventMainRouter);
 app.use('/bookleteventcreate', EventCreateBookletRouter);
 app.use('/bulletinmain', BulletinMainRouter);
 app.use('/bulletincreate', BulletinCreateRouter);
+app.use('/homeinappmain', HomeinappMainRouter);
+app.use('/serviceapply', ServiceApplyRouter);
+
 app.use('/paymentbilling', PortoneBillingRouter);
 app.use('/paymentrequestpay', PortoneRequestPayRouter);
 

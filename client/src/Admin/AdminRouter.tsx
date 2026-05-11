@@ -14,12 +14,13 @@ import WorshipManage from './worship/WorshipManage';
 import WorshipManageAdmin from './worship/WorshipManageAdmin';
 import Backup from './Backup';
 import AdminEmail from './email/AdminEmail';
+import PushNotificationAdmin from './pushNotifi/PushNotificationAdmin';
+import ServiceApplyList from './service/ServiceApplyList';
 
 export default function AdminMain( props: any) {
 
   return (
     <div className="AdminContainer">
-      <Header />
       <Routes>
         <Route path="/" element={<Login/>}/>
         <Route path="/main" element={<Main/>}/>
@@ -31,6 +32,8 @@ export default function AdminMain( props: any) {
         <Route path="/backup" element={<Backup/>}/>
         <Route path="/worshipmanageadmin" element={<WorshipManageAdmin/>}/>
         <Route path="/emailmanage" element={<AdminEmail />}/>
+        <Route path="/pushnotifi" element={<PushNotificationAdmin />}/>
+        <Route path="/serviceapply" element={<ServiceApplyList />}/>
       </Routes>
       <Footer />
     </div>

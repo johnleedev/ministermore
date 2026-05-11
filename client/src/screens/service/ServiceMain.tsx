@@ -20,21 +20,39 @@ const SERVICES = [
     path: "/service/event",
   },
   {
-    emoji: "📖",
-    titleLines: ["교회 주보"],
-    strong: "매주 업데이트되는 모바일 주보",
+    emoji: "🏠",
+    titleLines: ["홈인앱"],
+    strong: "기존 홈페이지를 웹앱으로 연결",
     description:
-      "예배 순서, 교회 소식, 광고 내용을 종이 없이도 모바일에서 편하게 확인할 수 있습니다.",
-    path: "/service/bulletin",
+      "지금 사용 중인 교회 홈페이지를 바탕으로 주보·설교·공지를 모바일에서 더 빠르게 전달하는 웹앱 서비스입니다.",
+    path: "/service/homeinapp",
   },
   {
-    emoji: "🌐",
-    titleLines: ["홈페이지 제작"],
-    strong: "교회 맞춤 홈페이지 제작",
+    emoji: "📲",
+    titleLines: ["교회 전용 어플"],
+    strong: "교회 브랜드 전용 앱",
     description:
-      "교회 정체성과 안내를 담은 웹사이트를 기획부터 제작까지 함께 구성해 드립니다.",
-    path: "/service/homepage",
+      "교회명과 사역 흐름을 담은 전용 앱으로 공지, 설교, 부서 안내를 한곳에서 운영할 수 있습니다.",
+    path: "/service/churchapp",
   },
+  // {
+  //   emoji: "🌐",
+  //   titleLines: ["홈페이지 제작"],
+  //   strong: "교회 맞춤 홈페이지 제작",
+  //   description:
+  //     "교회 정체성과 안내를 담은 웹사이트를 기획부터 제작까지 함께 구성해 드립니다.",
+  //   path: "/service/homepage",
+  // },
+  // {
+  //   emoji: "📖",
+  //   titleLines: ["모바일 주보"],
+  //   strong: "매주 업데이트되는 모바일 주보",
+  //   description:
+  //     "예배 순서, 교회 소식, 광고 내용을 종이 없이도 모바일에서 편하게 확인할 수 있습니다.",
+  //   path: "/service/bulletin",
+  // },
+  
+ 
 ];
 
 const WHY_ITEMS = [

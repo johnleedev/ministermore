@@ -38,6 +38,7 @@ export default function MinisterPageList() {
     try {
       const res = await axios.get(`${MainURL}/minister/getdataministers`);
       const rows = res?.data?.data;
+      console.log(rows);
       if (!rows || rows === false) {
         setSearchResult(null);
         return;
@@ -235,7 +236,7 @@ export default function MinisterPageList() {
       <div className="inner">
         <div className="subpage__main">
           <div className="subpage__main__title">
-            <h3>사역자 페이지</h3>
+            <h3>프로필 페이지</h3>
             <div className='postBtn'
               onClick={() => navigate('/minister/edit')}
             >

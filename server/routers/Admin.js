@@ -4,6 +4,7 @@ var cors = require('cors');
 router.use(cors());
 router.use(express.json()); // axios 전송 사용하려면 이거 있어야 함
 const { commondb } = require('./dbdatas/commondb');
+const { retreatmoredb, retreatdb } = require('./dbdatas/retreatdb');
 const bodyParser = require('body-parser');
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({extended:true}));
@@ -11,6 +12,20 @@ const multer  = require('multer')
 var fs = require("fs");
 
 const escapeQuotes = (str) => str.replaceAll('è', '\è').replaceAll("'", "\\\'").replaceAll('"', '\\\"').replaceAll('\\n', '\\\\n');
+
+const queryAsync = (db, sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+  });
+};
+
+const getTableColumns = async (db, tableName) => {
+  const columns = await queryAsync(db, `SHOW COLUMNS FROM ${tableName}`);
+  return columns.map((column) => column.Field);
+};
 
 
 // 방문자 통계 조회 (일별 방문자 수)
@@ -106,6 +121,82 @@ router.get('/countall', (req, res) => {
     }
   );
 });
+
+// datacasting 백업 현황 조회
+router.get('/retreat-casting-backup-status', async (req, res) => {
+  try {
+    const [sourceCountResult, targetCountResult] = await Promise.all([
+      queryAsync(retreatmoredb, `SELECT COUNT(*) AS count FROM datacasting`),
+      queryAsync(retreatdb, `SELECT COUNT(*) AS count FROM datacasting`)
+    ]);
+
+    res.json({
+      success: true,
+      sourceCount: sourceCountResult[0].count,
+      targetCount: targetCountResult[0].count
+    });
+  } catch (error) {
+    console.error('retreat-casting-backup-status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'datacasting 백업 현황 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// retreatmore datacasting 데이터를 retreat datacasting으로 복사
+router.post('/backup-retreat-casting', async (req, res) => {
+  try {
+    const sourceColumns = await getTableColumns(retreatmoredb, 'datacasting');
+    const targetColumns = await getTableColumns(retreatdb, 'datacasting');
+    const copyColumns = sourceColumns.filter((column) => targetColumns.includes(column));
+
+    if (copyColumns.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '복사 가능한 공통 컬럼이 없습니다.'
+      });
+    }
+
+    const columnSql = copyColumns.map((column) => `\`${column}\``).join(', ');
+    const sourceRows = await queryAsync(retreatmoredb, `SELECT ${columnSql} FROM datacasting`);
+
+    if (sourceRows.length === 0) {
+      return res.json({
+        success: true,
+        totalCount: 0,
+        insertedCount: 0,
+        skippedCount: 0,
+        columns: copyColumns
+      });
+    }
+
+    const values = sourceRows.map((row) => copyColumns.map((column) => row[column]));
+    const placeholders = values.map(() => `(${copyColumns.map(() => '?').join(', ')})`).join(', ');
+    const flatValues = values.flat();
+
+    const insertResult = await queryAsync(
+      retreatdb,
+      `INSERT IGNORE INTO datacasting (${columnSql}) VALUES ${placeholders}`,
+      flatValues
+    );
+
+    res.json({
+      success: true,
+      totalCount: sourceRows.length,
+      insertedCount: insertResult.affectedRows,
+      skippedCount: sourceRows.length - insertResult.affectedRows,
+      columns: copyColumns
+    });
+  } catch (error) {
+    console.error('backup-retreat-casting error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'datacasting 백업 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 
 
 module.exports = router;

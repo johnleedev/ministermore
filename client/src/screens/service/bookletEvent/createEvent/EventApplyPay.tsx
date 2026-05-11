@@ -5,14 +5,10 @@ import axios from 'axios';
 import MainURL from '../../../../MainURL';
 import { requestEventBookletPayment } from '../../../../payment/portonePayment';
 import { recoilUserData } from '../../../../RecoilStore';
-import { FaChevronRight, FaChevronDown, FaCheck, FaExclamationCircle } from 'react-icons/fa';
-import naverlogo from '../../../../images/login/naver.png';
-import kakaologo from '../../../../images/login/kakao.png';
-import './EventTemplateSelect.scss';
+import { FaChevronDown, FaCheck, FaExclamationCircle } from 'react-icons/fa';
+import './EventApplyPay.scss';
 import type { EventTemplateId } from './eventTemplateTypes';
 import {
-  TEMPLATE_EVENT_ORDER,
-  type EventBlockId,
   type EventBookletTypeId,
   type EventVisibleTabId,
   EVENT_BOOKLET_TYPE_DEFS,
@@ -30,7 +26,7 @@ export type { EventTemplateId };
 const DEFAULT_EVENT_TEMPLATE: EventTemplateId = 'classic';
 
 /** 행사 전단지 1건 공급가액(원) */
-const EVENT_TEMPLATE_PRICE = 1000;
+const EVENT_TEMPLATE_PRICE = 50000;
 const EVENT_TEMPLATE_VAT_RATE = 0.1;
 const EVENT_TEMPLATE_PRICE_WITH_VAT = Math.round(EVENT_TEMPLATE_PRICE * (1 + EVENT_TEMPLATE_VAT_RATE));
 
@@ -57,6 +53,25 @@ type EventPaymentSuccessState = {
 
 type ServerErrorPayload = { message?: string; ok?: boolean };
 
+async function recordServiceApply(payload: {
+  serviceType: string;
+  orderName: string;
+  userAccount: string;
+  ordererName: string;
+  ordererPhone: string;
+  amount: number;
+  vat: number;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentId?: string;
+}) {
+  try {
+    await axios.post(`${MainURL}/serviceapply/record`, payload);
+  } catch (err) {
+    console.error('failed to record service apply (event):', err);
+  }
+}
+
 function serverErrorToKorean(payload: ServerErrorPayload | undefined, axiosMessage?: string): string {
   const msg = typeof payload?.message === 'string' ? payload.message.trim() : '';
   if (msg && /^[\s가-힣0-9.,!?()[\]·\-'"%…]+$/.test(msg) && msg.length >= 2) {
@@ -68,7 +83,7 @@ function serverErrorToKorean(payload: ServerErrorPayload | undefined, axiosMessa
   return '처리 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.';
 }
 
-export default function EventTemplateSelect() {
+export default function EventApplyPay() {
   const navigate = useNavigate();
   const userData = useRecoilValue(recoilUserData);
   const userAccount = userData?.userAccount || '';
@@ -156,6 +171,19 @@ export default function EventTemplateSelect() {
         return;
       }
 
+      await recordServiceApply({
+        serviceType: 'bookletEvent',
+        orderName: EVENT_ORDER_NAME,
+        userAccount,
+        ordererName: nameTrim,
+        ordererPhone: phoneDigits,
+        amount: EVENT_TEMPLATE_PRICE,
+        vat: Math.round(EVENT_TEMPLATE_PRICE * EVENT_TEMPLATE_VAT_RATE),
+        totalAmount: EVENT_TEMPLATE_PRICE_WITH_VAT,
+        paymentStatus: 'paid',
+        paymentId: data.paymentId,
+      });
+
       setPaymentSuccessState({
         eventMainId: Number(data.eventMainId),
         ordererName: nameTrim,
@@ -240,15 +268,6 @@ export default function EventTemplateSelect() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [eventAlert, paymentSuccessState, finalizeSuccessfulPayment]);
 
-  const eventOrder = TEMPLATE_EVENT_ORDER['classic'] as EventBlockId[];
-  const sampleEvent = { eventName: '행사명', date: '2025-01-15', place: '본당', superViser: '주관', address: '서울시 강남구' };
-  const previewTabIds = orderVisibleTabIds(selectedTabSet);
-  const previewTabs = previewTabIds.map((id) => ({
-    id,
-    label: EVENT_VISIBLE_TAB_LABELS[id],
-  }));
-  const showProgramSampleInIntro = previewTabIds.includes('program');
-
   const setTabIncluded = (id: EventVisibleTabId, include: boolean) => {
     if (id === 'info') return;
     setSelectedTabSet((prev) => {
@@ -271,121 +290,6 @@ export default function EventTemplateSelect() {
     <div className="event-template-select">
       <div className="event-template-select__body">
         <div className="event-template-select__inner">
-          <aside className="event-create__preview-wrap">
-            <div className="event-create__phone-frame">
-              <div className="event-create__phone-notch" />
-              <div className="event-create__phone-screen">
-                <div className="event-create__preview">
-                  <div className="event-create__preview-hero">
-                    <div className="event-create__preview-hero-placeholder">메인 이미지</div>
-                    <div className="event-create__preview-hero-overlay">
-                      <p className="event-create__preview-hero-sub">행사</p>
-                      <h1 className="event-create__preview-hero-title">행사 로고</h1>
-                    </div>
-                  </div>
-
-                  <div className={`event-template-select__tabs-wrap event-template-select__tabs-wrap--${DEFAULT_EVENT_TEMPLATE}`}>
-                    <div className={`event-create__preview-tabs event-create__preview-tabs--n${previewTabs.length}`}>
-                      {previewTabs.map((tab) => (
-                        <div
-                          key={tab.id}
-                          className={`event-create__preview-tab ${tab.id === 'info' ? 'on' : ''}`}
-                        >
-                          {tab.label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className={`event-create__preview-body event-create__preview-body--${DEFAULT_EVENT_TEMPLATE}`}>
-                    {eventOrder.map((blockId: EventBlockId) => {
-                      if (blockId === 'eventInfo') {
-                        return (
-                          <div key="eventInfo" className="event-create__preview-welcome">
-                            <p className="event-create__preview-welcome-sub">행사 정보</p>
-                            <h2 className="event-create__preview-welcome-title">{sampleEvent.eventName}</h2>
-                            <p className="event-create__preview-welcome-desc">
-                              {sampleEvent.date} · {sampleEvent.place}
-                              <br />
-                              주관/주최: {sampleEvent.superViser}
-                              <br />
-                              주소: {sampleEvent.address}
-                            </p>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'map') {
-                        return (
-                          <div key="map">
-                            <div className="event-create__preview-section-label">
-                              <span className="event-create__preview-chip-icon">📍</span>
-                              오시는길
-                            </div>
-                            <div className="event-create__preview-chips">
-                              <div className="event-create__preview-chip">
-                                <span className="event-create__preview-chip-icon">📍</span>
-                                <div>
-                                  <p className="event-create__preview-chip-label">위치</p>
-                                  <p className="event-create__preview-chip-value">{sampleEvent.address}</p>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="event-create__preview-actions">
-                              <div className="event-create__preview-btn-row">
-                                <a href="#" className="event-create__preview-btn event-create__preview-btn--naver">
-                                  <img src={naverlogo} alt="네이버" className="event-create__preview-map-icon" />
-                                  네이버 지도
-                                </a>
-                                <a href="#" className="event-create__preview-btn event-create__preview-btn--kakao">
-                                  <img src={kakaologo} alt="카카오" className="event-create__preview-map-icon" />
-                                  카카오 지도
-                                </a>
-                              </div>
-                              <div className="event-create__preview-btn-row">
-                                <div className="event-create__preview-btn event-create__preview-btn--secondary">
-                                  📞 문의하기
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      if (blockId === 'program') {
-                        if (!showProgramSampleInIntro) return null;
-                        return (
-                          <div key="program" className="event-create__preview-schedule">
-                            <div className="event-create__preview-section-label">
-                              <span className="event-create__preview-chip-icon">📋</span>
-                              프로그램
-                            </div>
-                            <div className="event-create__preview-worship-list">
-                              <div className="event-create__preview-worship-item">
-                                <span className="event-create__preview-worship-name">1. 오프닝</span>
-                                <span className="event-create__preview-worship-place">14:00</span>
-                              </div>
-                              <div className="event-create__preview-worship-item">
-                                <span className="event-create__preview-worship-name">2. 본 프로그램</span>
-                                <span className="event-create__preview-worship-place">14:30</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                    <div className="event-create__preview-footer">
-                      <p className="event-create__preview-footer-info">
-                        02-1234-5678 | 서울시 강남구
-                        <br />
-                        © {new Date().getFullYear()} 행사 All Rights Reserved.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-
           <section className="event-template-select__form-wrap">
             <h2 className="event-template-select__form-title">타이틀</h2>
             <div className="event-template-select__form-block event-template-select__form-block--title">
@@ -541,86 +445,110 @@ export default function EventTemplateSelect() {
               </div>
             </div>
 
-            <h2 className="event-template-select__form-title">결제</h2>
-            <div className="event-template-select__payment-block">
-              <h3 className="event-template-select__plan-section-title">행사 전단지 이용권</h3>
-              <div className="event-template-select__plan-cards event-template-select__plan-cards--single">
-                <div className="event-template-select__plan-card event-template-select__plan-card--selected">
-                  <p className="event-template-select__plan-card-name">1건 제작</p>
-                  <p className="event-template-select__plan-card-price">
-                    {EVENT_TEMPLATE_PRICE.toLocaleString('ko-KR')}원
-                  </p>
-                  <p className="event-template-select__plan-card-billing">선택한 유형으로 제작 · 3개월 이용</p>
-                  <p className="event-template-select__plan-card-vat">(부가세 10% 별도)</p>
-                  <span className="event-template-select__plan-select event-template-select__plan-select--outline event-template-select__plan-select--selected">
-                    이 상품 선택
-                  </span>
-                </div>
+            <h2 className="event-template-select__form-title">서비스 안내</h2>
+            <div className="event-template-select__plan-features">
+              <div className="event-template-select__plan-feature-col">
+                <p className="event-template-select__plan-feature-heading">제작</p>
+                <ul className="event-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>행사 유형별 탭·프로그램 구성</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>모바일 미리보기와 동일한 편집</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>지도·문의 버튼 연결</span>
+                  </li>
+                </ul>
               </div>
-
-              <div className="event-template-select__plan-features">
-                <div className="event-template-select__plan-feature-col">
-                  <p className="event-template-select__plan-feature-heading">제작</p>
-                  <ul className="event-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>행사 유형별 탭·프로그램 구성</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>모바일 미리보기와 동일한 편집</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>지도·문의 버튼 연결</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="event-template-select__plan-feature-col">
-                  <p className="event-template-select__plan-feature-heading">결제</p>
-                  <ul className="event-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>포트원 결제 창에서 안전하게 카드 결제</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>부가세 포함 금액으로 결제</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>결제 완료 후 바로 제작 화면 이동</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="event-template-select__plan-feature-col">
-                  <p className="event-template-select__plan-feature-heading">안내</p>
-                  <ul className="event-template-select__plan-feature-list">
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>결제 후 3개월 동안 이용 가능</span>
-                    </li>
-                    <li>
-                      <FaCheck aria-hidden />
-                      <span>타이틀·주문자·유형은 결제 시 함께 저장</span>
-                    </li>
-                  </ul>
-                </div>
+              <div className="event-template-select__plan-feature-col">
+                <p className="event-template-select__plan-feature-heading">결제</p>
+                <ul className="event-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>포트원 결제 창에서 안전하게 카드 결제</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>부가세 포함 금액으로 결제</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>결제 완료 후 바로 제작 화면 이동</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="event-template-select__plan-feature-col">
+                <p className="event-template-select__plan-feature-heading">안내</p>
+                <ul className="event-template-select__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>결제 후 3개월 동안 이용 가능</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>타이틀·주문자·유형은 결제 시 함께 저장</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <div className="event-template-select__footer-wrap">
-              <button
-                type="button"
-                className="event-template-select__next-btn"
-                onClick={handlePaymentSubmit}
-                disabled={paymentLoading}
-              >
-                {paymentLoading ? '결제 처리 중...' : '결제 후 제작하기'}
-                <FaChevronRight />
-              </button>
-            </div>
           </section>
+
+          <aside className="event-template-select__summary-wrap">
+            <div className="event-template-select__summary-card">
+              <h2 className="event-template-select__form-title">결제</h2>
+              <div className="event-template-select__payment-block">
+                <h3 className="event-template-select__plan-section-title">행사 전단지 이용권</h3>
+                <div className="event-template-select__plan-cards event-template-select__plan-cards--single">
+                  <div className="event-template-select__plan-card event-template-select__plan-card--selected">
+                    <p className="event-template-select__plan-card-name">1건 제작</p>
+                    <p className="event-template-select__plan-card-price">
+                      {EVENT_TEMPLATE_PRICE.toLocaleString('ko-KR')}원
+                    </p>
+                    <p className="event-template-select__plan-card-billing">선택한 유형으로 제작 · 3개월 이용</p>
+                    <p className="event-template-select__plan-card-vat">(부가세 10% 별도)</p>
+                  </div>
+                </div>
+                <dl className="event-template-select__price-list">
+                  <div>
+                    <dt>상품 금액</dt>
+                    <dd>{EVENT_TEMPLATE_PRICE.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div>
+                    <dt>부가세 (10%)</dt>
+                    <dd>{Math.round(EVENT_TEMPLATE_PRICE * EVENT_TEMPLATE_VAT_RATE).toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div className="is-total">
+                    <dt>총 결제금액</dt>
+                    <dd>{EVENT_TEMPLATE_PRICE_WITH_VAT.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                </dl>
+
+              </div>
+
+              <div className="event-template-select__footer-wrap">
+                <button
+                  type="button"
+                  className="event-template-select__pay-btn"
+                  onClick={handlePaymentSubmit}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading ? '결제 처리 중...' : '결제하기'}
+                </button>
+                <button
+                  type="button"
+                  className="event-template-select__back-btn"
+                  onClick={() => navigate('/service/bookleteventtemplates')}
+                >
+                  이전으로
+                </button>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 

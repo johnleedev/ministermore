@@ -1,0 +1,71 @@
+.service-apply-admin {
+  width: min(1400px, calc(100% - 40px));
+  margin: 24px auto 48px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.service-apply-admin__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.service-apply-admin__head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.service-apply-admin__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-apply-admin__controls select,
+.service-apply-admin__controls button {
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+}
+
+.service-apply-admin__controls button {
+  cursor: pointer;
+}
+
+.service-apply-admin__table-wrap {
+  overflow: auto;
+}
+
+.service-apply-admin__table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.service-apply-admin__table th,
+.service-apply-admin__table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.service-apply-admin__table th {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+}
+
+.service-apply-admin__empty {
+  text-align: center !important;
+  color: #64748b;
+  padding: 20px 8px !important;
+}

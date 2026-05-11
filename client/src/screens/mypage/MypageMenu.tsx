@@ -10,7 +10,8 @@ const MENU_ITEMS = [
 const SERVICE_SUB_ITEMS = [
   { path: '/mypage/servicemanage/mobile-church-notice', label: '모바일교회전단지' },
   { path: '/mypage/servicemanage/mobile-event-notice', label: '모바일행사전단지' },
-  { path: '/mypage/servicemanage/church-bulletin', label: '교회주보' },
+  // { path: '/mypage/church-bulletin', label: '교회주보' },
+  { path: '/mypage/homeinapp-notification', label: '홈인앱알림' },
 ] as const;
 
 export default function MypageMenu() {
@@ -20,6 +21,13 @@ export default function MypageMenu() {
   const isActive = (path: string) => {
     if (path === '/mypage') {
       return location.pathname === '/mypage' || location.pathname === '/mypage/';
+    }
+    if (path === '/mypage/servicemanage') {
+      return (
+        location.pathname.startsWith('/mypage/servicemanage') ||
+        location.pathname === '/mypage/church-bulletin' ||
+        location.pathname === '/mypage/homeinapp-notification'
+      );
     }
     return location.pathname.startsWith(path);
   };

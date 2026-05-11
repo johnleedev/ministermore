@@ -59,6 +59,24 @@ router.post('/getdataministerspart', async (req, res) => {
   });
 });
 
+// 빈 사역자 페이지(신규 편집) 생성 — insertId 반환
+router.post('/createnew', (req, res) => {
+  ministerdb.query(
+    `INSERT INTO ministerMain
+      (userAccount, sort, name, personInfo, profile, images, youtube, contact, date)
+     VALUES ('', '', '', '', '', '', '', '', NOW())`,
+    function (error, result) {
+      if (error) {
+        console.error('createnew:', error);
+        return res.json({ success: false });
+      }
+      if (result && result.insertId) {
+        return res.json({ success: true, id: String(result.insertId) });
+      }
+      return res.json({ success: false });
+    }
+  );
+});
 
 // 게시글 사진 파일 저장 미들웨어
 const storage = multer.diskStorage({

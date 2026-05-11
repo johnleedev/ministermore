@@ -797,9 +797,13 @@ router.post('/generateNoticeHtml', (req, res) => {
   }
 
   const query = `
-    SELECT i.churchName, i.imageMainName
-    FROM churchInfo i
-    WHERE i.churchMainId = ?
+    SELECT
+      m.orderTitle,
+      i.churchName,
+      i.imageMainName
+    FROM churchMain m
+    LEFT JOIN churchInfo i ON m.id = i.churchMainId
+    WHERE m.id = ?
     LIMIT 1
   `;
 
@@ -813,7 +817,7 @@ router.post('/generateNoticeHtml', (req, res) => {
     }
 
     const row = rows[0] || {};
-    const churchName = String(row.churchName || '').trim() || `교회소개${churchMainId}`;
+    const churchName = String(row.churchName || row.orderTitle || '').trim() || `교회소개${churchMainId}`;
     const imageSlots = parseImageMainNameSlots(row.imageMainName);
     const firstImage = imageSlots.find((name) => String(name || '').trim() !== '');
     const imageUrl = firstImage
