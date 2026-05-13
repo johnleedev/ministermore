@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import axios from 'axios';
@@ -7,7 +7,6 @@ import { requestEventBookletPayment } from '../../../../payment/portonePayment';
 import { recoilUserData } from '../../../../RecoilStore';
 import { FaChevronDown, FaCheck, FaExclamationCircle } from 'react-icons/fa';
 import './EventApplyPay.scss';
-import type { EventTemplateId } from './eventTemplateTypes';
 import {
   type EventBookletTypeId,
   type EventVisibleTabId,
@@ -20,11 +19,6 @@ import {
   MAX_EVENT_VISIBLE_TAB_COUNT,
 } from './eventTemplateTypes';
 
-export type { EventTemplateId };
-
-/** 템플릿 선택 UI 제거 — 제작·미리보기 기본값 */
-const DEFAULT_EVENT_TEMPLATE: EventTemplateId = 'classic';
-
 /** 행사 전단지 1건 공급가액(원) */
 const EVENT_TEMPLATE_PRICE = 50000;
 const EVENT_TEMPLATE_VAT_RATE = 0.1;
@@ -32,6 +26,17 @@ const EVENT_TEMPLATE_PRICE_WITH_VAT = Math.round(EVENT_TEMPLATE_PRICE * (1 + EVE
 
 /** `portonePayment.requestEventBookletPayment` · 서버 검증과 동일한 주문명 */
 const EVENT_ORDER_NAME = '행사 전단지 제작';
+
+/** 전화번호 앞자리 선택지 — 휴대전화/주요 지역번호/인터넷전화 등 (NoticeApplyPay 와 동일) */
+const PHONE_PREFIX_OPTIONS = [
+  '010', '011', '016', '017', '018', '019',
+  '02',
+  '031', '032', '033',
+  '041', '042', '043', '044',
+  '051', '052', '053', '054', '055',
+  '061', '062', '063', '064',
+  '070', '080',
+] as const;
 
 type CompleteBrowserSuccessResponse = {
   ok: true;
@@ -95,7 +100,11 @@ export default function EventApplyPay() {
   const [tabHelpOpen, setTabHelpOpen] = useState<Partial<Record<EventVisibleTabId, boolean>>>({});
   const [orderTitle, setOrderTitle] = useState('');
   const [ordererName, setOrdererName] = useState('');
-  const [ordererPhone, setOrdererPhone] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
+  const [phoneMid, setPhoneMid] = useState('');
+  const [phoneLast, setPhoneLast] = useState('');
+  const phoneMidRef = useRef<HTMLInputElement | null>(null);
+  const phoneLastRef = useRef<HTMLInputElement | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccessState, setPaymentSuccessState] = useState<EventPaymentSuccessState | null>(null);
   const [eventAlert, setEventAlert] = useState<EventAlertState | null>(null);
@@ -121,7 +130,8 @@ export default function EventApplyPay() {
   const handlePaymentSubmit = async () => {
     const titleTrim = orderTitle.trim();
     const nameTrim = ordererName.trim();
-    const phoneDigits = ordererPhone.trim().replace(/\s/g, '');
+    /** PortOne `customer.phoneNumber` 허용 문자: digits + `+- ` 만. 그 외(괄호/점/한글 등) 들어오면 400. */
+    const phoneDigits = `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20);
     if (!titleTrim || !nameTrim || !phoneDigits) {
       openErrorAlert('타이틀, 이름, 전화번호를 모두 입력해 주세요.', '입력 정보 확인');
       return;
@@ -133,7 +143,6 @@ export default function EventApplyPay() {
         fullName: nameTrim || userAccount || '주문자',
         phoneNumber: phoneDigits || '01000000000',
         email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
-        
       };
       const visibleTabsJson = JSON.stringify(orderVisibleTabIds(selectedTabSet));
 
@@ -159,7 +168,6 @@ export default function EventApplyPay() {
           ordererName: nameTrim,
           ordererPhone: phoneDigits,
           userAccount,
-          templateId: DEFAULT_EVENT_TEMPLATE,
           bookletType: selectedBookletType,
           visibleTabs: visibleTabsJson,
         },
@@ -197,7 +205,7 @@ export default function EventApplyPay() {
           setPaymentSuccessState({
             eventMainId: Number(d.eventMainId),
             ordererName: ordererName.trim(),
-            ordererPhone: ordererPhone.trim().replace(/\s/g, ''),
+            ordererPhone: `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20),
           });
           return;
         }
@@ -224,7 +232,6 @@ export default function EventApplyPay() {
     if (!paymentSuccessState) return;
     const q = new URLSearchParams({
       id: String(paymentSuccessState.eventMainId),
-      template: DEFAULT_EVENT_TEMPLATE,
     });
     q.set('visibleTabs', JSON.stringify(orderVisibleTabIds(selectedTabSet)));
     if (paymentSuccessState.ordererName) q.set('ordererName', paymentSuccessState.ordererName);
@@ -328,13 +335,60 @@ export default function EventApplyPay() {
               </div>
               <div className="event-template-select__form-row">
                 <label className="event-template-select__form-label">전화번호</label>
-                <input
-                  type="tel"
-                  className="event-template-select__input"
-                  placeholder="전화번호를 입력하세요"
-                  value={ordererPhone}
-                  onChange={(e) => setOrdererPhone(e.target.value)}
-                />
+                <div className="event-template-select__field-with-hint">
+                  <div className="event-template-select__phone-row" role="group" aria-label="전화번호">
+                    <select
+                      className="event-template-select__phone-prefix"
+                      value={phonePrefix}
+                      onChange={(e) => setPhonePrefix(e.target.value)}
+                      aria-label="전화번호 앞자리"
+                    >
+                      {PHONE_PREFIX_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="event-template-select__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneMidRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="event-template-select__phone-part"
+                      maxLength={4}
+                      value={phoneMid}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneMid(next);
+                        if (next.length === 4) {
+                          requestAnimationFrame(() => phoneLastRef.current?.focus());
+                        }
+                      }}
+                      aria-label="전화번호 가운데 자리"
+                    />
+                    <span className="event-template-select__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneLastRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="event-template-select__phone-part"
+                      maxLength={4}
+                      value={phoneLast}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneLast(next);
+                      }}
+                      aria-label="전화번호 끝자리"
+                    />
+                  </div>
+                  <p className="event-template-select__form-hint">
+                    전화번호를 올바르게 입력하셔야 결제가 됩니다
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -542,7 +596,10 @@ export default function EventApplyPay() {
                 <button
                   type="button"
                   className="event-template-select__back-btn"
-                  onClick={() => navigate('/service/bookleteventtemplates')}
+                  onClick={() => {
+                    navigate('/service/event');
+                    window.scrollTo(0, 0);
+                  }}
                 >
                   이전으로
                 </button>

@@ -26,7 +26,7 @@ export default function MypageMenu() {
       return (
         location.pathname.startsWith('/mypage/servicemanage') ||
         location.pathname === '/mypage/church-bulletin' ||
-        location.pathname === '/mypage/homeinapp-notification'
+        location.pathname.startsWith('/mypage/homeinapp-notification')
       );
     }
     return location.pathname.startsWith(path);
@@ -60,7 +60,9 @@ export default function MypageMenu() {
                       window.scrollTo(0, 0);
                     }}
                     className={`subpage__menu__subitem ${
-                      location.pathname === sub.path ? 'subpage__menu__subitem--on' : ''
+                      location.pathname === sub.path || location.pathname.startsWith(`${sub.path}/`)
+                        ? 'subpage__menu__subitem--on'
+                        : ''
                     }`}
                   >
                     {sub.label}

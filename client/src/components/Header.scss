@@ -214,6 +214,9 @@
     top: 100px;
     left: 100%;
     width: 100vw;
+    /** 화면을 넘는 메뉴 내용이 내부에서 스크롤되도록 명시적 높이 부여 */
+    height: calc(100vh - 100px);
+    height: calc(100dvh - 100px);
     overflow: hidden;
     z-index: 100;
     transition: left 0.4s;
@@ -222,11 +225,21 @@
     color: #ffffff;
     max-width: unset;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /** 패널 자체는 스크롤하지 않음 — 스크롤은 .mobile_menu-inner 한 곳만 */
+    overscroll-behavior: none;
 
     .mobile_menu-inner {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      touch-action: pan-y;
 
       .mobile_menu-top {
         display: flex;
@@ -253,13 +266,12 @@
       }
   
       .mobile_menu-list {
-        flex: 1;
+        flex: 0 0 auto;
         border-radius: 12px;
         box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.16);
         background-color: #ffffff;
         padding: 16px 0;
         overflow-x: hidden;
-        overflow-y: scroll;
         font-size: 20px;
   
         .mobile_menu-item {

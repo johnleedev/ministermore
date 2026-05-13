@@ -4,22 +4,6 @@ import "./ServiceMain.scss";
 
 const SERVICES = [
   {
-    emoji: "📍",
-    titleLines: ["모바일 교회", "소개 전단지"],
-    strong: "모바일 교회 전단지",
-    description:
-      "우리 교회를 소개하고 예배와 안내 내용을 모바일에서 간편하게 전달할 수 있는 전단지 서비스입니다.",
-    path: "/service/notice",
-  },
-  {
-    emoji: "📣",
-    titleLines: ["모바일 행사", "안내 전단지"],
-    strong: "모바일 행사 전단지",
-    description:
-      "교회 행사, 집회, 초청 소식을 모바일에서 보기 좋게 홍보할 수 있는 안내 서비스입니다.",
-    path: "/service/event",
-  },
-  {
     emoji: "🏠",
     titleLines: ["홈인앱"],
     strong: "기존 홈페이지를 웹앱으로 연결",
@@ -34,6 +18,22 @@ const SERVICES = [
     description:
       "교회명과 사역 흐름을 담은 전용 앱으로 공지, 설교, 부서 안내를 한곳에서 운영할 수 있습니다.",
     path: "/service/churchapp",
+  },
+  {
+    emoji: "📍",
+    titleLines: ["모바일 교회", "소개 전단지"],
+    strong: "모바일 교회 전단지",
+    description:
+      "우리 교회를 소개하고 예배와 안내 내용을 모바일에서 간편하게 전달할 수 있는 전단지 서비스입니다.",
+    path: "/service/notice",
+  },
+  {
+    emoji: "📣",
+    titleLines: ["모바일 행사", "안내 전단지"],
+    strong: "모바일 행사 전단지",
+    description:
+      "교회 행사, 집회, 초청 소식을 모바일에서 보기 좋게 홍보할 수 있는 안내 서비스입니다.",
+    path: "/service/event",
   },
   // {
   //   emoji: "🌐",

@@ -6,7 +6,8 @@ import ResumeManage from './ResumeManage';
 import ResumeEdit from './ResumeEdit';
 import ServiceManage from './ServiceManage';
 import ChurchBulletinManageMain from './bulletinComponent/ChurchBulletinManageMain';
-import HomeinappNotificationPage from './homeinappComponent/HomeinappNotificationMain';
+import HomeinappNotificationMain from './homeinappComponent/HomeinappNotificationMain';
+import HomeinappNotificationList from './homeinappComponent/HomeinappNotificationList';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
@@ -21,7 +22,8 @@ export default function MypageRouter() {
         <Route path="/resumemanage" element={<ResumeManage/>}/>
         <Route path="/resumeedit" element={<ResumeEdit/>}/>
         <Route path="/church-bulletin" element={<ChurchBulletinManageMain/>}/>
-        <Route path="/homeinapp-notification" element={<HomeinappNotificationPage/>}/>
+        <Route path="/homeinapp-notification/:churchId" element={<HomeinappNotificationMain />} />
+        <Route path="/homeinapp-notification" element={<HomeinappNotificationList />} />
         <Route
           path="/servicemanage/church-bulletin"
           element={<Navigate to="/mypage/church-bulletin" replace/>}

@@ -1,6 +1,9 @@
 /**
- * 공지 전단지 — PortOne 빌링키 + 첫 결제 + 다음 회차 예약(월간 구독)
- * 클라이언트: NoticeApplyPay.tsx → POST /paymentbilling/billingkey
+ * PortOne 빌링키 + 첫 결제 + 다음 회차 예약(월간 구독)
+ * - 공지 전단지: `customData.serviceType` 없음 → `churchMain` INSERT
+ * - 홈인앱: `customData.serviceType === 'homeinapp'` + `customData.churchName` → `churches` INSERT
+ *
+ * 클라이언트: NoticeApplyPay.tsx, HomeinappPayment.tsx → POST /paymentbilling/billingkey
  *
  * 행사 전단지 브라우저 일반결제는 PortoneRequestPay.js → POST /paymentrequestpay/event/complete-browser
  */
@@ -10,6 +13,10 @@ router.use(express.json()); // axios 전송 사용하려면 이거 있어야 함
 const crypto = require('crypto');
 const { bookletnoticedb } = require('../dbdatas/bookletdb');
 const { insertChurchMainRow } = require('../service/bookletNotice/bookletNoticeShared');
+const {
+  findHomeinappOrderByPaymentId,
+  insertHomeinappOrderWithPayment,
+} = require('../service/homeinapp/homeinappPaymentService');
 var cors = require('cors');
 router.use(cors());
 const bodyParser = require('body-parser');
@@ -23,10 +30,6 @@ const {
   PORTONE_BILLING_CHANNEL_KEY,
   PORTONE_STORE_ID,
 } = require('./portonedata');
-const {
-  findHomeinappOrderByPaymentId,
-  insertHomeinappOrderWithPayment,
-} = require('../service/homeinapp/homeinappPaymentService');
 
 function createNewPaymentId(prefix = 'notice') {
   const safe = String(prefix).replace(/[^a-zA-Z0-9]/g, '') || 'pay';
@@ -88,19 +91,23 @@ router.post('/billingkey', async (req, res) => {
     orderTitle,
   } = req.body;
 
-
-  // const {billingKey, transactionType, customerId, customer, amount, customData, orderTitle} = req.body;
+  const serviceType =
+    customData && typeof customData === 'object' ? String(customData.serviceType || '').trim() : '';
+  const isHomeinapp = serviceType === 'homeinapp';
+  const billingOrderName = isHomeinapp ? '홈인앱 상세페이지 제작' : '월간 이용권 정기결제';
 
   try {
     const customerPayload = { id: String(customerId) };
     if (customer && typeof customer === 'object') {
       if (customer.fullName) customerPayload.name = { full: String(customer.fullName).trim() };
       if (customer.phoneNumber) {
-        customerPayload.phoneNumber = String(customer.phoneNumber).replace(/\s/g, '');
+        /** PortOne `customer.phoneNumber` 허용 문자: digits + `+- ` 만. 그 외(괄호/점/한글 등) 들어오면 400. */
+        const sanitizedPhone = String(customer.phoneNumber).replace(/[^\d+\-\s]/g, '');
+        if (sanitizedPhone) customerPayload.phoneNumber = sanitizedPhone;
       }
       if (customer.email) customerPayload.email = String(customer.email).trim();
     }
-
+   
     const issueResponse = await fetch('https://api.portone.io/billing-keys', {
       method: 'POST',
       headers: {
@@ -142,7 +149,7 @@ router.post('/billingkey', async (req, res) => {
       return res.status(502).json({ ok: false, message: '빌링키 응답에 billingKey가 없습니다.', details: issueParsed });
     }
 
-    const paymentId = createNewPaymentId('notice');
+    const paymentId = createNewPaymentId(isHomeinapp ? 'homeinapp' : 'notice');
 
     const paymentResponse = await fetch(
       `https://api.portone.io/payments/${encodeURIComponent(paymentId)}/billing-key`,
@@ -156,7 +163,7 @@ router.post('/billingkey', async (req, res) => {
           billingKey,
           storeId: PORTONE_STORE_ID,
           channelKey: PORTONE_BILLING_CHANNEL_KEY,
-          orderName: '월간 이용권 정기결제',
+          orderName: billingOrderName,
           customer: customerPayload,
           amount: {
             total: Number(amount),
@@ -181,7 +188,7 @@ router.post('/billingkey', async (req, res) => {
     const amountTotal = Number(amount);
     /** @type {string} PortOne `timeToPay`: RFC 3339 date-time 문자열 */
     const timeToPay = isoTimeNextMonthUtc();
-    const schedulePaymentId = createNewPaymentId('noticesched');
+    const schedulePaymentId = createNewPaymentId(isHomeinapp ? 'homeiappsched' : 'noticesched');
 
     const scheduleResponse = await fetch(
       `https://api.portone.io/payments/${encodeURIComponent(schedulePaymentId)}/schedule`,
@@ -196,7 +203,7 @@ router.post('/billingkey', async (req, res) => {
             storeId: PORTONE_STORE_ID,
             billingKey,
             channelKey: PORTONE_BILLING_CHANNEL_KEY,
-            orderName: '월간 이용권 정기결제',
+            orderName: billingOrderName,
             customer: customerPayload,
             amount: {
               total: amountTotal,
@@ -247,6 +254,69 @@ router.post('/billingkey', async (req, res) => {
       String(customerPayload.phoneNumber || '').replace(/\s/g, '') ||
       '';
 
+    if (isHomeinapp) {
+      const homeinappChurchName =
+        customData && typeof customData === 'object' ? String(customData.churchName || '').trim() : '';
+      if (!homeinappChurchName) {
+        return res.status(400).json({ ok: false, message: '교회명이 필요합니다.' });
+      }
+
+      let homeinappMainId;
+      try {
+        const existingH = await findHomeinappOrderByPaymentId(paymentId);
+        if (existingH != null) {
+          return res.status(409).json({
+            ok: false,
+            message: '이 결제로 이미 홈인앱 주문이 생성되었습니다.',
+            homeinappMainId: existingH,
+            paymentId,
+            schedulePaymentId,
+            firstPaymentSucceeded: true,
+            scheduleSucceeded: true,
+          });
+        }
+        homeinappMainId = await insertHomeinappOrderWithPayment({
+          userAccount,
+          churchName: homeinappChurchName,
+          ordererName,
+          ordererPhone,
+          portonePaymentId: paymentId,
+          portonePaidAmount: amountTotal,
+          portoneOrderName: billingOrderName,
+          portonePlan: 'monthly',
+          schedulePaymentId,
+          billingKey,
+          portonePaidAt: paidAtResolved,
+          portoneTimeToPay: timeToPay,
+          portoneScheduleId: scheduleIdResolved,
+        });
+      } catch (dbErr) {
+        console.error('homeinapp churches INSERT after billing', dbErr);
+        return res.status(500).json({
+          ok: false,
+          message: '결제·예약은 완료되었으나 홈인앱 주문 저장에 실패했습니다. 고객센터로 문의해 주세요.',
+          paymentId,
+          schedulePaymentId,
+          firstPaymentSucceeded: true,
+          scheduleSucceeded: true,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        paymentId,
+        schedulePaymentId,
+        billingKey,
+        customerId,
+        customData,
+        paidAt: paidAtResolved,
+        payment: payParsed,
+        timeToPay,
+        schedule: scheduleInfo,
+        homeinappMainId,
+      });
+    }
+
     const orderTitleNorm = orderTitle != null ? String(orderTitle).trim() : '';
     const createBody = {
       userAccount,
@@ -258,7 +328,7 @@ router.post('/billingkey', async (req, res) => {
     if (paymentId) {
       createBody.portonePaymentId = paymentId;
       createBody.portonePaidAmount = amountTotal;
-      createBody.portoneOrderName = '월간 이용권 정기결제';
+      createBody.portoneOrderName = billingOrderName;
       createBody.portonePlan = 'monthly';
       createBody.schedulePaymentId = schedulePaymentId;
       createBody.billingKey = billingKey;
@@ -312,129 +382,6 @@ router.post('/billingkey', async (req, res) => {
     console.error('billingkey handler', e);
     return res.status(500).json({ ok: false, message: e?.message || String(e) });
     
-  }
-});
-
-router.post('/homeinapp/billingkey', async (req, res) => {
-  const {
-    billingKey,
-    customerId,
-    customer,
-    amount,
-    churchName,
-    ordererName,
-    ordererPhone,
-    ordererEmail,
-    memo,
-    userAccount,
-    orderTitle,
-  } = req.body || {};
-
-  const billingKeyNorm = billingKey != null ? String(billingKey).trim() : '';
-  const churchNameNorm = churchName != null ? String(churchName).trim() : '';
-  const ordererNameNorm = ordererName != null ? String(ordererName).trim() : '';
-  const ordererPhoneNorm = ordererPhone != null ? String(ordererPhone).replace(/\s/g, '') : '';
-  const ordererEmailNorm = ordererEmail != null ? String(ordererEmail).trim() : '';
-  const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
-  const memoNorm = memo != null ? String(memo) : '';
-  const amountTotal = Number(amount);
-
-  if (!billingKeyNorm) {
-    return res.status(400).json({ ok: false, message: 'billingKey가 필요합니다.' });
-  }
-  if (!churchNameNorm || !ordererNameNorm || !ordererPhoneNorm) {
-    return res.status(400).json({ ok: false, message: '교회명, 주문자명, 전화번호는 필수입니다.' });
-  }
-  if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
-    return res.status(400).json({ ok: false, message: 'amount 값이 올바르지 않습니다.' });
-  }
-
-  try {
-    const customerPayload = { id: String(customerId || `homeinapp_${Date.now()}`) };
-    if (customer && typeof customer === 'object') {
-      if (customer.fullName) customerPayload.name = { full: String(customer.fullName).trim() };
-      if (customer.phoneNumber) customerPayload.phoneNumber = String(customer.phoneNumber).replace(/\s/g, '');
-      if (customer.email) customerPayload.email = String(customer.email).trim();
-    } else {
-      if (ordererNameNorm) customerPayload.name = { full: ordererNameNorm };
-      if (ordererPhoneNorm) customerPayload.phoneNumber = ordererPhoneNorm;
-      if (ordererEmailNorm) customerPayload.email = ordererEmailNorm;
-    }
-
-    const paymentId = createNewPaymentId('homeinapp');
-    const paymentResponse = await fetch(
-      `https://api.portone.io/payments/${encodeURIComponent(paymentId)}/billing-key`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `PortOne ${PORTONE_API_SECRET}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          billingKey: billingKeyNorm,
-          storeId: PORTONE_STORE_ID,
-          channelKey: PORTONE_BILLING_CHANNEL_KEY,
-          orderName: orderTitle ? String(orderTitle).trim() : '홈인앱 상세페이지 제작',
-          customer: customerPayload,
-          amount: { total: amountTotal },
-          currency: 'KRW',
-        }),
-      }
-    );
-
-    const payRaw = await paymentResponse.text();
-    let payParsed = null;
-    try {
-      payParsed = payRaw ? JSON.parse(payRaw) : null;
-    } catch {
-      payParsed = { raw: payRaw?.slice(0, 300) };
-    }
-    if (!paymentResponse.ok) {
-      const msg =
-        (payParsed && (payParsed.pgMessage || payParsed.message)) || '빌링키 결제 요청에 실패했습니다.';
-      return res.status(400).json({ ok: false, message: msg, details: payParsed, paymentId });
-    }
-
-    const existingId = await findHomeinappOrderByPaymentId(paymentId);
-    if (existingId != null) {
-      return res.status(409).json({
-        ok: false,
-        message: '이 결제로 이미 홈인앱 주문이 생성되었습니다.',
-        homeinappMainId: existingId,
-        paymentId,
-      });
-    }
-
-    const homeinappMainId = await insertHomeinappOrderWithPayment({
-      userAccount: userAccountNorm,
-      churchName: churchNameNorm,
-      ordererName: ordererNameNorm,
-      ordererPhone: ordererPhoneNorm,
-      ordererEmail: ordererEmailNorm,
-      memo: memoNorm,
-      paymentStatus: 'PAID',
-      portonePaymentId: paymentId,
-      portoneTxId: null,
-      portonePaidAmount: amountTotal,
-      portoneOrderName: orderTitle ? String(orderTitle).trim() : '홈인앱 상세페이지 제작',
-      portonePlan: 'onetime',
-      schedulePaymentId: null,
-      billingKey: billingKeyNorm,
-      portonePaidAt: pickPaidAt(payParsed),
-      portoneTimeToPay: null,
-      portoneScheduleId: null,
-    });
-
-    return res.json({
-      ok: true,
-      paymentId,
-      billingKey: billingKeyNorm,
-      homeinappMainId,
-      payment: payParsed,
-    });
-  } catch (e) {
-    console.error('homeinapp billingkey handler', e);
-    return res.status(500).json({ ok: false, message: e?.message || String(e) });
   }
 });
 

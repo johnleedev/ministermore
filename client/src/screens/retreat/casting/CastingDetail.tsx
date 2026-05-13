@@ -130,6 +130,26 @@ export default function CastingDetail() {
                 <h3>본 프로필과 사진은, 본인의 허락을 구한 후에, 올린 것입니다.</h3>
                 <h3>업데이트 날짜: {detailData.date}</h3>
               </div>
+
+              <div className="place__detail-actions place__detail-actions--bottom">
+                <button
+                  className="btn btn--secondary"
+                  type="button"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  Top
+                </button>
+                <button
+                  className="btn btn--primary"
+                  type="button"
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'auto' });
+                    navigate('/retreat/casting');
+                  }}
+                >
+                  목록으로
+                </button>
+              </div>
             </div>
           </div>
         </main>

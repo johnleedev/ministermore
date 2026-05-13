@@ -15,7 +15,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
-const { toTemplateInt, toTemplateStr, toChurchMainIdInt, insertChurchMainRow } = require('./bookletNoticeShared');
+const { toChurchMainIdInt, insertChurchMainRow } = require('./bookletNoticeShared');
 
 // 특정 교회전단지 데이터 보내기 (id 또는 userAccount로 조회, churchMain + churchInfo 병합)
 router.post('/getdatabookletspart', async (req, res) => {
@@ -25,17 +25,17 @@ router.post('/getdatabookletspart', async (req, res) => {
     return {
       id: m.id,
       userAccount: m.userAccount,
-      templateId: toTemplateStr(m.templateId),
+      link: m.link || '',
       ordererName: m.ordererName || '',
       ordererPhone: m.ordererPhone || '',
       orderTitle: m.orderTitle != null && String(m.orderTitle).trim() !== '' ? String(m.orderTitle).trim() : '',
       title: i?.title || '새 교회 소개',
-      type: i?.type || 'notice',
-      categoryOrder: i?.categoryOrder,
       churchName: i?.churchName || '',
+      churchNameEn: i?.churchNameEn || '',
       mainPastor: i?.mainPastor || '',
       religiousbody: i?.religiousbody || '',
       address: i?.address || '',
+      addressDetail: i?.addressDetail || '',
       quiry: i?.quiry || '',
       youtube: i?.youtube || '',
       blog: i?.blog || '',
@@ -59,8 +59,8 @@ router.post('/getdatabookletspart', async (req, res) => {
   const idInt = toChurchMainIdInt(id);
   if (idInt != null) {
     const query = `
-      SELECT m.*, i.title, i.type, i.categoryOrder, i.churchName, i.mainPastor, i.religiousbody,
-             i.address, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
+      SELECT m.*, i.title, i.churchName, i.churchNameEn, i.mainPastor, i.religiousbody,
+             i.address, i.addressDetail, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
              i.mainPastorMessage, i.churchGreeting, i.mainPastorCareer, i.worshipTimes,
              i.placeNaver, i.placeKakao, i.placeHomepage, i.imageMainName, i.mainLogo,
              i.mainPastorImage, i.worshipImage, i.youtubeNoticeImage, i.youtubeNoticeUrl
@@ -80,8 +80,8 @@ router.post('/getdatabookletspart', async (req, res) => {
     });
   } else if (userAccount) {
     const query = `
-      SELECT m.*, i.title, i.type, i.categoryOrder, i.churchName, i.mainPastor, i.religiousbody,
-             i.address, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
+      SELECT m.*, i.title, i.churchName, i.churchNameEn, i.mainPastor, i.religiousbody,
+             i.address, i.addressDetail, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
              i.mainPastorMessage, i.churchGreeting, i.mainPastorCareer, i.worshipTimes,
              i.placeNaver, i.placeKakao, i.placeHomepage, i.imageMainName, i.mainLogo,
              i.mainPastorImage, i.worshipImage, i.youtubeNoticeImage, i.youtubeNoticeUrl
@@ -199,16 +199,14 @@ router.post('/getdataeventspart', async (req, res) => {
 
 // 팜플렛 데이터 검색하기 (churchInfo.title 기준)
 router.post('/getdatabookletsearch', async (req, res)=>{
-  var {word, type} = req.body;
-  const whereType = type === 'all' ? '' : `AND i.type = '${type}'`;
+  var {word} = req.body;
 
   const query = `
-    SELECT m.id, m.userAccount, m.templateId,
-           i.title, i.type, i.churchName, i.mainPastor, i.imageMainName
+    SELECT m.id, m.userAccount,
+           i.title, i.churchName, i.mainPastor, i.imageMainName
     FROM churchMain m
     LEFT JOIN churchInfo i ON m.id = i.churchMainId
     WHERE (i.title LIKE '%${word}%' OR i.churchName LIKE '%${word}%')
-    ${whereType}
   `;
   bookletnoticedb.query(query, function(error, result) {
     if (error) throw error;
@@ -238,26 +236,6 @@ router.post('/create', async (req, res) => {
     console.error('create churchMain INSERT error:', e);
     return res.status(500).json({ success: false, message: e?.message || String(e) });
   }
-});
-
-// 카테고리 순서 저장 (churchInfo.categoryOrder)
-router.post('/saveCategoryOrder', (req, res) => {
-  const churchMainId = toChurchMainIdInt(req.body?.churchMainId);
-  const { order } = req.body || {};
-  if (churchMainId == null || !Array.isArray(order) || order.length === 0) {
-    return res.status(400).json({ success: false, message: 'churchMainId와 order 배열이 필요합니다.' });
-  }
-  const categoryOrder = JSON.stringify(order);
-  const query = `UPDATE churchInfo SET categoryOrder = ? WHERE churchMainId = ?`;
-  bookletnoticedb.query(query, [categoryOrder, churchMainId], (err, result) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: err.message });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: '해당 전단지를 찾을 수 없습니다.' });
-    }
-    res.json({ success: true });
-  });
 });
 
 // ----- 전단지 소개 탭 저장 (메인 이미지, 담임목사 사진 포함) -----
@@ -331,9 +309,29 @@ function toEnglishFilenamePart(churchName) {
   return asciiOnly || 'church';
 }
 
+/** HTML 파일명 접미사: 사용자 영문명 우선(ASCII만), 없으면 한글 교회명에서 ASCII 변환 */
+function noticeHtmlFilenameEnPart(churchNameEnRaw, churchNameKo) {
+  const en = String(churchNameEnRaw || '').trim();
+  if (en) {
+    const part = en
+      .normalize('NFKD')
+      .replace(/[^\x00-\x7F]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '');
+    if (part) return part;
+  }
+  return toEnglishFilenamePart(churchNameKo);
+}
+
+/**
+ * 공유용 리다이렉트 HTML (build/hp/notice)
+ * - 제목·설명·og:title 등은 한글 교회명만 (영문명은 파일명에만 사용)
+ * - og:image / og:url 은 동일하게 첫 번째 메인 이미지 전체 URL, 없으면 빈 문자열
+ */
 function makeNoticeHtml({ churchMainId, churchName, imageUrl }) {
-  const safeChurchName = escapeHtml(churchName || '교회 소개');
-  const safeImageUrl = escapeHtml(imageUrl || '');
+  const churchNameKo = String(churchName || '').trim() || '교회 소개';
+  const safeTitleKo = escapeHtml(churchNameKo);
+  const safeOgImage = escapeHtml(imageUrl || '');
   const linkUrl = `https://ministermore.co.kr/booklet?id=${churchMainId}`;
   const safeLinkUrl = escapeHtml(linkUrl);
 
@@ -346,14 +344,15 @@ function makeNoticeHtml({ churchMainId, churchName, imageUrl }) {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 
-    <meta name="description" content="${safeChurchName}"/>
+    <meta name="description" content="${safeTitleKo}"/>
+    <meta name="church-name-ko" content="${safeTitleKo}"/>
     <meta property="og:type" content="website">
-    <meta property="og:title" content="${safeChurchName}">
-    <meta property="og:description" content="${safeChurchName}">
-    <meta property="og:image" content="${safeImageUrl}">
-    <meta property="og:url" content="${safeLinkUrl}">
+    <meta property="og:title" content="${safeTitleKo}">
+    <meta property="og:description" content="${safeTitleKo}">
+    <meta property="og:image" content="${safeOgImage}">
+    <meta property="og:url" content="${safeOgImage}">
 
-    <title>${safeChurchName}</title>
+    <title>${safeTitleKo}</title>
 
   </head>
   <body>
@@ -369,15 +368,16 @@ router.post('/saveIntro', upload_intro, (req, res) => {
   const q = req.query || {};
   const churchMainIdRaw = body.churchMainId || q.churchMainId;
   const churchMainId = churchMainIdRaw != null ? toChurchMainIdInt(churchMainIdRaw) : null;
-  const templateId = body.templateId || q.templateId || 'classic';
   const ordererName = body.ordererName || q.ordererName || '';
   const ordererPhone = body.ordererPhone || q.ordererPhone || '';
   const orderTitle = String(body.orderTitle || q.orderTitle || '').trim();
   const {
     churchName,
+    churchNameEn,
     mainPastor,
     religiousbody,
     address,
+    addressDetail,
     quiry,
     youtube,
     blog,
@@ -411,14 +411,11 @@ router.post('/saveIntro', upload_intro, (req, res) => {
 
   const churchGreetingJson = typeof churchGreeting === 'string' ? churchGreeting : JSON.stringify(churchGreeting || '{}');
 
-  const categoryOrderDefault = JSON.stringify(['churchInfo', 'churchIntro', 'sermon', 'servers', 'gallery']);
-
   if (churchMainId == null) {
     // 새 전단지: 1) churchMain 생성, 2) churchInfo 생성
-    const templateIdInt = toTemplateInt(templateId || 'classic');
     bookletnoticedb.query(
-      'INSERT INTO churchMain (userAccount, templateId, ordererName, ordererPhone, orderTitle, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
-      [userAccount || '', templateIdInt, ordererName, ordererPhone, orderTitle],
+      'INSERT INTO churchMain (userAccount, ordererName, ordererPhone, orderTitle, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+      [userAccount || '', ordererName, ordererPhone, orderTitle],
       (err, result) => {
         if (err) {
           console.error('saveIntro churchMain INSERT error:', err);
@@ -426,18 +423,19 @@ router.post('/saveIntro', upload_intro, (req, res) => {
         }
         const newChurchMainId = result.insertId;
         const infoQuery = `
-          INSERT INTO churchInfo (churchMainId, title, type, categoryOrder, churchName, mainPastor, religiousbody,
-            address, quiry, youtube, blog, instar, facebook, mainPastorMessage, mainPastorImage, churchGreeting,
+          INSERT INTO churchInfo (churchMainId, title, churchName, churchNameEn, mainPastor, religiousbody,
+            address, addressDetail, quiry, youtube, blog, instar, facebook, mainPastorMessage, mainPastorImage, churchGreeting,
             mainPastorCareer, worshipTimes, placeNaver, placeKakao, imageMainName)
-          VALUES (?, '새 교회 소개', 'notice', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, '새 교회 소개', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const infoValues = [
           newChurchMainId,
-          categoryOrderDefault,
           churchName || '',
+          churchNameEn || '',
           mainPastor || '',
           religiousbody || '',
           address || '',
+          addressDetail || '',
           quiry || '',
           youtube || '',
           blog || '',
@@ -473,7 +471,7 @@ router.post('/saveIntro', upload_intro, (req, res) => {
   // 기존 전단지: churchInfo UPDATE 또는 INSERT (create에서 churchMain만 만든 경우 churchInfo 없을 수 있음)
   const updateQuery = `
     UPDATE churchInfo SET
-      churchName = ?, mainPastor = ?, religiousbody = ?, address = ?,
+      churchName = ?, churchNameEn = ?, mainPastor = ?, religiousbody = ?, address = ?, addressDetail = ?,
       quiry = ?, youtube = ?, blog = ?, instar = ?, facebook = ?,
       mainPastorMessage = ?, mainPastorImage = ?, churchGreeting = ?, mainPastorCareer = ?, worshipTimes = ?,
       placeNaver = ?, placeKakao = ?, imageMainName = ?
@@ -481,9 +479,11 @@ router.post('/saveIntro', upload_intro, (req, res) => {
   `;
   const updateValues = [
     churchName || '',
+    churchNameEn || '',
     mainPastor || '',
     religiousbody || '',
     address || '',
+    addressDetail || '',
     quiry || '',
     youtube || '',
     blog || '',
@@ -514,18 +514,19 @@ router.post('/saveIntro', upload_intro, (req, res) => {
     }
     // churchInfo 없음 (create에서 churchMain만 생성한 경우) → INSERT
     const infoQuery = `
-      INSERT INTO churchInfo (churchMainId, title, type, categoryOrder, churchName, mainPastor, religiousbody,
-        address, quiry, youtube, blog, instar, facebook, mainPastorMessage, mainPastorImage, churchGreeting,
+      INSERT INTO churchInfo (churchMainId, title, churchName, churchNameEn, mainPastor, religiousbody,
+        address, addressDetail, quiry, youtube, blog, instar, facebook, mainPastorMessage, mainPastorImage, churchGreeting,
         mainPastorCareer, worshipTimes, placeNaver, placeKakao, imageMainName)
-      VALUES (?, '새 교회 소개', 'notice', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, '새 교회 소개', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const infoValues = [
       churchMainId,
-      categoryOrderDefault,
       churchName || '',
+      churchNameEn || '',
       mainPastor || '',
       religiousbody || '',
       address || '',
+      addressDetail || '',
       quiry || '',
       youtube || '',
       blog || '',
@@ -800,6 +801,7 @@ router.post('/generateNoticeHtml', (req, res) => {
     SELECT
       m.orderTitle,
       i.churchName,
+      i.churchNameEn,
       i.imageMainName
     FROM churchMain m
     LEFT JOIN churchInfo i ON m.id = i.churchMainId
@@ -818,13 +820,17 @@ router.post('/generateNoticeHtml', (req, res) => {
 
     const row = rows[0] || {};
     const churchName = String(row.churchName || row.orderTitle || '').trim() || `교회소개${churchMainId}`;
+    const churchNameEn = String(row.churchNameEn || '').trim();
     const imageSlots = parseImageMainNameSlots(row.imageMainName);
-    const firstImage = imageSlots.find((name) => String(name || '').trim() !== '');
+    /** og:image / og:url — 왼쪽 첫 슬롯부터 첫 번째로 등록된 이미지(없으면 빈 문자열) */
+    const firstRaw = imageSlots.find((name) => String(name || '').trim() !== '');
+    const firstImage = firstRaw != null ? String(firstRaw).trim() : '';
     const imageUrl = firstImage
       ? `https://www.ministermore.co.kr/images/bookletnotice/mainimages/${firstImage}`
       : '';
 
-    const englishName = toEnglishFilenamePart(churchName);
+    // 파일명: 영문 교회명(ASCII) 우선, 없으면 한글명 ASCII 변환 (본문·메타 제목에는 영문 미사용)
+    const englishName = noticeHtmlFilenameEnPart(churchNameEn, churchName);
     const fileName = `id${churchMainId}${englishName}.html`;
     const targetDir = path.resolve(__dirname, '../../../build/hp/notice');
     const targetPath = path.join(targetDir, fileName);
@@ -833,10 +839,25 @@ router.post('/generateNoticeHtml', (req, res) => {
     try {
       fs.mkdirSync(targetDir, { recursive: true });
       fs.writeFileSync(targetPath, html, 'utf8');
+      const filePath = `/hp/notice/${fileName}`;
+      const fileUrl = `https://ministermore.co.kr${filePath}`;
+      // 생성된 링크 주소를 churchMain.link 에 저장 (실패해도 파일은 이미 생성된 상태이므로 응답은 성공으로 반환)
+      bookletnoticedb.query(
+        'UPDATE churchMain SET link = ? WHERE id = ?',
+        [fileUrl, churchMainId],
+        (linkErr) => {
+          if (linkErr) {
+            console.error('generateNoticeHtml UPDATE churchMain.link error:', linkErr);
+          }
+        },
+      );
       return res.json({
         success: true,
         fileName,
-        filePath: `/hp/notice/${fileName}`,
+        filePath,
+        fileUrl,
+        churchName,
+        churchNameEn,
       });
     } catch (writeErr) {
       console.error('generateNoticeHtml write error:', writeErr);
@@ -845,27 +866,250 @@ router.post('/generateNoticeHtml', (req, res) => {
   });
 });
 
+/** 업로드 파일명만 허용 (경로 탈출 방지) */
+function safeImageBasename(name) {
+  const n = String(name || '').trim();
+  if (!n || n.includes('/') || n.includes('\\') || n.includes('..')) return '';
+  return n;
+}
+
+/**
+ * 편집 화면에서 이미지 삭제 시 즉시 디스크 + DB 반영 (저장 버튼을 누르지 않아도 서버 파일 제거)
+ * body: { churchMainId, userAccount, kind, fileName, slotIndex? }
+ * kind: mainSlot | pastor | server | sermonThumb | gallery
+ */
+router.post('/deleteBookletUploadedImage', (req, res) => {
+  const churchMainId = toChurchMainIdInt(req.body?.churchMainId);
+  const userAccount = req.body?.userAccount;
+  const kind = String(req.body?.kind || '').trim();
+  const fileName = safeImageBasename(req.body?.fileName);
+  const slotIndexRaw = req.body?.slotIndex;
+
+  if (churchMainId == null || !userAccount || !fileName || !kind) {
+    return res.status(400).json({ success: false, message: 'churchMainId, userAccount, kind, fileName이 필요합니다.' });
+  }
+
+  const imagesRoot = path.resolve(__dirname, '../../../build/images/bookletnotice');
+  const unlinkUploaded = (subDir) => {
+    fs.unlink(path.join(imagesRoot, subDir, fileName), () => {});
+  };
+
+  bookletnoticedb.query(
+    'SELECT id FROM churchMain WHERE id = ? AND userAccount = ?',
+    [churchMainId, userAccount],
+    (ownerErr, mainRows) => {
+      if (ownerErr) return res.status(500).json({ success: false, message: ownerErr.message });
+      if (!mainRows || mainRows.length === 0) {
+        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
+      }
+
+      if (kind === 'mainSlot') {
+        const idx = Number(slotIndexRaw);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= MAIN_IMAGE_SLOT_COUNT) {
+          return res.status(400).json({ success: false, message: 'slotIndex가 올바르지 않습니다.' });
+        }
+        return bookletnoticedb.query(
+          'SELECT imageMainName FROM churchInfo WHERE churchMainId = ?',
+          [churchMainId],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            const slots = parseImageMainNameSlots(rows[0]?.imageMainName);
+            if (String(slots[idx] || '').trim() !== fileName) {
+              return res.status(400).json({ success: false, message: '해당 슬롯의 이미지가 일치하지 않습니다.' });
+            }
+            slots[idx] = '';
+            const newJson = serializeImageMainNameSlots(slots);
+            bookletnoticedb.query(
+              'UPDATE churchInfo SET imageMainName = ? WHERE churchMainId = ?',
+              [newJson, churchMainId],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('mainimages');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'pastor') {
+        return bookletnoticedb.query(
+          'SELECT mainPastorImage FROM churchInfo WHERE churchMainId = ?',
+          [churchMainId],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            const cur = String(rows[0]?.mainPastorImage || '').trim();
+            if (cur !== fileName) {
+              return res.status(400).json({ success: false, message: '담임목사 사진이 일치하지 않습니다.' });
+            }
+            bookletnoticedb.query(
+              'UPDATE churchInfo SET mainPastorImage = ? WHERE churchMainId = ?',
+              ['', churchMainId],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('pastors');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'server') {
+        return bookletnoticedb.query(
+          'SELECT id FROM churchServers WHERE churchMainId = ? AND image = ? LIMIT 1',
+          [churchMainId, fileName],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            if (!rows || rows.length === 0) {
+              return res.status(400).json({ success: false, message: '해당 섬김이 이미지를 찾을 수 없습니다.' });
+            }
+            const rowId = rows[0].id;
+            bookletnoticedb.query(
+              'UPDATE churchServers SET image = ? WHERE id = ? AND churchMainId = ?',
+              ['', rowId, churchMainId],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('servers');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'sermonThumb') {
+        return bookletnoticedb.query(
+          'SELECT id FROM churchSermonVideos WHERE churchMainId = ? AND thumbnail = ? LIMIT 1',
+          [churchMainId, fileName],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            if (!rows || rows.length === 0) {
+              return res.status(400).json({ success: false, message: '해당 설교 썸네일을 찾을 수 없습니다.' });
+            }
+            const rowId = rows[0].id;
+            bookletnoticedb.query(
+              'UPDATE churchSermonVideos SET thumbnail = ? WHERE id = ? AND churchMainId = ?',
+              ['', rowId, churchMainId],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('sermonthumbnail');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'gallery') {
+        return bookletnoticedb.query(
+          'SELECT id FROM churchGallery WHERE churchMainId = ? AND image = ? LIMIT 1',
+          [churchMainId, fileName],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            if (!rows || rows.length === 0) {
+              return res.status(400).json({ success: false, message: '해당 갤러리 이미지를 찾을 수 없습니다.' });
+            }
+            const rowId = rows[0].id;
+            bookletnoticedb.query(
+              'UPDATE churchGallery SET image = ? WHERE id = ? AND churchMainId = ?',
+              ['', rowId, churchMainId],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('gallery');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      return res.status(400).json({ success: false, message: 'kind 값이 올바르지 않습니다.' });
+    },
+  );
+});
+
 // 전단지 삭제 (서비스 관리용, userAccount 검증)
+// MySQL 행(churchMain/churchInfo/Servers/Sermon/Gallery) + 업로드 이미지(pastors / mainimages / servers / sermonthumbnail / gallery)
+// + 공유용 HTML(build/hp/notice/{file}.html) 모두 삭제
 router.post('/deleteBooklet', (req, res) => {
   const churchMainId = toChurchMainIdInt(req.body?.churchMainId);
   const userAccount = req.body?.userAccount;
   if (churchMainId == null || !userAccount) {
     return res.status(400).json({ success: false, message: 'churchMainId와 userAccount가 필요합니다.' });
   }
-  bookletnoticedb.query('SELECT id FROM churchMain WHERE id = ? AND userAccount = ?', [churchMainId, userAccount], (err, rows) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-    if (!rows || rows.length === 0) {
-      return res.status(403).json({ success: false, message: '권한이 없습니다.' });
-    }
-    bookletnoticedb.query('DELETE FROM churchServers WHERE churchMainId = ?', [churchMainId], () => {});
-    bookletnoticedb.query('DELETE FROM churchSermonVideos WHERE churchMainId = ?', [churchMainId], () => {});
-    bookletnoticedb.query('DELETE FROM churchGallery WHERE churchMainId = ?', [churchMainId], () => {});
-    bookletnoticedb.query('DELETE FROM churchInfo WHERE churchMainId = ?', [churchMainId], () => {});
-    bookletnoticedb.query('DELETE FROM churchMain WHERE id = ?', [churchMainId], (delErr) => {
-      if (delErr) return res.status(500).json({ success: false, message: delErr.message });
-      res.json({ success: true });
-    });
-  });
+
+  // 1) 권한 검증 + link(공유용 HTML URL) 조회
+  bookletnoticedb.query(
+    'SELECT id, link FROM churchMain WHERE id = ? AND userAccount = ?',
+    [churchMainId, userAccount],
+    (err, mainRows) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      if (!mainRows || mainRows.length === 0) {
+        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
+      }
+      const linkUrl = String(mainRows[0]?.link || '');
+
+      // 2) 자식 테이블에서 파일명 수집 (각 쿼리 실패는 [] 로 처리)
+      const queryAsync = (sql, params) =>
+        new Promise((resolve) => {
+          bookletnoticedb.query(sql, params, (e, rows) => resolve(e ? [] : rows || []));
+        });
+
+      Promise.all([
+        queryAsync(
+          'SELECT imageMainName, mainPastorImage, mainLogo, worshipImage, youtubeNoticeImage FROM churchInfo WHERE churchMainId = ?',
+          [churchMainId],
+        ),
+        queryAsync('SELECT image FROM churchServers WHERE churchMainId = ?', [churchMainId]),
+        queryAsync('SELECT thumbnail FROM churchSermonVideos WHERE churchMainId = ?', [churchMainId]),
+        queryAsync('SELECT image FROM churchGallery WHERE churchMainId = ?', [churchMainId]),
+      ]).then(([infoRows, serversRows, sermonRows, galleryRows]) => {
+        // 업로드 디렉토리 (saveIntro / saveServants / saveSermon / saveGallery 와 동일)
+        const imagesRoot = path.resolve(__dirname, '../../../build/images/bookletnotice');
+        const safeUnlink = (subDir, fileName) => {
+          if (!fileName) return;
+          const name = String(fileName).trim();
+          // 경로 탈출(슬래시/`..`) 방지 — 정상 업로드 파일명은 단일 토큰
+          if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) return;
+          fs.unlink(path.join(imagesRoot, subDir, name), () => {});
+        };
+
+        const info = infoRows[0] || {};
+        // 메인 이미지: 단일 파일명(레거시) 또는 JSON 배열
+        parseImageMainNameSlots(info.imageMainName).forEach((n) => safeUnlink('mainimages', n));
+        safeUnlink('pastors', info.mainPastorImage);
+        // 사용 빈도가 낮지만 best-effort 로 같이 정리 (디렉토리가 달라 unlink 실패해도 무시됨)
+        safeUnlink('mainimages', info.mainLogo);
+        safeUnlink('mainimages', info.worshipImage);
+        safeUnlink('mainimages', info.youtubeNoticeImage);
+
+        serversRows.forEach((r) => safeUnlink('servers', r.image));
+        sermonRows.forEach((r) => safeUnlink('sermonthumbnail', r.thumbnail));
+        galleryRows.forEach((r) => safeUnlink('gallery', r.image));
+
+        // 3) 공유용 HTML 파일 삭제 (link → /hp/notice/{fileName})
+        if (linkUrl) {
+          const m = linkUrl.match(/\/hp\/notice\/([^/?#]+)$/);
+          const htmlName = m ? m[1] : '';
+          if (htmlName && !htmlName.includes('..') && !htmlName.includes('/') && !htmlName.includes('\\')) {
+            const htmlPath = path.resolve(__dirname, '../../../build/hp/notice', htmlName);
+            fs.unlink(htmlPath, () => {});
+          }
+        }
+
+        // 4) DB 행 삭제 (자식 → 부모 순)
+        bookletnoticedb.query('DELETE FROM churchServers WHERE churchMainId = ?', [churchMainId], () => {});
+        bookletnoticedb.query('DELETE FROM churchSermonVideos WHERE churchMainId = ?', [churchMainId], () => {});
+        bookletnoticedb.query('DELETE FROM churchGallery WHERE churchMainId = ?', [churchMainId], () => {});
+        bookletnoticedb.query('DELETE FROM churchInfo WHERE churchMainId = ?', [churchMainId], () => {});
+        bookletnoticedb.query('DELETE FROM churchMain WHERE id = ?', [churchMainId], (delErr) => {
+          if (delErr) return res.status(500).json({ success: false, message: delErr.message });
+          res.json({ success: true });
+        });
+      });
+    },
+  );
 });
 
 module.exports = router;

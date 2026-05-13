@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import '../Mypage.scss';
 import './HomeinappNotificationMain.scss';
 import { useRecoilState } from 'recoil';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { recoilUserData } from '../../../RecoilStore';
 import MainURL from '../../../MainURL';
+import Loading from '../../../components/Loading';
 
 const DEFAULT_TITLE = '수요예배 안내';
 const DEFAULT_MESSAGE =
@@ -39,7 +40,9 @@ type ChurchInfoRow = {
 
 export default function HomeinappNotificationMain() {
   const navigate = useNavigate();
+  const { churchId: churchIdParam } = useParams<{ churchId: string }>();
   const [userData] = useRecoilState(recoilUserData);
+  const [churchReady, setChurchReady] = useState(false);
   const [churchName, setChurchName] = useState<string>('');
   const [adminName, setAdminName] = useState<string>('');
   const [churchInfo, setChurchInfo] = useState<ChurchInfoRow | null>(null);
@@ -82,11 +85,21 @@ export default function HomeinappNotificationMain() {
 
   useEffect(() => {
     const userAccount = String(userData?.userAccount || '').trim();
+    const churchId = String(churchIdParam || '').trim();
+    setChurchReady(false);
+    setChurchInfo(null);
+
+    if (!churchId) {
+      navigate('/mypage/homeinapp-notification', { replace: true });
+      return;
+    }
     if (!userAccount) return;
 
     let mounted = true;
     axios
-      .get(`${MainURL}/homeinappmain/getChurchByUser/${encodeURIComponent(userAccount)}`)
+      .get(
+        `${MainURL}/homeinappmain/getChurchForUser/${encodeURIComponent(userAccount)}/${encodeURIComponent(churchId)}`
+      )
       .then((res) => {
         if (!mounted) return;
         const payload = res.data;
@@ -96,16 +109,27 @@ export default function HomeinappNotificationMain() {
           const reps = String(payload.data.representatives || '').trim();
           const firstRep = reps.split(',').map((v: string) => v.trim()).find(Boolean) || '';
           if (firstRep) setAdminName(firstRep);
+          setChurchReady(true);
+        } else {
+          window.alert('교회 정보를 찾을 수 없습니다.');
+          navigate('/mypage/homeinapp-notification', { replace: true });
         }
       })
       .catch((err) => {
-        console.error('homeinapp churches fetch fail:', err);
+        if (!mounted) return;
+        console.error('homeinapp church fetch fail:', err);
+        const msg =
+          err?.response?.status === 404
+            ? '해당 홈인앱 교회를 찾을 수 없거나 권한이 없습니다.'
+            : '교회 정보를 불러오지 못했습니다.';
+        window.alert(msg);
+        navigate('/mypage/homeinapp-notification', { replace: true });
       });
 
     return () => {
       mounted = false;
     };
-  }, [userData?.userAccount]);
+  }, [churchIdParam, userData?.userAccount, navigate]);
 
   useEffect(() => {
     const churchId = String(churchInfo?.id || '').trim();
@@ -225,6 +249,23 @@ export default function HomeinappNotificationMain() {
     }
   };
 
+  if (!churchReady || !churchInfo?.id) {
+    return (
+      <div className="mypage mypage--service-full mypage--service-plain">
+        <div className="inner">
+          <div className="subpage__main">
+            <div className="subpage__main__title">홈인앱알림</div>
+            <div className="subpage__main__content">
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+                <Loading />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mypage mypage--service-full mypage--service-plain">
       <div className="inner">
@@ -237,11 +278,11 @@ export default function HomeinappNotificationMain() {
               marginBottom: '20px',
             }}
           >
-            <div className="subpage__main__title">홈인앱알림</div>
+            <div className="subpage__main__title">홈인앱알림 · 푸시 발송</div>
             <button
               type="button"
               onClick={() => {
-                navigate('/mypage/servicemanage/mobile-church-notice');
+                navigate('/mypage/homeinapp-notification');
                 window.scrollTo(0, 0);
               }}
               style={{
@@ -256,7 +297,7 @@ export default function HomeinappNotificationMain() {
                 whiteSpace: 'nowrap',
               }}
             >
-              서비스관리
+              목록으로
             </button>
           </div>
           <div className="subpage__main__content">

@@ -433,6 +433,29 @@
             .infoValue {
               color: #666;
             }
+
+            /* ServiceManage 등: 링크 행의 복사 버튼 — postingActions .actionBtn과 동일 크기, 흰색 테마 */
+            .actionBtn.copyLinkBtn {
+              flex-shrink: 0;
+              padding: 8px 16px;
+              border-radius: 4px;
+              font-size: 14px;
+              cursor: pointer;
+              transition: all 0.2s;
+              background: #fff;
+              color: #333;
+              border: 1px solid #333;
+
+              &:hover {
+                opacity: 0.8;
+              }
+
+              &.copyLinkBtn--copied {
+                background: #fff;
+                color: #16a34a;
+                border-color: #16a34a;
+              }
+            }
           }
         }
         

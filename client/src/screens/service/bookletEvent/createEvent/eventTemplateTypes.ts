@@ -1,5 +1,3 @@
-export type EventTemplateId = 'classic' | 'modern' | 'minimal' | 'warm' | 'forest' | 'rose' | 'navy' | 'violet';
-
 /** 행사 전단지 상단 탭 (공개 페이지·편집기 공통) */
 export type EventVisibleTabId = 'info' | 'greeting' | 'program' | 'profile' | 'order' | 'apply';
 
@@ -162,26 +160,5 @@ export const EVENT_BLOCK_LABELS: Record<EventBlockId, string> = {
   program: '프로그램',
 };
 
-/** 템플릿별 행사 블록 순서 (BookletEventDetail: noticebox-sub → map → program) */
-export const TEMPLATE_EVENT_ORDER: Record<EventTemplateId, EventBlockId[]> = {
-  classic: ['eventInfo', 'map', 'program'],
-  modern: ['eventInfo', 'map', 'program'],
-  minimal: ['eventInfo', 'map', 'program'],
-  warm: ['eventInfo', 'map', 'program'],
-  forest: ['eventInfo', 'map', 'program'],
-  rose: ['eventInfo', 'map', 'program'],
-  navy: ['eventInfo', 'map', 'program'],
-  violet: ['eventInfo', 'map', 'program'],
-};
-
-/** 템플릿별 행사 탭 색상 테마 (CSS 변수 또는 클래스용) */
-export const TEMPLATE_EVENT_COLORS: Record<EventTemplateId, { primary: string; accent: string }> = {
-  classic: { primary: '#475569', accent: '#334155' },
-  modern: { primary: '#3b82f6', accent: '#1d4ed8' },
-  minimal: { primary: '#64748b', accent: '#475569' },
-  warm: { primary: '#d97706', accent: '#b45309' },
-  forest: { primary: '#15803d', accent: '#166534' },
-  rose: { primary: '#e11d48', accent: '#be123c' },
-  navy: { primary: '#1e3a8a', accent: '#1e40af' },
-  violet: { primary: '#7c3aed', accent: '#6d28d9' },
-};
+/** 행사 블록 표시 순서 (BookletEventDetail: noticebox-sub → map → program) */
+export const EVENT_BLOCK_ORDER: EventBlockId[] = ['eventInfo', 'map', 'program'];

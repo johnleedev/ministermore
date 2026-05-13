@@ -226,6 +226,26 @@ export default function PlaceDetail() {
                   </div>
                 ))}
               </div>
+
+              <div className="place__detail-actions place__detail-actions--bottom">
+                <button
+                  className="btn btn--secondary"
+                  type="button"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  Top
+                </button>
+                <button
+                  className="btn btn--primary"
+                  type="button"
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'auto' });
+                    navigate(-1);
+                  }}
+                >
+                  목록으로
+                </button>
+              </div>
             </div>
           </div>
         </main>

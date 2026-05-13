@@ -7,6 +7,8 @@ import MainURL from '../../../MainURL';
 import { useRecoilValue } from 'recoil';
 import { recoilLoginState } from '../../../RecoilStore';
 import { locationList, citydata } from '../../../DefaultData';
+import Pagination from '../../../components/Pagination';
+import Loading from '../../../components/Loading';
 // 직무 검색 키워드: 찬양대, 방송, 직원
 const churchJobSorts = ['찬양대', '방송', '직원'];
 
@@ -55,16 +57,24 @@ export default function RecruitChurchList (props:any) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [listAllLength, setListAllLength] = useState<number>(0);
   const [listAllLengthOrigin, setListAllLengthOrigin] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // 게시글 가져오기
   const fetchPosts = async () => {
     if (searchResult) return; // 검색 중이면 전체 데이터 fetch X
-    const res = await axios.get(`${MainURL}/recruitchurch/getrecruitdata/${currentPage}`)
+    setIsLoading(true);
+    try {
+      const res = await axios.get(`${MainURL}/recruitchurch/getrecruitdata/${currentPage}`)
       if (res.data.resultData) {
         setListView(res.data.resultData);
         setListAllLength(res.data.totalCount);
         setListAllLengthOrigin(res.data.totalCount);
-      } 
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
    };
 
   useEffect(() => {
@@ -102,31 +112,9 @@ export default function RecruitChurchList (props:any) {
   const itemsPerPage = 10; // 한 페이지당 표시될 게시글 수
   const totalPages = Math.ceil((searchResult ? searchResult.length : listAllLength) / itemsPerPage);
 
-  // 페이지 변경 함수
   // 지역 선택 리스트: citydata의 city 필드 사용
   const cityNames: string[] = citydata.map((c: any) => c.city);
-  const changePage = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
 
-  // 페이지네이션 범위 계산
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 10;
-    let start = Math.max(1, currentPage - 4);
-    let end = Math.min(totalPages, start + maxPagesToShow - 1);
-    
-    // 끝에서 10개가 안 될 때 시작점 조정
-    if (end - start + 1 < maxPagesToShow) {
-      start = Math.max(1, end - maxPagesToShow + 1);
-    }
-    
-    for (let i = start; i <= end; i++) {
-      pageNumbers.push(i);
-    }
-    return pageNumbers;
-  };
- 
   // 글자수 제한
   const renderPreview30 = (content : string) => {
     if (content?.length > 30) {
@@ -469,6 +457,11 @@ export default function RecruitChurchList (props:any) {
           
           <div className="subpage__main__content">
 
+            {isLoading ? (
+              <div className="list-loading">
+                <Loading />
+              </div>
+            ) : (
             <div className="main__content">
                 
                 <div className="recruit__wrap--category">
@@ -593,43 +586,14 @@ export default function RecruitChurchList (props:any) {
                   </div>
                 </div>
             </div>
+            )}
 
-            <div className='btn-row'>
-              <div onClick={() => {
-                changePage(1);
-                window.scrollTo(0, 500);
-              }} className='btn'>
-                <p>{"<<"}</p>
-              </div>
-              <div onClick={() => {
-                changePage(currentPage - 1);
-                window.scrollTo(0, 500);
-              }} className='btn'>
-                <p>{"<"}</p>
-              </div>
-              {getPageNumbers().map((page) => (
-                <div key={page} onClick={() => {
-                  changePage(page);
-                  window.scrollTo(0, 500);
-                }} 
-                className={currentPage === page ? 'current btn' : 'btn'}
-                >
-                  <p>{page}</p>
-                </div>
-              ))}
-              <div onClick={() => {
-                changePage(currentPage + 1);
-                window.scrollTo(0, 500);
-              }} className='btn'>
-                <p>{">"}</p>
-              </div>
-              <div onClick={() => {
-                changePage(totalPages);
-                window.scrollTo(0, 500);
-              }} className='btn'>
-                <p>{">>"}</p>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              onAfterChange={() => window.scrollTo(0, 500)}
+            />
           </div>
           
           

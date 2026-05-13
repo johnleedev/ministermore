@@ -38,8 +38,8 @@ export default function ServiceRouter() {
 
         <Route path="/churchdetail" element={<ChurchDetail/>}/>
 
-        <Route path="/bookletnoticetemplates" element={<NoticeApplyPay/>}/>
-        <Route path="/bookleteventtemplates" element={<EventApplyPay/>}/>
+        <Route path="/bookletnoticepay" element={<NoticeApplyPay/>}/>
+        <Route path="/bookleteventpay" element={<EventApplyPay/>}/>
         <Route path="/bookletnoticecreate" element={<NoticeCreate/>}/>
         <Route path="/bookleteventcreate" element={<EventCreate/>}/>
         <Route path="/bookleteventcomplete" element={<EventComplete/>}/>

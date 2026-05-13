@@ -29,26 +29,31 @@ export interface PastorPostData {
   mainPastorMessage?: string;
 }
 
+function serverRowHasContent(s: ServerItem): boolean {
+  return !!(
+    String(s.serverName ?? '').trim() ||
+    String(s.duty ?? '').trim() ||
+    String(s.notice ?? '').trim() ||
+    String(s.image ?? '').trim() ||
+    String(s.imageUrl ?? '').trim()
+  );
+}
+
 function ServersList(props: { serversDataList: { title: string; serverList: ServerItem[] }[] }) {
   const { serversDataList = [] } = props;
-
-  const totalCount = serversDataList.reduce((sum, g) => sum + g.serverList.length, 0);
-
-  if (totalCount === 0) {
-    return (
-      <div className="notice-detail__servers notice-detail__empty">
-        <div className="notice-detail__section-title">섬김이들</div>
-        <p className="notice-detail__empty-text">등록된 섬김이가 없습니다.</p>
-      </div>
-    );
-  }
 
   const teamList = serversDataList
     .map((g) => ({
       title: g.title || '사역팀',
-      servers: g.serverList,
+      servers: g.serverList.filter(serverRowHasContent),
     }))
     .filter((g) => g.servers.length > 0);
+
+  const displayCount = teamList.reduce((sum, g) => sum + g.servers.length, 0);
+
+  if (displayCount === 0) {
+    return null;
+  }
 
   const getImageUrl = (item: ServerItem) => {
     if (item.imageUrl) return item.imageUrl;
@@ -62,7 +67,7 @@ function ServersList(props: { serversDataList: { title: string; serverList: Serv
     <div className="notice-detail__servers">
       <div className="notice-detail__servers-header">
         <h2 className="notice-detail__servers-title">섬김이들을 소개합니다</h2>
-        <span className="notice-detail__servers-badge">총 {totalCount}명</span>
+        <span className="notice-detail__servers-badge">총 {displayCount}명</span>
       </div>
 
       <div className="notice-detail__servers-team">

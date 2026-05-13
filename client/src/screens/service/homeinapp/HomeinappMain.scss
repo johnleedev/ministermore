@@ -228,6 +228,99 @@ $lp-radius-pill: 999px;
     height: auto;
   }
 
+  // --- Sample section (store links) ---
+  &__sample {
+    padding: 0 0 36px;
+    margin-top: -72px;
+  }
+
+  &__sample-card {
+    border-radius: $lp-radius-xl;
+    border: 1px solid rgba(126, 170, 226, 0.22);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: $lp-shadow;
+    padding: 26px 24px;
+    display: grid;
+    gap: 18px;
+    align-items: center;
+  }
+
+  &__sample-copy {
+    text-align: center;
+  }
+
+  &__sample-title {
+    margin: 0 0 10px;
+    font-size: clamp(1.6rem, 3.3vw, 2.2rem);
+    line-height: 1.15;
+    letter-spacing: -0.04em;
+    font-weight: 850;
+  }
+
+  &__sample-actions {
+    display: grid;
+    gap: 16px;
+    justify-items: center;
+  }
+
+  &__sample-app {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(126, 170, 226, 0.22);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: $lp-shadow-soft;
+  }
+
+  &__sample-app-icon {
+    width: clamp(200px, 7vw, 72px);
+    height: clamp(200px, 7vw, 72px);
+    border-radius: 16px;
+    object-fit: cover;
+    border: 1px solid rgba(126, 170, 226, 0.22);
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  &__sample-app-meta {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+  }
+
+  &__sample-app-name {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  &__sample-app-sub {
+    color: $lp-muted;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  &__store-links {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  &__store-link {
+    display: inline-flex;
+    border-radius: 14px;
+    outline: none;
+    &:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    &:focus-visible {
+      box-shadow: 0 0 0 4px rgba(103, 169, 255, 0.28);
+    }
+  }
+
   // --- Sections ---
   &__section {
     padding: 88px 0;

@@ -30,6 +30,8 @@ RENAME TABLE eventWorship TO eventOrder;
 
 표시할 탭은 **`eventInfo.visibleTabs`**(JSON 배열 문자열)로 저장된다. **소개(`info`)는 항상 포함**되고, 나머지는 편집 화면 **「탭선택」**에서 켠다. 코드상 탭 id는 `eventTemplateTypes.ts`의 `EventVisibleTabId`와 동일하다.
 
+> 2026 리팩터: **템플릿 선택 기능 전면 제거.** `EventTemplateId`(classic/modern/…/violet), `TEMPLATE_EVENT_ORDER`, `TEMPLATE_EVENT_COLORS`, 서버의 `TEMPLATE_*` 매핑 함수, `eventMain.templateId`·`eventInfo.templateId` 컬럼 의존을 모두 제거했다. `EventCreate` 미리보기 클래스 변형(`--classic` 등)도 함께 정리. `eventTemplateTypes.ts` 파일 이름은 유지(`EventVisibleTabId`, 유형 정의 등이 모두 여기에 있음).
+
 | 탭 id | 라벨 | 내용 |
 |-------|------|------|
 | **info** | 소개 | 행사 일반 소개 (`eventInfo` + 메인 이미지 등) — `TemplateNotice` |
@@ -47,7 +49,7 @@ RENAME TABLE eventWorship TO eventOrder;
 
 | 테이블 | 역할 |
 |--------|------|
-| **eventMain** | 전단지 단위 메타(주문자·템플릿·타임스탬프). `POST /bookleteventcreate/...` 등으로 생성. |
+| **eventMain** | 전단지 단위 메타(주문자·결제·타임스탬프·`link`). `POST /bookleteventcreate/...` 등으로 생성. |
 | **eventInfo** | 행사 본문. `bookletId` = `String(eventMain.id)`. `programType`: `concert` \| `worship`(프로그램 탭 UI·`postImage` 처리). **`visibleTabs`**: 표시 탭 id JSON 배열(TEXT). |
 | **eventProgram** | **저장의 기준** — 프로그램 행 전부. `saveProgram`은 여기에 `DELETE` 후 `INSERT`. 레거시 `eventProgramConcert` / `eventProgramWorship` 행은 같은 booklet에 대해 삭제만 수행. |
 | **eventProfile** | **프로필** 행(구 `eventCast`). `saveCast`는 `DELETE` 후 `INSERT`. |
@@ -86,7 +88,9 @@ RENAME TABLE eventWorship TO eventOrder;
 
 ### 소개 (`getdatabookletspart` 병합)
 
-`eventName`, `date`, `place`, `superViser`, `address`, `quiry`, `placeNaver`, `placeKakao`, `imageMain` / `imageMainName`, `programType`, `templateId`, **`visibleTabs`** 등.
+`eventName`, `eventNameEn`, `date`, `place`, `superViser`, `address`, `quiry`, `placeNaver`, `placeKakao`, `imageMain` / `imageMainName`, `programType`, **`visibleTabs`**, `link`(eventMain) 등.
+
+> `eventNameEn`은 영문·숫자 식별명. HTML 파일명(`id{eventMainId}{eventNameEn}.html`)에 사용된다. 클라이언트(`EventCreate.tsx`)의 행사 영문명 입력에서 영문·숫자 외 입력을 차단한다.
 
 ### 프로그램 (`getdataprogramspart`)
 
@@ -171,8 +175,15 @@ Express 마운트는 `app.js` 기준 `/bookleteventcreate`, `/bookleteventmain` 
 | `saveCast` | `castData` 배열 → **`eventProfile`** |
 | `saveWorship` | `worshipData` 배열 → **`eventOrder`** |
 | `uploadProgramImage` | 프로그램·프로필 이미지 → `images/bookletevent/programimages/` |
+| `generateEventHtml` | 공유용 HTML(`build/hp/event/id{eventMainId}{eventNameEn}.html`) 생성 + `eventMain.link` 갱신 + 응답에 `fileUrl` 포함 |
+| `deleteBooklet` | `userAccount` 검증 후 **DB 행 · 이미지 파일(mainimages/programimages/castimages) · HTML 파일** 모두 정리 |
 
 공개 조회용 라우트(`EventMain.js`)는 동일 엔드포인트 이름을 맞춰 둘 수 있다.
+
+### 결제 이후 라우트 (`PortoneRequestPay.js`)
+
+- `POST /paymentrequestpay/event/complete-browser` — PortOne 결제 검증 + `eventMain`/`eventInfo` INSERT.
+  - 2026 리팩터로 `templateId` 컬럼·필드를 더 이상 받지 않는다. `insertEventMainWithPayment`는 `templateId` 없이 호출된다.
 
 ---
 
@@ -199,3 +210,34 @@ Express 마운트는 `app.js` 기준 `/bookleteventcreate`, `/bookleteventmain` 
 - [x] **`eventOrder` 저장·조회(순서, API `saveWorship` / `getdataworshippart`)** — `subTitle`, `title`, `charger`, `notice`
 - [x] `programType`, `showDateTime`, 프로그램 이미지(음악회형)
 - [x] MySQL **`bookletevent`** 스키마 전용 연결 (`bookleteventdb`)
+- [x] **템플릿 선택 기능 제거** (클라이언트·서버·CSS 변형 모두)
+- [x] **HTML 파일 생성/링크 저장**: `generateEventHtml` → `build/hp/event/`에 `id{eventMainId}{eventNameEn}.html` 작성 + `eventMain.link` 갱신
+- [x] **EventComplete 링크 표시·복사 UI** + `eventMainId` 기반 수정 버튼
+- [x] **마이페이지(모바일행사전단지) 링크 표시·복사 UI** (`ServiceManage.tsx`)
+- [x] **삭제 강화**: `deleteBooklet`이 MySQL 행 + 이미지 파일(mainimages/programimages/castimages) + `build/hp/event/*.html` 모두 정리
+
+## 기능 변경 이력 (2026 리팩터)
+
+### 템플릿 선택 제거
+- 클라이언트
+  - `eventTemplateTypes.ts`: `EventTemplateId`, `TEMPLATE_EVENT_ORDER`, `TEMPLATE_EVENT_COLORS` 제거 (파일은 유지, 탭/유형 정의 보존).
+  - `EventApplyPay.tsx`: `DEFAULT_EVENT_TEMPLATE`, `templateId` payload, `template` URL 파라미터 제거.
+  - `EventCreate.tsx`: `templateId` state·URL 파라미터·로드·FormData append 제거. 미리보기 클래스(`event-create__tabs-wrap--${templateId}`, `event-create__preview-body--${templateId}`, `notice-create__preview-body--${templateId}`) 정리.
+  - `EventCreate.scss`, `EventApplyPay.scss`: `--classic ~ --violet` 변형 블록 전부 제거.
+- 서버
+  - `bookletEventShared.js`: `TEMPLATE_STR_TO_INT/INT_TO_STR/toTemplateInt/toTemplateStr` 제거.
+  - `bookletEventMerge.js`: `templateIdStrFromBody` 제거, `mergeEventMainRow`에서 `templateId` 필드 미반환.
+  - `EventCreateBooklet.js`: `/create`, `/saveIntro`(`upsertEventInfo`)에서 `templateId` 컬럼·바인딩 제거. `ensureEventInfoColumns` 보강 목록에서도 제거.
+  - `PortoneRequestPay.js`: `insertEventMainWithPayment` · `POST /event/complete-browser`에서 `templateId` 제거.
+
+### HTML/링크 처리
+- `eventInfo.eventNameEn` 컬럼 추가 (영문·숫자 식별명) — `ensureEventInfoColumns` 보강.
+- `eventMain.link` 컬럼 추가 — `ensureEventMainMetaColumns` 보강.
+- `EventCreate.tsx`: "행사 영문명" 입력 (영문·숫자만 허용, 한글 입력 시 디바운스 알림). FormData에 `eventNameEn` 동봉.
+- `generateEventHtml`: `eventNameEn` 우선 사용해 파일명 생성, 실패 시 `toEnglishFilenamePart(eventName)` 폴백. 응답에 `fileUrl/fileName/filePath/eventName/eventNameEn` 포함. `eventMain.link` UPDATE.
+- `EventCreate.tsx → handleCompleteClick`: 응답값을 `location.state`로 `EventComplete`에 전달.
+- `EventComplete.tsx`: NoticeComplete와 동일 패턴(`fileUrl` 표시·복사·새 탭 열기 + 수정 버튼은 `eventMainId` 기반 `/service/bookleteventcreate?id=…`로 진입). state 비었을 때 `/mypage/servicemanage/mobile-event-notice`로 폴백.
+
+### 삭제 강화
+- `POST /bookleteventcreate/deleteBooklet`: `userAccount` 검증 → 자식 테이블(`eventProgram`, `eventProgramConcert`, `eventProgramWorship`, `eventProfile`, `eventOrder`, `eventInfo`)에서 이미지 파일명 수집 → `build/images/bookletevent/{mainimages,programimages,castimages}` 안전 삭제 → `eventMain.link`에서 HTML 파일명 추출해 `build/hp/event/`에서 삭제 → DB 행 삭제(자식 먼저, 마지막에 `eventMain`).
+- 마이페이지(`ServiceManage.tsx`)의 모바일행사전단지 카드도 링크 행/복사 버튼을 노출하여 삭제 후 링크 사라짐을 즉시 반영.

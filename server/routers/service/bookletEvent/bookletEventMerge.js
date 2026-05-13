@@ -2,7 +2,6 @@
  * eventMain + eventInfo 병합 (bookleteventmain / bookleteventcreate 공통)
  * 프로그램 행은 eventProgramConcert / eventProgramWorship — getdataprogramspart / saveProgram 참고.
  */
-const { toTemplateInt, toTemplateStr } = require('../bookletNotice/bookletNoticeShared');
 
 function normalizeVisibleTabIdStr(id) {
   const s = String(id);
@@ -18,14 +17,16 @@ function normalizeVisibleTabsArray(p) {
   return mapped.includes('info') ? mapped : ['info', ...mapped];
 }
 
-function templateIdStrFromBody(v) {
-  if (v == null || v === '') return 'classic';
-  if (typeof v === 'string' && v.length) return String(v);
-  return toTemplateStr(toTemplateInt(v));
-}
-
 /** MySQL TEXT/BLOB 등이 Buffer로 올 때 JSON·파일명 문자열로 통일 */
 function coerceImageMainField(v) {
+  if (v == null || v === '') return '';
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(v)) return v.toString('utf8');
+  if (typeof v === 'string') return v;
+  return String(v);
+}
+
+/** VARCHAR 등이 mysql2에서 Buffer로 올 때 — res.json 전에 UTF-8 문자열로 통일 */
+function coerceUtf8Text(v) {
   if (v == null || v === '') return '';
   if (typeof Buffer !== 'undefined' && Buffer.isBuffer(v)) return v.toString('utf8');
   if (typeof v === 'string') return v;
@@ -37,9 +38,6 @@ function coerceImageMainField(v) {
  */
 function mergeEventMainRow(m, info) {
   if (!m) return null;
-  const templateId = templateIdStrFromBody(
-    m.templateId != null && m.templateId !== '' ? m.templateId : info && info.templateId
-  );
   const fromInfo =
     info &&
     (info.imageMain != null && String(info.imageMain).trim() !== ''
@@ -71,11 +69,17 @@ function mergeEventMainRow(m, info) {
   return {
     id: m.id,
     userAccount: m.userAccount || '',
-    templateId,
     ordererName: m.ordererName || '',
     ordererPhone: m.ordererPhone || '',
     orderTitle: m.orderTitle != null && String(m.orderTitle).trim() !== '' ? String(m.orderTitle).trim() : '',
-    eventName: (info && info.eventName) || m.eventName || '',
+    link: m.link != null && String(m.link).trim() !== '' ? String(m.link).trim() : '',
+    /** info.eventName 이 빈 문자열이면 eventMain 폴백 — Buffer·비문자 mysql2 값은 UTF-8 문자열로 */
+    eventName: (info && coerceUtf8Text(info.eventName)) || coerceUtf8Text(m.eventName) || '',
+    eventNameEn: (() => {
+      const fromInfo = info ? coerceUtf8Text(info.eventNameEn).trim() : '';
+      const fromMain = coerceUtf8Text(m.eventNameEn).trim();
+      return fromInfo || fromMain || '';
+    })(),
     date: (info && info.date) || m.date || '',
     place: (info && info.place) || m.place || '',
     superViser: (info && info.superViser) || m.superViser || '',
@@ -104,7 +108,6 @@ function mergeEventMainRow(m, info) {
 }
 
 module.exports = {
-  templateIdStrFromBody,
   mergeEventMainRow,
   normalizeVisibleTabsArray,
 };

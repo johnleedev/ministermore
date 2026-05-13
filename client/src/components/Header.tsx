@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './Header.scss';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { recoilLoginPath, recoilLoginState, recoilUserData } from '../RecoilStore';
+import MainURL from '../MainURL';
 
 const Header: React.FC = () => {
   
@@ -25,7 +27,7 @@ const Header: React.FC = () => {
     //     // {title:"사역지", subUrl:"/worship"}, 
     //   ]
     // },
-    { title: "수련회", url:"/retreat", 
+    { title: "수련회", url:"/retreat", countType: "retreatmenu",
       links: [
         {title:"수련회장소", subUrl:"/retreat/place"}, 
         {title:"장소후기", subUrl:"/retreat/review"}, 
@@ -39,12 +41,12 @@ const Header: React.FC = () => {
         {title:"콘티만들기", subUrl:"/worship/conti"}, 
       ]
     },
-    { title: "서비스", url:"/service", 
+    { title: "서비스", url:"/service", countType: "servicemenu",
       links: [
-        {title:"모바일전단지(소개)", subUrl:"/service/notice"},
-        {title:"모바일전단지(행사)", subUrl:"/service/event"},
         {title:"홈인앱", subUrl:"/service/homeinapp"},
         {title:"교회어플", subUrl:"/service/churchapp"},
+        {title:"모바일전단지(소개)", subUrl:"/service/notice"},
+        {title:"모바일전단지(행사)", subUrl:"/service/event"},
         // {title:"홈페이지", subUrl:"/service/homepage"},
         // {title:"모바일주보", subUrl:"/service/bulletin"},     
       ]
@@ -73,6 +75,17 @@ const Header: React.FC = () => {
       setMenuOpen(!menuOpen);
   };
 
+  // 메뉴(수련회/서비스 등) 클릭수 카운트
+  const countMenuClick = (type?: string) => {
+    if (!type) return;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const date = `${yyyy}-${mm}-${dd}`;
+    axios.post(`${MainURL}/admin/countup`, { date, type }).catch(() => {});
+  };
+
   const toggleMobileMenu = (index: number) => {
       setMobileMenuOpen((prevState) => ({
           ...prevState,
@@ -96,6 +109,8 @@ const Header: React.FC = () => {
   
   useEffect(() => {
     const handleScroll = () => {
+      /** 모바일 메뉴가 열려있을 때는 페이지 스크롤로 닫히지 않도록 가드 */
+      if (menuOpen) return;
       if (window.scrollY > 10 && window.scrollY < 100) {
         setMenuOpen(false);
       } 
@@ -104,7 +119,55 @@ const Header: React.FC = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [menuOpen]);
+
+  /**
+   * 모바일 햄버거 메뉴 오픈 동안 배경(페이지) 스크롤 차단.
+   * `overflow: hidden`만으로는 iOS Safari 등에서 체인 스크롤이 남는 경우가 있어
+   * 스크롤 위치를 유지한 채 `body`를 fixed로 고정한다.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const scrollY = window.scrollY;
+    const prev = {
+      bodyOverflow: document.body.style.overflow,
+      bodyPosition: document.body.style.position,
+      bodyTop: document.body.style.top,
+      bodyLeft: document.body.style.left,
+      bodyRight: document.body.style.right,
+      bodyWidth: document.body.style.width,
+      bodyOverscroll: document.body.style.overscrollBehavior,
+      htmlOverflow: document.documentElement.style.overflow,
+      htmlHeight: document.documentElement.style.height,
+      htmlOverscroll: document.documentElement.style.overscrollBehavior,
+    };
+
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.height = '100%';
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = prev.bodyOverflow;
+      document.body.style.position = prev.bodyPosition;
+      document.body.style.top = prev.bodyTop;
+      document.body.style.left = prev.bodyLeft;
+      document.body.style.right = prev.bodyRight;
+      document.body.style.width = prev.bodyWidth;
+      document.body.style.overscrollBehavior = prev.bodyOverscroll;
+      document.documentElement.style.overflow = prev.htmlOverflow;
+      document.documentElement.style.height = prev.htmlHeight;
+      document.documentElement.style.overscrollBehavior = prev.htmlOverscroll;
+      window.scrollTo(0, scrollY);
+    };
+  }, [menuOpen]);
 
 
   return (
@@ -155,6 +218,7 @@ const Header: React.FC = () => {
                     <div className="menu-item" key={index}>
                         <div className="menu-face" 
                           onClick={()=>{
+                            countMenuClick(item.countType);
                             navigate(item.url);
                           }}
                         >{item.title}</div>
@@ -163,6 +227,7 @@ const Header: React.FC = () => {
                             item.links.map((subItem:any, subIndex:any) => (
                               <div className="menu-part" key={subIndex}>
                                 <div onClick={()=>{
+                                    countMenuClick(item.countType);
                                     navigate(subItem.subUrl)
                                   }}>{subItem.title}</div>
                               </div>
@@ -212,6 +277,7 @@ const Header: React.FC = () => {
                                           <div className={`mobile_menu-face ${mobileMenuOpen[index] ? 'mobile_menu-face--open' : ''}`}>
                                               <div className="mobile_menu-face_text" 
                                                 onClick={()=>{
+                                                  countMenuClick(item.countType);
                                                   navigate(item.url);
                                                   toggleMenu();
                                                 }}>{item.title}</div>
@@ -222,6 +288,7 @@ const Header: React.FC = () => {
                                                 item.links.map((subItem:any, subIndex:any) => (
                                                   <div className="mobile_menu-part"
                                                     onClick={()=>{
+                                                      countMenuClick(item.countType);
                                                       navigate(subItem.subUrl);
                                                       toggleMenu();
                                                     }} key={subIndex}

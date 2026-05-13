@@ -65,6 +65,56 @@ router.get('/getChurchByUser/:userAccount', (req, res) => {
   });
 });
 
+/** 로그인 계정이 소유한 churches 전체(최신순) — 마이페이지 홈인앱알림 목록 */
+router.get('/getChurchesByUser/:userAccount', (req, res) => {
+  const userAccount = String(req.params.userAccount || '').trim();
+  if (!userAccount) {
+    return res.status(400).json({ success: false, data: [], message: 'userAccount가 필요합니다.' });
+  }
+
+  const sql = `
+    SELECT *
+    FROM churches
+    WHERE userAccount = ?
+    ORDER BY created_at DESC
+  `;
+
+  homeinappdb.query(sql, [userAccount], (err, rows) => {
+    if (err) {
+      console.error('getChurchesByUser error:', err.message);
+      return res.status(500).json({ success: false, data: [], message: 'DB 조회 실패' });
+    }
+    return res.json({ success: true, data: Array.isArray(rows) ? rows : [] });
+  });
+});
+
+/** 특정 교회 1건 — 요청 계정이 소유한 경우에만 반환(타 교회 ID 조회 방지) */
+router.get('/getChurchForUser/:userAccount/:churchId', (req, res) => {
+  const userAccount = String(req.params.userAccount || '').trim();
+  const churchId = String(req.params.churchId || '').trim();
+  if (!userAccount || !churchId) {
+    return res.status(400).json({ success: false, data: null, message: 'userAccount와 churchId가 필요합니다.' });
+  }
+
+  const sql = `
+    SELECT *
+    FROM churches
+    WHERE id = ? AND userAccount = ?
+    LIMIT 1
+  `;
+
+  homeinappdb.query(sql, [churchId, userAccount], (err, rows) => {
+    if (err) {
+      console.error('getChurchForUser error:', err.message);
+      return res.status(500).json({ success: false, data: null, message: 'DB 조회 실패' });
+    }
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, data: null, message: '교회 정보를 찾을 수 없습니다.' });
+    }
+    return res.json({ success: true, data: rows[0] });
+  });
+});
+
 router.get('/users/:churchId', async (req, res) => {
   const churchId = String(req.params.churchId || '').trim();
   if (!churchId) {
@@ -534,7 +584,7 @@ async function getChurchFirebaseKeyName(churchId) {
     if (!rows.length) return { exists: false, keyName: '' };
     return {
       exists: true,
-      keyName: String(rows[0].firebaseKey || '').trim(),
+      keyName: path.basename(String(rows[0].firebaseKey || '').trim()),
     };
   } catch (error) {
     // Backward compatibility for old schema (firebaseKeyPath)
@@ -552,14 +602,14 @@ async function getChurchFirebaseKeyName(churchId) {
 }
 
 async function updateChurchFirebaseKeyName(churchId, keyName) {
+  const fileOnly = path.basename(String(keyName || '').trim());
   try {
-    await queryAsync('UPDATE churches SET firebaseKey = ? WHERE id = ?', [keyName, churchId]);
+    await queryAsync('UPDATE churches SET firebaseKey = ? WHERE id = ?', [fileOnly, churchId]);
     return 'firebaseKey';
   } catch (error) {
     // Backward compatibility for old schema (firebaseKeyPath)
     if (error && error.code === 'ER_BAD_FIELD_ERROR') {
-      const legacyPath = `server/routers/service/homeinappkeys/${keyName}`;
-      await queryAsync('UPDATE churches SET firebaseKeyPath = ? WHERE id = ?', [legacyPath, churchId]);
+      await queryAsync('UPDATE churches SET firebaseKeyPath = ? WHERE id = ?', [fileOnly, churchId]);
       return 'firebaseKeyPath';
     }
     throw error;
@@ -645,7 +695,6 @@ router.post('/sendPushByChurch', async (req, res) => {
         message: '해당 교회의 firebaseKey가 없습니다. 키 파일을 먼저 업로드해주세요.',
       });
     }
-    const firebaseKeyPath = path.resolve(firebaseKeysDir, path.basename(keyName));
 
     const users = await queryAsync(
       'SELECT fcmToken FROM users WHERE church_id = ? AND isActive = TRUE AND fcmToken IS NOT NULL',
@@ -663,7 +712,7 @@ router.post('/sendPushByChurch', async (req, res) => {
       });
     }
 
-    const app = getFirebaseAdmin(churchId, firebaseKeyPath);
+    const app = getFirebaseAdmin(churchId, keyName);
     const message = {
       notification: { title, body: content },
       tokens,
@@ -698,6 +747,111 @@ router.post('/sendPushByChurch', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: '푸시 발송 중 오류가 발생했습니다.',
+      error: error?.message || 'unknown error',
+    });
+  }
+});
+
+/** 관리자: churches.status 갱신 — applied | process | completed (process는 DB에 progress로 저장) */
+router.post('/admin/church-status', async (req, res) => {
+  try {
+    const id = req.body?.id ?? req.body?.churchId;
+    const raw = String(req.body?.status ?? '').trim().toLowerCase();
+    if (id == null || id === '') {
+      return res.status(400).json({ success: false, message: 'id가 필요합니다.' });
+    }
+
+    let status = raw;
+    if (status === 'process') status = 'progress';
+    const allowed = new Set(['applied', 'progress', 'completed']);
+    if (!allowed.has(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'status는 applied, process(또는 progress), completed 중 하나여야 합니다.',
+      });
+    }
+
+    const result = await queryAsync('UPDATE churches SET status = ? WHERE id = ? LIMIT 1', [
+      status,
+      String(id),
+    ]);
+    const affected = result?.affectedRows ?? 0;
+    if (!affected) {
+      return res.status(404).json({ success: false, message: '해당 id의 교회 레코드를 찾을 수 없습니다.' });
+    }
+
+    const rows = await queryAsync('SELECT * FROM churches WHERE id = ? LIMIT 1', [String(id)]);
+    return res.json({ success: true, data: rows[0] || null, message: '상태가 갱신되었습니다.' });
+  } catch (error) {
+    console.error('admin/church-status error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '상태 갱신 실패',
+      error: error?.message || 'unknown error',
+    });
+  }
+});
+
+/** 관리자: churches.firebaseKey / firebaseKeyPath — homeinappkeys 기준 JSON 파일명만 저장 */
+router.post('/admin/church-firebase-key', async (req, res) => {
+  try {
+    const id = req.body?.id ?? req.body?.churchId;
+    const rawKey = req.body?.firebaseKeyPath ?? req.body?.firebaseKey ?? '';
+    if (id == null || id === '') {
+      return res.status(400).json({ success: false, message: 'id가 필요합니다.' });
+    }
+
+    const fileOnly = path.basename(String(rawKey || '').trim());
+    if (!fileOnly) {
+      return res.status(400).json({
+        success: false,
+        message: 'firebase JSON 파일명(또는 경로)을 입력해 주세요.',
+      });
+    }
+    if (!/\.json$/i.test(fileOnly)) {
+      return res.status(400).json({
+        success: false,
+        message: '파일명은 .json으로 끝나야 합니다.',
+      });
+    }
+
+    const absKey = path.resolve(firebaseKeysDir, fileOnly);
+    if (!fs.existsSync(absKey)) {
+      return res.status(400).json({
+        success: false,
+        message: `server/.../homeinappkeys 폴더에 파일이 없습니다: ${fileOnly}`,
+      });
+    }
+
+    try {
+      const raw = fs.readFileSync(absKey, 'utf8');
+      JSON.parse(raw);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: '해당 파일이 유효한 JSON이 아닙니다.',
+      });
+    }
+
+    const existsRows = await queryAsync('SELECT id FROM churches WHERE id = ? LIMIT 1', [String(id)]);
+    if (!existsRows.length) {
+      return res.status(404).json({ success: false, message: '해당 id의 교회 레코드를 찾을 수 없습니다.' });
+    }
+
+    await updateChurchFirebaseKeyName(String(id), fileOnly);
+    await clearFirebaseAdmin(String(id));
+
+    const rows = await queryAsync('SELECT * FROM churches WHERE id = ? LIMIT 1', [String(id)]);
+    return res.json({
+      success: true,
+      data: rows[0] || null,
+      message: 'firebase 키 파일명이 갱신되었습니다.',
+    });
+  } catch (error) {
+    console.error('admin/church-firebase-key error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'firebase 키 저장 실패',
       error: error?.message || 'unknown error',
     });
   }

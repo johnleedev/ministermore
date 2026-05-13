@@ -11,18 +11,13 @@ import naverlogo from '../../../../images/login/naver.png';
 import naverbloglogo from '../../../../images/naverblog.png';
 import navermapnotice from '../../../../images/booklet/navermapnotice.jpg';
 import kakaomapnotice from '../../../../images/booklet/kakaomapnotice.jpg';
-import { FaInstagram, FaYoutube, FaFacebookF, FaInfoCircle } from 'react-icons/fa';
+import { FaInstagram, FaYoutube, FaFacebookF, FaInfoCircle, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { DaumPostcodeEmbed } from 'react-daum-postcode';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { religiousbodySubSort } from '../../../recruit/recruit_minister/RecruitMinisterPostData';
 import TemplateServers from '../../../../exceptbooklets/bookletNotice/BookletNoticeTemplates/TemplateServers';
 import TemplateSermon from '../../../../exceptbooklets/bookletNotice/BookletNoticeTemplates/TemplateSermon';
-import {
-  type NoticeTemplateId,
-  type IntroBlockId,
-  TEMPLATE_INTRO_ORDER,
-} from './noticeTemplateTypes';
 import MainHeroCarousel from '../../../../exceptbooklets/component/MainHeroCarousel';
 import {
   MAIN_IMAGE_SLOT_COUNT,
@@ -87,6 +82,42 @@ function galleryFormDisplayUrl(item: GalleryItem): string {
   return '';
 }
 
+/** 모달용: 붙여넣은 문자열에서 YouTube 영상 ID(11자) 추출 */
+function extractYoutubeVideoId(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  let s = t;
+  if (!/^https?:\/\//i.test(s)) {
+    s = `https://${s}`;
+  }
+  try {
+    const u = new URL(s);
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase();
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      const v = u.searchParams.get('v');
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+      const path = u.pathname;
+      const embed = path.match(/^\/embed\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+      if (embed) return embed[1];
+      const shorts = path.match(/^\/shorts\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+      if (shorts) return shorts[1];
+      const live = path.match(/^\/live\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+      if (live) return live[1];
+    }
+    if (host === 'youtu.be') {
+      const m = u.pathname.match(/^\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+      if (m) return m[1];
+    }
+  } catch {
+    /* ignore */
+  }
+  const watch = t.match(/[?&]v=([a-zA-Z0-9_-]{11})(?:&|#|$)/);
+  if (watch) return watch[1];
+  const short = t.match(/youtu\.be\/([a-zA-Z0-9_-]{11})(?:\?|#|$)/i);
+  if (short) return short[1];
+  return null;
+}
+
 /** TemplateServers.getImageUrl 과 동일 규칙: blob/데이터/절대 URL은 그대로, 나머지는 servers 폴더 파일명 */
 function serverFormDisplayUrl(item: ServerItem): string {
   if (item.imageUrl) return item.imageUrl;
@@ -133,12 +164,134 @@ interface WorshipTime {
   notice: string;
 }
 
+/** 전화번호 앞자리 선택지 — 휴대전화/주요 지역번호/인터넷전화 등 */
+const PHONE_PREFIX_OPTIONS = [
+  '010', '011', '016', '017', '018', '019',
+  '02',
+  '031', '032', '033',
+  '041', '042', '043', '044',
+  '051', '052', '053', '054', '055',
+  '061', '062', '063', '064',
+  '070', '080',
+] as const;
+
+/** 휴대·070/080 등 4+4 국번 — 뒤 8자리는 4+4, 입력 중 7자리는 4+3 */
+const MOBILE_PHONE_PREFIXES = new Set<string>(['010', '011', '016', '017', '018', '019', '070', '080']);
+
+/**
+ * 저장된 `quiry`(숫자만 결합 문자열)를 3분할 UI 값으로 분해.
+ * - 옵션 목록에서 가장 긴 prefix 우선 매칭 → 휴대 `010` 과 `02` 같은 길이 충돌 방지.
+ * - 매칭 실패 시 앞 3자리 또는 기본값 `010` 으로 폴백.
+ * - `02`·지역(031~064 등): 나머지 7자리 → 3+4(예: 053-643-0691), 8자리 이상 → 4+4.
+ * - 휴대(010 등): 4+4, 입력 중 7자리 → 4+3.
+ */
+function parseQuiryParts(value: string): { prefix: string; mid: string; last: string } {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) {
+    return { prefix: PHONE_PREFIX_OPTIONS[0], mid: '', last: '' };
+  }
+  let matched = '';
+  for (const p of PHONE_PREFIX_OPTIONS) {
+    if (digits.startsWith(p) && p.length > matched.length) {
+      matched = p;
+    }
+  }
+  if (!matched) {
+    matched =
+      digits.startsWith('0') && digits.length >= 3
+        ? digits.slice(0, 3)
+        : PHONE_PREFIX_OPTIONS[0];
+  }
+  const rest = digits.slice(matched.length);
+  if (!rest) {
+    return { prefix: matched, mid: '', last: '' };
+  }
+
+  // 2자리 국번(02): 가운데 3 또는 4자리 — 완성 7자리(3+4) vs 8자리(4+4)
+  if (matched.length === 2) {
+    if (rest.length <= 4) {
+      return { prefix: matched, mid: rest, last: '' };
+    }
+    if (rest.length >= 8) {
+      return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 8) };
+    }
+    if (rest.length === 7) {
+      return { prefix: matched, mid: rest.slice(0, 3), last: rest.slice(3, 7) };
+    }
+    if (rest.length === 6) {
+      return { prefix: matched, mid: rest.slice(0, 3), last: rest.slice(3, 6) };
+    }
+    return { prefix: matched, mid: rest.slice(0, 3), last: rest.slice(3, 7) };
+  }
+
+  // 휴대전화: 가운데 4 + 끝 4 (입력 중 7자리는 4+3)
+  if (MOBILE_PHONE_PREFIXES.has(matched)) {
+    if (rest.length <= 4) {
+      return { prefix: matched, mid: rest, last: '' };
+    }
+    if (rest.length >= 8) {
+      return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 8) };
+    }
+    if (rest.length === 7) {
+      return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 7) };
+    }
+    return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4) };
+  }
+
+  // 3자리 지역(031~064 등, 070/080 제외): 완성 7자리는 3+4. 입력 중 rest가 4자리일 때(예: 6340) 전부를
+  // 가운데에 두면 끝자리 선행 0이 깨짐 → 항상 앞 3 + 나머지로 분해.
+  if (matched.length === 3) {
+    if (rest.length <= 3) {
+      return { prefix: matched, mid: rest, last: '' };
+    }
+    if (rest.length >= 8) {
+      return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 8) };
+    }
+    return { prefix: matched, mid: rest.slice(0, 3), last: rest.slice(3) };
+  }
+
+  if (rest.length <= 4) {
+    return { prefix: matched, mid: rest, last: '' };
+  }
+  if (rest.length >= 8) {
+    return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 8) };
+  }
+  if (rest.length === 7) {
+    return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4, 7) };
+  }
+  return { prefix: matched, mid: rest.slice(0, 4), last: rest.slice(4) };
+}
+
+/** UI 3칸 → 저장·dirty용 숫자만 문자열. 가운데·끝이 비고 국번만 기본(010)이면 '' (기존 단일 `quiry` 빈 값과 동일). */
+function buildQuiryFromParts(prefix: string, mid: string, last: string): string {
+  const p = String(prefix ?? '').replace(/\D/g, '');
+  const m = String(mid ?? '').replace(/\D/g, '');
+  const l = String(last ?? '').replace(/\D/g, '');
+  if (!m && !l) {
+    if (!p || p === PHONE_PREFIX_OPTIONS[0]) return '';
+    return p;
+  }
+  return `${p}${m}${l}`;
+}
+
+/** 기본주소 + 상세주소 한 줄 표기(미리보기·푸터 등) */
+function formatAddressLine(base: string, detail: string): string {
+  const a = (base || '').trim();
+  const b = (detail || '').trim();
+  if (!a && !b) return '';
+  if (!a) return b;
+  if (!b) return a;
+  return `${a} ${b}`;
+}
+
 /** intro dirty 비교·lastSavedRef·서버 로드 직후 기준점 — 필드 구조가 하나라도 다르면 저장/다음탭 버튼이 틀어짐 */
 function buildIntroDirtySnapshot(p: {
   churchName: string;
+  churchNameEn: string;
   mainPastor: string;
   religiousbody: string;
   address: string;
+  addressDetail: string;
   quiry: string;
   youtube: string;
   blog: string;
@@ -158,9 +311,11 @@ function buildIntroDirtySnapshot(p: {
 }): string {
   return JSON.stringify({
     churchName: p.churchName,
+    churchNameEn: p.churchNameEn,
     mainPastor: p.mainPastor,
     religiousbody: p.religiousbody,
     address: p.address,
+    addressDetail: p.addressDetail,
     quiry: p.quiry,
     youtube: p.youtube,
     blog: p.blog,
@@ -368,11 +523,13 @@ export default function NoticeCreate() {
   const userAccount = userData?.userAccount || '';
 
   const urlParams = new URLSearchParams(location.search);
-  const [templateId, setTemplateId] = useState<NoticeTemplateId>(
-    (urlParams.get('template') as NoticeTemplateId) || 'classic'
-  );
   const ordererName = urlParams.get('ordererName') || '';
   const ordererPhone = urlParams.get('ordererPhone') || '';
+  /** 마이페이지「수정」진입 시에만 1 — 결제 직후·완료 후 재편집 등에서는 없음 */
+  const namesLocked = useMemo(
+    () => new URLSearchParams(location.search).get('namesLocked') === '1',
+    [location.search]
+  );
 
   const TAB_LIST = [
     { id: 'intro' as const, label: '소개' },
@@ -381,14 +538,26 @@ export default function NoticeCreate() {
     { id: 'gallery' as const, label: '갤러리' },
   ] as const;
   const [churchName, setChurchName] = useState('');
+  const [churchNameEn, setChurchNameEn] = useState('');
+  const churchNameInputRef = useRef<HTMLInputElement>(null);
+  const lastKoreanAlertRef = useRef<number>(0);
   const [mainPastor, setMainPastor] = useState('');
   const [mainImages, setMainImages] = useState<MainImageSlot[]>(emptyMainImageSlots);
   const [mainImageLoadingSlot, setMainImageLoadingSlot] = useState<number | null>(null);
   const [religiousbody, setReligiousbody] = useState('');
   const [address, setAddress] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
   const [placeNaver, setPlaceNaver] = useState('');
   const [placeKakao, setPlaceKakao] = useState('');
-  const [quiry, setQuiry] = useState('');
+  const [quiryPrefix, setQuiryPrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
+  const [quiryMid, setQuiryMid] = useState('');
+  const [quiryLast, setQuiryLast] = useState('');
+  const quiry = useMemo(
+    () => buildQuiryFromParts(quiryPrefix, quiryMid, quiryLast),
+    [quiryPrefix, quiryMid, quiryLast]
+  );
+  const quiryMidRef = useRef<HTMLInputElement | null>(null);
+  const quiryLastRef = useRef<HTMLInputElement | null>(null);
   const [youtube, setYoutube] = useState('');
   const [blog, setBlog] = useState('');
   const [instar, setInstar] = useState('');
@@ -417,7 +586,11 @@ export default function NoticeCreate() {
   const [galleryPreviewIndex, setGalleryPreviewIndex] = useState(0);
   const [serverImageLoading, setServerImageLoading] = useState<Record<number, boolean>>({});
   const [sermonThumbLoading, setSermonThumbLoading] = useState<Record<number, boolean>>({});
+  const [sermonThumbHelpOpen, setSermonThumbHelpOpen] = useState(false);
+  const [sermonThumbHelpYoutubeUrl, setSermonThumbHelpYoutubeUrl] = useState('');
   const [galleryImageLoading, setGalleryImageLoading] = useState<Record<number, boolean>>({});
+  const [galleryBulkProcessing, setGalleryBulkProcessing] = useState(false);
+  const galleryBulkInputRef = useRef<HTMLInputElement | null>(null);
   const serverInputResetFns = useRef<Record<number, () => void>>({});
   const sermonThumbResetFns = useRef<Record<number, () => void>>({});
   const galleryImageResetFns = useRef<Record<number, () => void>>({});
@@ -428,6 +601,12 @@ export default function NoticeCreate() {
   const [churchMainId, setChurchMainId] = useState<string | null>(() =>
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
   );
+  /** `getdatabookletspart` 병합값 — 완료 시 관리자 `serviceApply` 기록용 */
+  const [savedOrderMeta, setSavedOrderMeta] = useState({
+    orderTitle: '',
+    ordererName: '',
+    ordererPhone: '',
+  });
   const [saveLoading, setSaveLoading] = useState(false);
   const [dirtyTabs, setDirtyTabs] = useState<Record<string, boolean>>({
     intro: false,
@@ -451,6 +630,24 @@ export default function NoticeCreate() {
     }
   }, [activeTab]);
 
+  /** 설교 썸네일 안내 모달 — ESC·배경 클릭으로 닫기, 열린 동안 body 스크롤 잠금. 닫을 때 URL 입력 초기화 */
+  useEffect(() => {
+    if (!sermonThumbHelpOpen) {
+      setSermonThumbHelpYoutubeUrl('');
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSermonThumbHelpOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [sermonThumbHelpOpen]);
+
   // churchMain id는 URL에서만 사용 (NoticeApplyPay 결제 후 or ServiceManage 수정 시 전달)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -459,7 +656,7 @@ export default function NoticeCreate() {
       setChurchMainId(id);
     } else {
       // id 없으면 템플릿 선택 페이지로 (전단지 만들기는 반드시 NoticeApplyPay 경유)
-      navigate('/service/bookletnoticetemplates', { replace: true });
+      navigate('/service/bookletnoticepay', { replace: true });
     }
   }, [location.search, navigate]);
 
@@ -470,16 +667,25 @@ export default function NoticeCreate() {
       .then((res) => {
         if (res.data?.[0]) {
           const d = res.data[0];
-          if (d.templateId && ['classic', 'modern', 'minimal', 'warm', 'forest', 'rose', 'navy', 'violet'].includes(d.templateId)) {
-            setTemplateId(d.templateId as NoticeTemplateId);
-          }
+          setSavedOrderMeta({
+            orderTitle: String(d.orderTitle ?? ''),
+            ordererName: String(d.ordererName ?? ''),
+            ordererPhone: String(d.ordererPhone ?? '').replace(/\s/g, ''),
+          });
           setChurchName(d.churchName || '');
+          setChurchNameEn(d.churchNameEn || '');
           setMainPastor(d.mainPastor || '');
           setReligiousbody(d.religiousbody || '');
           setAddress(d.address || '');
+          setAddressDetail(d.addressDetail != null ? String(d.addressDetail) : '');
           setPlaceNaver(d.placeNaver || '');
           setPlaceKakao(d.placeKakao || '');
-          setQuiry(d.quiry || '');
+          {
+            const q = parseQuiryParts(d.quiry || '');
+            setQuiryPrefix(q.prefix);
+            setQuiryMid(q.mid);
+            setQuiryLast(q.last);
+          }
           setYoutube(d.youtube || '');
           setBlog(d.blog || '');
           setInstar(d.instar || '');
@@ -527,9 +733,11 @@ export default function NoticeCreate() {
           // 로드된 데이터를 lastSaved로 설정 (dirty 스냅샷과 동일 구조)
           lastSavedIntroRef.current = buildIntroDirtySnapshot({
             churchName: d.churchName || '',
+            churchNameEn: d.churchNameEn || '',
             mainPastor: d.mainPastor || '',
             religiousbody: d.religiousbody || '',
             address: d.address || '',
+            addressDetail: d.addressDetail != null ? String(d.addressDetail) : '',
             quiry: d.quiry || '',
             youtube: d.youtube || '',
             blog: d.blog || '',
@@ -556,15 +764,18 @@ export default function NoticeCreate() {
             showPastorCareer: true,
             serversData: [{ title: '', serverName: '', duty: '', notice: '', image: '' }],
           });
-          lastSavedSermonRef.current = JSON.stringify([]);
-          lastSavedGalleryRef.current = JSON.stringify([]);
+          /** 초기 1행(placeholder)이 dirty로 잡히지 않도록 기본 스냅샷도 동일 모양으로 맞춤 */
+          lastSavedSermonRef.current = JSON.stringify([{ title: '', url: '', thumbnail: '' }]);
+          lastSavedGalleryRef.current = JSON.stringify([{ image: '', title: '', description: '' }]);
         } else {
           // 데이터 없음 (신규) - 빈 상태를 lastSaved로 설정 (폼 초기값과 동일)
           lastSavedIntroRef.current = buildIntroDirtySnapshot({
             churchName: '',
+            churchNameEn: '',
             mainPastor: '',
             religiousbody: '',
             address: '',
+            addressDetail: '',
             quiry: '',
             youtube: '',
             blog: '',
@@ -586,8 +797,9 @@ export default function NoticeCreate() {
             mainPastor: '', mainPastorMessage: '', pastorCareerLines: [''], showPastorCareer: true,
             serversData: [{ title: '', serverName: '', duty: '', notice: '', image: '' }],
           });
-          lastSavedSermonRef.current = JSON.stringify([]);
-          lastSavedGalleryRef.current = JSON.stringify([]);
+          /** 초기 1행(placeholder)이 dirty로 잡히지 않도록 기본 스냅샷도 동일 모양으로 맞춤 */
+          lastSavedSermonRef.current = JSON.stringify([{ title: '', url: '', thumbnail: '' }]);
+          lastSavedGalleryRef.current = JSON.stringify([{ image: '', title: '', description: '' }]);
         }
         // servants, sermon, gallery 데이터 로드 (기존 전단지 수정 시)
         Promise.all([
@@ -640,9 +852,11 @@ export default function NoticeCreate() {
     if (lastSavedIntroRef.current === null) return;
     const snapshot = buildIntroDirtySnapshot({
       churchName,
+      churchNameEn,
       mainPastor,
       religiousbody,
       address,
+      addressDetail,
       quiry,
       youtube,
       blog,
@@ -664,10 +878,14 @@ export default function NoticeCreate() {
     setDirtyTabs((prev) => (prev.intro !== isDirty ? { ...prev, intro: isDirty } : prev));
   }, [
     churchName,
+    churchNameEn,
     mainPastor,
     religiousbody,
     address,
-    quiry,
+    addressDetail,
+    quiryPrefix,
+    quiryMid,
+    quiryLast,
     youtube,
     blog,
     instar,
@@ -776,6 +994,19 @@ export default function NoticeCreate() {
   };
 
   const handleCompleteClick = async () => {
+    // 필수 입력 검증: 교회명·교회 영문명 (둘 중 하나라도 비어 있으면 안내 후 입력창으로 스크롤)
+    if (!churchName.trim() || !churchNameEn.trim()) {
+      alert('교회명과 영문명을 입력해 주세요');
+      if (activeTab !== 'intro') {
+        setActiveTab('intro');
+      }
+      // 탭 전환·미리보기 갱신 후 ref가 마운트되도록 다음 tick에 스크롤
+      setTimeout(() => {
+        churchNameInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        churchNameInputRef.current?.focus({ preventScroll: true });
+      }, 50);
+      return;
+    }
     if (dirtyTabs[activeTab]) {
       alert('변경 사항을 저장한 후 완료해 주세요.');
       return;
@@ -786,10 +1017,50 @@ export default function NoticeCreate() {
     }
     try {
       setSaveLoading(true);
-      await axios.post(`${MainURL}/bookletnoticecreate/generateNoticeHtml`, {
+      const res = await axios.post<{
+        success: boolean;
+        fileName?: string;
+        filePath?: string;
+        fileUrl?: string;
+        churchName?: string;
+        churchNameEn?: string;
+        message?: string;
+      }>(`${MainURL}/bookletnoticecreate/generateNoticeHtml`, {
         churchMainId,
       });
-      navigate('/service/bookletnoticecomplete');
+      if (!res.data?.success) {
+        alert(res.data?.message || '완료 처리에 실패했습니다.');
+        return;
+      }
+      try {
+        await axios.post(`${MainURL}/serviceapply/record`, {
+          serviceType: 'bookletNotice',
+          orderName: savedOrderMeta.orderTitle.trim() || '모바일 교회 전단지',
+          userAccount: userAccount || undefined,
+          churchName: (res.data?.churchName || churchName).trim() || null,
+          ordererName: (savedOrderMeta.ordererName || ordererName).trim() || null,
+          ordererPhone: (savedOrderMeta.ordererPhone || ordererPhone).trim() || null,
+          amount: null,
+          vat: null,
+          totalAmount: null,
+          paymentStatus: 'completed',
+          paymentId: null,
+          memo: `churchMainId=${churchMainId}`,
+          status: '등록',
+        });
+      } catch (e) {
+        console.error('serviceapply /record (notice complete):', e);
+      }
+      navigate('/service/bookletnoticecomplete', {
+        state: {
+          churchMainId,
+          fileName: res.data?.fileName,
+          filePath: res.data?.filePath,
+          fileUrl: res.data?.fileUrl,
+          churchName: res.data?.churchName,
+          churchNameEn: res.data?.churchNameEn,
+        },
+      });
       window.scrollTo(0, 0);
     } catch (e) {
       console.error('완료 HTML 생성 실패:', e);
@@ -811,14 +1082,15 @@ export default function NoticeCreate() {
         if (currentChurchMainId) formData.append('churchMainId', currentChurchMainId);
         if (userAccount) formData.append('userAccount', userAccount);
         if (!currentChurchMainId) {
-          formData.append('templateId', templateId);
           if (ordererName) formData.append('ordererName', ordererName);
           if (ordererPhone) formData.append('ordererPhone', ordererPhone);
         }
         formData.append('churchName', churchName);
+        formData.append('churchNameEn', churchNameEn);
         formData.append('mainPastor', mainPastor);
         formData.append('religiousbody', religiousbody);
         formData.append('address', address);
+        formData.append('addressDetail', addressDetail);
         formData.append('quiry', quiry);
         formData.append('youtube', youtube);
         formData.append('blog', blog);
@@ -868,9 +1140,11 @@ export default function NoticeCreate() {
         }
         lastSavedIntroRef.current = buildIntroDirtySnapshot({
           churchName,
+          churchNameEn,
           mainPastor,
           religiousbody,
           address,
+          addressDetail,
           quiry,
           youtube,
           blog,
@@ -899,9 +1173,11 @@ export default function NoticeCreate() {
         introFormData.append('churchMainId', currentChurchMainId);
         if (userAccount) introFormData.append('userAccount', userAccount);
         introFormData.append('churchName', churchName);
+        introFormData.append('churchNameEn', churchNameEn);
         introFormData.append('mainPastor', mainPastor);
         introFormData.append('religiousbody', religiousbody);
         introFormData.append('address', address);
+        introFormData.append('addressDetail', addressDetail);
         introFormData.append('quiry', quiry);
         introFormData.append('youtube', youtube);
         introFormData.append('blog', blog);
@@ -1054,6 +1330,8 @@ export default function NoticeCreate() {
         );
         setDirtyTabs((prev) => ({ ...prev, gallery: false }));
       }
+      // 모든 탭 분기에서 await가 끝까지 성공한 경우에만 도달 (early return·throw 시에는 알림 미노출)
+      alert('저장되었습니다');
     } catch (err: unknown) {
       console.error('저장 실패:', err);
       alert(
@@ -1086,6 +1364,16 @@ export default function NoticeCreate() {
     setPastorCareerLines((prev) =>
       prev.map((line, i) => (i === index ? value : line))
     );
+  };
+
+  const movePastorCareerLine = (index: number, direction: 'up' | 'down') => {
+    setPastorCareerLines((prev) => {
+      const j = direction === 'up' ? index - 1 : index + 1;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
   };
 
   const addWorshipTime = () => {
@@ -1282,22 +1570,26 @@ export default function NoticeCreate() {
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
+
+  const buildGalleryItemFromFile = useCallback(async (file: File): Promise<GalleryItem> => {
+    const options = { maxSizeMB: 1, maxWidthOrHeight: 1000 };
+    const resizingBlob = await imageCompression(file, options);
+    const regex = file.name.replace(/[^a-zA-Z0-9!@#$%^&*()\-_=+\[\]{}|;:'",.<>]/g, '').slice(-15);
+    const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`;
+    const newFile = new File([resizingBlob], `${dateStr}_${regex}`, { type: file.type });
+    const url = URL.createObjectURL(newFile);
+    return { image: newFile.name, title: '', description: '', imageFile: newFile, imageUrl: url };
+  }, []);
+
   const onGalleryImageDrop = useCallback(
     async (index: number, acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
       const file = acceptedFiles[0];
       try {
         setGalleryImageLoading((prev) => ({ ...prev, [index]: true }));
-        const options = { maxSizeMB: 1, maxWidthOrHeight: 1000 };
-        const resizingBlob = await imageCompression(file, options);
-        const regex = file.name.replace(/[^a-zA-Z0-9!@#$%^&*()\-_=+\[\]{}|;:'",.<>]/g, '').slice(-15);
-        const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`;
-        const newFile = new File([resizingBlob], `${dateStr}_${regex}`, { type: file.type });
-        const url = URL.createObjectURL(newFile);
+        const built = await buildGalleryItemFromFile(file);
         setGalleryData((prev) =>
-          prev.map((item, i) =>
-            i === index ? { ...item, imageFile: newFile, imageUrl: url, image: newFile.name } : item
-          )
+          prev.map((item, i) => (i === index ? { ...item, ...built } : item))
         );
       } catch (e) {
         console.error(e);
@@ -1306,8 +1598,60 @@ export default function NoticeCreate() {
         galleryImageResetFns.current[index]?.();
       }
     },
-    []
+    [buildGalleryItemFromFile]
   );
+
+  const galleryRowImageEmpty = (it: GalleryItem) =>
+    !String(it.image || '').trim() && !it.imageUrl && !it.imageFile;
+
+  const handleGalleryBulkFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const raw = input.files;
+    if (!raw?.length) return;
+    // value 초기화는 FileList를 배열로 복사한 뒤에 해야 함. 먼저 비우면 일부 브라우저에서 files가 비어 첨부가 되지 않음.
+    const imageFiles = Array.from(raw).filter(
+      (f) => f.type.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(f.name)
+    );
+    input.value = '';
+    if (imageFiles.length === 0) {
+      alert('이미지 파일만 선택할 수 있습니다.');
+      return;
+    }
+    setGalleryBulkProcessing(true);
+    try {
+      const builtItems: GalleryItem[] = [];
+      for (const file of imageFiles) {
+        try {
+          builtItems.push(await buildGalleryItemFromFile(file));
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      if (builtItems.length === 0) {
+        alert('이미지를 처리하지 못했습니다.');
+        return;
+      }
+      setGalleryData((prev) => {
+        const next = [...prev];
+        let pi = 0;
+        for (let i = 0; i < next.length && pi < builtItems.length; i++) {
+          if (galleryRowImageEmpty(next[i])) {
+            const { title, description } = next[i];
+            next[i] = { ...builtItems[pi++], title, description };
+          }
+        }
+        while (pi < builtItems.length) {
+          next.push(builtItems[pi++]);
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+      alert('이미지 일괄 첨부 중 오류가 발생했습니다.');
+    } finally {
+      setGalleryBulkProcessing(false);
+    }
+  };
   const clearGalleryImage = (index: number) => {
     setGalleryData((prev) =>
       prev.map((item, i) =>
@@ -1333,6 +1677,147 @@ export default function NoticeCreate() {
     );
   }, []);
 
+  const DELETE_IMAGE_CONFIRM = '정말 삭제 하시겠습니까?';
+
+  type DeleteBookletImageKind = 'mainSlot' | 'pastor' | 'server' | 'sermonThumb' | 'gallery';
+
+  const deletePersistedBookletImage = async (payload: {
+    kind: DeleteBookletImageKind;
+    fileName: string;
+    slotIndex?: number;
+  }) => {
+    const res = await axios.post<{ success?: boolean; message?: string }>(
+      `${MainURL}/bookletnoticecreate/deleteBookletUploadedImage`,
+      {
+        churchMainId,
+        userAccount,
+        ...payload,
+      }
+    );
+    return res.data;
+  };
+
+  const confirmClearMainImageSlot = async (slotIndex: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const slot = mainImages[slotIndex];
+    const persistedName = (slot?.serverName || '').trim();
+    if (churchMainId && userAccount && persistedName) {
+      try {
+        setMainImageLoadingSlot(slotIndex);
+        const data = await deletePersistedBookletImage({
+          kind: 'mainSlot',
+          fileName: persistedName,
+          slotIndex,
+        });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setMainImageLoadingSlot(null);
+      }
+    }
+    clearMainImageSlot(slotIndex);
+  };
+
+  const confirmClearPastorImage = async () => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const persisted = (mainPastorImage || '').trim();
+    if (churchMainId && userAccount && persisted) {
+      try {
+        setMainPastorImageLoading(true);
+        const data = await deletePersistedBookletImage({ kind: 'pastor', fileName: persisted });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setMainPastorImageLoading(false);
+      }
+    }
+    clearPastorImage();
+  };
+
+  const confirmClearServerImage = async (index: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const item = serversData[index];
+    const persisted = !!(item?.image || '').trim() && !item?.imageUrl;
+    if (churchMainId && userAccount && persisted) {
+      const fileName = (item.image || '').trim();
+      try {
+        setServerImageLoading((prev) => ({ ...prev, [index]: true }));
+        const data = await deletePersistedBookletImage({ kind: 'server', fileName });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setServerImageLoading((prev) => ({ ...prev, [index]: false }));
+      }
+    }
+    clearServerImage(index);
+  };
+
+  const confirmClearSermonThumb = async (index: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const item = sermonVideos[index];
+    const persisted = !!(item?.thumbnail || '').trim() && !item?.thumbnailUrl;
+    if (churchMainId && userAccount && persisted) {
+      const fileName = (item.thumbnail || '').trim();
+      try {
+        setSermonThumbLoading((prev) => ({ ...prev, [index]: true }));
+        const data = await deletePersistedBookletImage({ kind: 'sermonThumb', fileName });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setSermonThumbLoading((prev) => ({ ...prev, [index]: false }));
+      }
+    }
+    clearSermonThumb(index);
+  };
+
+  const confirmClearGalleryImage = async (index: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const item = galleryData[index];
+    const persisted = !!(item?.image || '').trim() && !item?.imageUrl;
+    if (churchMainId && userAccount && persisted) {
+      const fileName = (item.image || '').trim();
+      try {
+        setGalleryImageLoading((prev) => ({ ...prev, [index]: true }));
+        const data = await deletePersistedBookletImage({ kind: 'gallery', fileName });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setGalleryImageLoading((prev) => ({ ...prev, [index]: false }));
+      }
+    }
+    clearGalleryImage(index);
+  };
+
   const serversDataList = serversData.reduce<{ title: string; serverList: ServerItem[] }[]>(
     (acc, curr) => {
       const title = curr.title;
@@ -1355,8 +1840,118 @@ export default function NoticeCreate() {
     []
   );
 
+  const sermonThumbHelpYoutubeId = useMemo(
+    () => extractYoutubeVideoId(sermonThumbHelpYoutubeUrl),
+    [sermonThumbHelpYoutubeUrl]
+  );
+  const sermonThumbHelpMaxThumbUrl = sermonThumbHelpYoutubeId
+    ? `https://img.youtube.com/vi/${sermonThumbHelpYoutubeId}/maxresdefault.jpg`
+    : '';
+  const sermonThumbHelpSdThumbUrl = sermonThumbHelpYoutubeId
+    ? `https://img.youtube.com/vi/${sermonThumbHelpYoutubeId}/sddefault.jpg`
+    : '';
+  const sermonThumbHelpHqThumbUrl = sermonThumbHelpYoutubeId
+    ? `https://img.youtube.com/vi/${sermonThumbHelpYoutubeId}/hqdefault.jpg`
+    : '';
+
   return (
     <div className="notice-create">
+      {sermonThumbHelpOpen ? (
+        <div
+          className="notice-create__modal-overlay"
+          role="presentation"
+          onClick={() => setSermonThumbHelpOpen(false)}
+        >
+          <div
+            className="notice-create__modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notice-create-sermon-thumb-help-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="notice-create-sermon-thumb-help-title" className="notice-create__modal-title">
+              썸네일 가져오는 방법
+            </h2>
+            <div className="notice-create__modal-body">
+
+              <div className="notice-create__modal-youtube-tool">
+                <label className="notice-create__modal-field-label" htmlFor="notice-create-sermon-thumb-youtube-url">
+                  유튜브 영상 URL
+                </label>
+                <input
+                  id="notice-create-sermon-thumb-youtube-url"
+                  type="text"
+                  inputMode="url"
+                  className="notice-create__modal-url-input"
+                  value={sermonThumbHelpYoutubeUrl}
+                  onChange={(e) => setSermonThumbHelpYoutubeUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=… 또는 https://youtu.be/…"
+                  autoComplete="off"
+                />
+                {sermonThumbHelpYoutubeId ? (
+                  <div className="notice-create__modal-generated">
+                    <p className="notice-create__modal-generated-title">생성된 썸네일 주소</p>
+                    <div className="notice-create__modal-generated-row">
+                      <span className="notice-create__modal-generated-kind">고화질 (HQ)</span>
+                      <code className="notice-create__modal-code notice-create__modal-code--block">
+                        {sermonThumbHelpHqThumbUrl}
+                      </code>
+                      <a
+                        className="notice-create__modal-generated-link"
+                        href={sermonThumbHelpHqThumbUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        새 탭에서 열기
+                      </a>
+                    </div>
+                    <div className="notice-create__modal-generated-row">
+                      <span className="notice-create__modal-generated-kind">최대 화질 (HD)</span>
+                      <code className="notice-create__modal-code notice-create__modal-code--block">
+                        {sermonThumbHelpMaxThumbUrl}
+                      </code>
+                      <a
+                        className="notice-create__modal-generated-link"
+                        href={sermonThumbHelpMaxThumbUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        새 탭에서 열기
+                      </a>
+                    </div>
+                    <div className="notice-create__modal-generated-row">
+                      <span className="notice-create__modal-generated-kind">표준 화질</span>
+                      <code className="notice-create__modal-code notice-create__modal-code--block">
+                        {sermonThumbHelpSdThumbUrl}
+                      </code>
+                      <a
+                        className="notice-create__modal-generated-link"
+                        href={sermonThumbHelpSdThumbUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        새 탭에서 열기
+                      </a>
+                    </div>
+                    
+                  </div>
+                ) : sermonThumbHelpYoutubeUrl.trim() ? (
+                  <p className="notice-create__modal-url-error" role="status">
+                    유튜브 영상 주소를 찾지 못했습니다. watch?v= 또는 youtu.be/ 형식인지 확인해 주세요.
+                  </p>
+                ) : null}
+              </div>
+
+            
+            </div>
+            <div className="notice-create__modal-actions">
+              <button type="button" className="notice-create__modal-close-btn" onClick={() => setSermonThumbHelpOpen(false)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="notice-create__body">
         <div className="notice-create__inner">
           {/* 왼쪽: 모바일 미리보기 (Header와 함께 화면에 딱 맞게) */}
@@ -1384,8 +1979,8 @@ export default function NoticeCreate() {
                   </div>
                 </div>
 
-                {/* 탭: 소개 | 섬김이들 | 설교영상 | 갤러리 (선택한 디자인 색상 적용) */}
-                <div className={`notice-create__tabs-wrap notice-create__tabs-wrap--${templateId}`}>
+                {/* 탭: 소개 | 섬김이들 | 설교영상 | 갤러리 */}
+                <div className="notice-create__tabs-wrap">
                 <div className="notice-create__preview-tabs">
                   {TAB_LIST.map((tab) => (
                     <div
@@ -1400,11 +1995,11 @@ export default function NoticeCreate() {
 
                 {/* 탭별 미리보기 내용 */}
                 <div
-                  className={`notice-create__preview-body ${activeTab === 'intro' ? `notice-create__preview-body--${templateId}` : ''}${activeTab === 'gallery' ? ' notice-create__preview-body--gallery' : ''}`}
+                  className={`notice-create__preview-body${activeTab === 'gallery' ? ' notice-create__preview-body--gallery' : ''}`}
                 >
                   {activeTab === 'intro' ? (
                   <>
-                  {TEMPLATE_INTRO_ORDER[templateId].map((blockId: IntroBlockId) => {
+                  {(['greeting', 'worship', 'sns', 'location', 'mapActions'] as const).map((blockId) => {
                     if (blockId === 'greeting') {
                       return (
                         <div key="greeting" className="notice-create__preview-welcome">
@@ -1502,7 +2097,9 @@ export default function NoticeCreate() {
                             <span className="notice-create__preview-chip-icon">📍</span>
                             <div>
                               <p className="notice-create__preview-chip-label">위치</p>
-                              <p className="notice-create__preview-chip-value">{address || '서울시 강남구'}</p>
+                              <p className="notice-create__preview-chip-value">
+                                {formatAddressLine(address, addressDetail) || '서울시 강남구'}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -1546,8 +2143,8 @@ export default function NoticeCreate() {
                   <div className="notice-create__preview-footer">
                     <p className="notice-create__preview-footer-info">
                       {quiry && `${quiry}`}
-                      {quiry && address && ' | '}
-                      {address}
+                      {quiry && formatAddressLine(address, addressDetail) && ' | '}
+                      {formatAddressLine(address, addressDetail)}
                       <br />
                       © {new Date().getFullYear()} {churchName || '교회'} All Rights Reserved.
                     </p>
@@ -1704,7 +2301,7 @@ export default function NoticeCreate() {
                             <button
                               type="button"
                               className="notice-create__main-image-slot-remove"
-                              onClick={() => clearMainImageSlot(i)}
+                              onClick={() => void confirmClearMainImageSlot(i)}
                             >
                               삭제
                             </button>
@@ -1730,13 +2327,60 @@ export default function NoticeCreate() {
               <label className="notice-create__label">
                 <span className="notice-create__label-text">교회명</span>
                 <input
+                  ref={churchNameInputRef}
                   type="text"
-                  className="notice-create__input"
+                  className={`notice-create__input${namesLocked ? ' notice-create__input--names-locked' : ''}`}
                   value={churchName}
                   onChange={(e) => setChurchName(e.target.value)}
                   placeholder="교회명"
+                  readOnly={namesLocked}
+                  aria-readonly={namesLocked}
                 />
               </label>
+              <label className="notice-create__label">
+                <span className="notice-create__label-text">교회 영문명</span>
+                <input
+                  type="text"
+                  className={`notice-create__input${namesLocked ? ' notice-create__input--names-locked' : ''}`}
+                  value={churchNameEn}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    // 한글(자모/완성형) 감지 시 안내 — IME 조합 중 다발 호출을 막기 위해 500ms debounce
+                    if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(raw)) {
+                      const now = Date.now();
+                      if (now - lastKoreanAlertRef.current > 500) {
+                        lastKoreanAlertRef.current = now;
+                        alert('영문과 숫자만 입력 가능합니다');
+                      }
+                    }
+                    setChurchNameEn(raw.replace(/[^a-zA-Z0-9]/g, ''));
+                  }}
+                  placeholder="교회 영문·숫자 식별명 (예: MinistermoreChurch1)"
+                  autoCapitalize="off"
+                  autoComplete="off"
+                  spellCheck={false}
+                  readOnly={namesLocked}
+                  aria-readonly={namesLocked}
+                />
+              </label>
+              {namesLocked ? (
+                <p className="notice-create__names-locked-hint">
+                  수정 모드인 경우 교회명·영문명은 변경할 수 없습니다.
+                </p>
+              ) : (
+                <p
+                  className="notice-create__church-en-hint"
+                  style={{
+                    margin: '-4px 0 8px 152px',
+                    fontSize: '12px',
+                    fontWeight: 400,
+                    color: '#94a3b8',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  영문과 숫자만 입력 가능합니다 (공백·한글·특수문자 입력 불가). 모바일 전단지 링크 주소로 만들어집니다.
+                </p>
+              )}
               <label className="notice-create__label">
                 <span className="notice-create__label-text">담임</span>
                 <input
@@ -1799,6 +2443,16 @@ export default function NoticeCreate() {
                   )}
                 </div>
               </div>
+              <label className="notice-create__label">
+                <span className="notice-create__label-text">상세주소</span>
+                <input
+                  type="text"
+                  className="notice-create__input"
+                  value={addressDetail}
+                  onChange={(e) => setAddressDetail(e.target.value)}
+                  placeholder="동·호수 등 (선택)"
+                />
+              </label>
             </div>
           </div>
 
@@ -1963,6 +2617,19 @@ export default function NoticeCreate() {
                   >
                     <FaInfoCircle />
                   </span>
+                  <button
+                    type="button"
+                    className="notice-create__map-open-btn notice-create__map-open-btn--naver"
+                    onClick={() => {
+                      const q = address.trim();
+                      const url = q
+                        ? `https://map.naver.com/p/search/${encodeURIComponent(q)}`
+                        : 'https://map.naver.com/';
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    네이버지도
+                  </button>
                 </div>
               </label>
               <label className="notice-create__label">
@@ -1988,6 +2655,19 @@ export default function NoticeCreate() {
                   >
                     <FaInfoCircle />
                   </span>
+                  <button
+                    type="button"
+                    className="notice-create__map-open-btn notice-create__map-open-btn--kakao"
+                    onClick={() => {
+                      const q = address.trim();
+                      const url = q
+                        ? `https://map.kakao.com/link/search/${encodeURIComponent(q)}`
+                        : 'https://map.kakao.com/';
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    카카오지도
+                  </button>
                 </div>
               </label>
             </div>
@@ -1998,14 +2678,51 @@ export default function NoticeCreate() {
             <div className="notice-create__form">
               <label className="notice-create__label">
                 <span className="notice-create__label-text">문의(전화)</span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  className="notice-create__input"
-                  value={quiry}
-                  onChange={(e) => setQuiry(e.target.value.replace(/\D/g, ''))}
-                  placeholder="전화번호 (숫자만)"
-                />
+                <div className="notice-create__quiry-row" role="group" aria-label="문의 전화번호">
+                  <select
+                    className="notice-create__quiry-prefix"
+                    value={quiryPrefix}
+                    onChange={(e) => setQuiryPrefix(e.target.value)}
+                    aria-label="문의 전화 앞자리"
+                  >
+                    {PHONE_PREFIX_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="notice-create__quiry-sep" aria-hidden>-</span>
+                  <input
+                    ref={quiryMidRef}
+                    type="tel"
+                    inputMode="numeric"
+                    className="notice-create__quiry-part"
+                    maxLength={4}
+                    value={quiryMid}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setQuiryMid(next);
+                      if (next.length === 4) {
+                        requestAnimationFrame(() => quiryLastRef.current?.focus());
+                      }
+                    }}
+                    aria-label="문의 전화 가운데 자리"
+                  />
+                  <span className="notice-create__quiry-sep" aria-hidden>-</span>
+                  <input
+                    ref={quiryLastRef}
+                    type="tel"
+                    inputMode="numeric"
+                    className="notice-create__quiry-part"
+                    maxLength={4}
+                    value={quiryLast}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setQuiryLast(next);
+                    }}
+                    aria-label="문의 전화 끝자리"
+                  />
+                </div>
               </label>
               <label className="notice-create__label">
                 <span className="notice-create__label-text">유튜브 URL</span>
@@ -2107,7 +2824,7 @@ export default function NoticeCreate() {
                           <button
                             type="button"
                             className="notice-create__main-image-remove"
-                            onClick={clearPastorImage}
+                            onClick={() => void confirmClearPastorImage()}
                           >
                             삭제
                           </button>
@@ -2146,6 +2863,28 @@ export default function NoticeCreate() {
                             }
                             placeholder="예) OO대학교 신학과, OO교회 담임"
                           />
+                          <div className="notice-create__career-reorder" role="group" aria-label="행 순서 바꾸기">
+                            <button
+                              type="button"
+                              className="notice-create__career-reorder-btn"
+                              disabled={index === 0}
+                              onClick={() => movePastorCareerLine(index, 'up')}
+                              title="위로 이동"
+                              aria-label="위로 이동"
+                            >
+                              <FaChevronUp aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              className="notice-create__career-reorder-btn"
+                              disabled={index >= pastorCareerLines.length - 1}
+                              onClick={() => movePastorCareerLine(index, 'down')}
+                              title="아래로 이동"
+                              aria-label="아래로 이동"
+                            >
+                              <FaChevronDown aria-hidden />
+                            </button>
+                          </div>
                           <button
                             type="button"
                             className="notice-create__career-remove"
@@ -2220,7 +2959,7 @@ export default function NoticeCreate() {
                           imageUrl={serverFormDisplayUrl(item)}
                           isLoading={!!serverImageLoading[index]}
                           onDrop={onServerImageDrop}
-                          onClear={clearServerImage}
+                          onClear={confirmClearServerImage}
                           onRegisterReset={registerServerInputReset}
                         />
                       </div>
@@ -2298,14 +3037,26 @@ export default function NoticeCreate() {
                       </label>
                       <div className="notice-create__label">
                         <span className="notice-create__label-text">썸네일</span>
-                        <ServerImageDropzone
-                          index={index}
-                          imageUrl={sermonThumbFormDisplayUrl(item)}
-                          isLoading={!!sermonThumbLoading[index]}
-                          onDrop={onSermonThumbDrop}
-                          onClear={clearSermonThumb}
-                          onRegisterReset={registerSermonThumbReset}
-                        />
+                        <div className="notice-create__sermon-thumb-slot">
+                          <ServerImageDropzone
+                            index={index}
+                            imageUrl={sermonThumbFormDisplayUrl(item)}
+                            isLoading={!!sermonThumbLoading[index]}
+                            onDrop={onSermonThumbDrop}
+                            onClear={confirmClearSermonThumb}
+                            onRegisterReset={registerSermonThumbReset}
+                          />
+                          <button
+                            type="button"
+                            className="notice-create__sermon-thumb-help-btn"
+                            onClick={() => {
+                              setSermonThumbHelpYoutubeUrl((item.url || '').trim());
+                              setSermonThumbHelpOpen(true);
+                            }}
+                          >
+                            썸네일 가져오는 방법
+                          </button>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -2352,6 +3103,26 @@ export default function NoticeCreate() {
             <div className="notice-create__gallery">
               <div className="notice-create__form-block">
                 <h3 className="notice-create__form-block-title">갤러리</h3>
+                <div className="notice-create__gallery-bulk">
+                  <input
+                    ref={galleryBulkInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="notice-create__gallery-bulk-input"
+                    aria-hidden
+                    tabIndex={-1}
+                    onChange={handleGalleryBulkFileChange}
+                  />
+                  <button
+                    type="button"
+                    className="notice-create__gallery-bulk-btn"
+                    disabled={galleryBulkProcessing || saveLoading}
+                    onClick={() => galleryBulkInputRef.current?.click()}
+                  >
+                    {galleryBulkProcessing ? '이미지 처리 중…' : '이미지 여러장 첨부하기'}
+                  </button>
+                </div>
                 <div className="notice-create__gallery-rows">
                   {galleryData.map((item, index) => (
                     <div key={index} className="notice-create__gallery-row">
@@ -2362,7 +3133,7 @@ export default function NoticeCreate() {
                           imageUrl={galleryFormDisplayUrl(item)}
                           isLoading={!!galleryImageLoading[index]}
                           onDrop={onGalleryImageDrop}
-                          onClear={clearGalleryImage}
+                          onClear={confirmClearGalleryImage}
                           onRegisterReset={registerGalleryImageReset}
                         />
                       </div>

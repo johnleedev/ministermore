@@ -1,5 +1,5 @@
 /**
- * NoticeCreate / 전단지(bookletnoticecreate) 라우트에서 공통으로 쓰는 ID·templateId 변환
+ * NoticeCreate / 전단지(bookletnoticecreate) 라우트에서 공통으로 쓰는 ID 유틸 / churchMain 공통 INSERT
  *
  * churchMain 확장 컬럼 (portoneTxId 제거 후 예시):
  *   schedulePaymentId VARCHAR(255) NULL,
@@ -9,35 +9,6 @@
  *   portoneScheduleId VARCHAR(255) NULL
  */
 
-const TEMPLATE_STR_TO_INT = {
-  classic: 1,
-  modern: 2,
-  minimal: 3,
-  warm: 4,
-  forest: 5,
-  rose: 6,
-  navy: 7,
-  violet: 8,
-};
-const TEMPLATE_INT_TO_STR = {
-  1: 'classic',
-  2: 'modern',
-  3: 'minimal',
-  4: 'warm',
-  5: 'forest',
-  6: 'rose',
-  7: 'navy',
-  8: 'violet',
-};
-
-function toTemplateInt(v) {
-  return typeof v === 'number' ? v : TEMPLATE_STR_TO_INT[v] || 1;
-}
-
-function toTemplateStr(v) {
-  return typeof v === 'string' && TEMPLATE_STR_TO_INT[v] ? v : TEMPLATE_INT_TO_STR[v] || 'classic';
-}
-
 function toChurchMainIdInt(v) {
   if (v == null || v === '') return null;
   const n = parseInt(v, 10);
@@ -46,7 +17,7 @@ function toChurchMainIdInt(v) {
 
 /**
  * `churchMain` INSERT — `/bookletnoticecreate/create` 와 동일 규칙.
- * 필드: userAccount, templateId, ordererName, ordererPhone, orderTitle,
+ * 필드: userAccount, ordererName, ordererPhone, orderTitle,
  *   portonePaymentId?, portonePaidAmount?, portoneOrderName?, portonePlan?,
  *   schedulePaymentId?, billingKey?, portonePaidAt?, portoneTimeToPay?, portoneScheduleId?
  * (portonePaymentId 있으면 중복 검사 후 확장 INSERT — portoneTxId 컬럼 미사용)
@@ -57,7 +28,6 @@ function toChurchMainIdInt(v) {
 function insertChurchMainRow(bookletdb, body) {
   const {
     userAccount,
-    templateId,
     ordererName,
     ordererPhone,
     orderTitle,
@@ -102,10 +72,8 @@ function insertChurchMainRow(bookletdb, body) {
       ? String(portoneScheduleId).trim().slice(0, 255)
       : null;
 
-  const templateIdInt = toTemplateInt(templateId || 'classic');
   const baseParams = [
     userAccount || '',
-    templateIdInt,
     ordererName || '',
     ordererPhone || '',
     String(orderTitle || '').trim(),
@@ -117,11 +85,11 @@ function insertChurchMainRow(bookletdb, body) {
       let insertParams;
       if (payId) {
         insertQuery = `INSERT INTO churchMain (
-          userAccount, templateId, ordererName, ordererPhone, orderTitle,
+          userAccount, ordererName, ordererPhone, orderTitle,
           portonePaymentId, portonePaidAmount, portoneOrderName, portonePlan,
           schedulePaymentId, billingKey, portonePaidAt, portoneTimeToPay, portoneScheduleId,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
         insertParams = [
           ...baseParams,
           payId,
@@ -136,9 +104,9 @@ function insertChurchMainRow(bookletdb, body) {
         ];
       } else {
         insertQuery = `INSERT INTO churchMain (
-          userAccount, templateId, ordererName, ordererPhone, orderTitle,
+          userAccount, ordererName, ordererPhone, orderTitle,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`;
+        ) VALUES (?, ?, ?, ?, NOW(), NOW())`;
         insertParams = baseParams;
       }
       bookletdb.query(insertQuery, insertParams, (err, result) => {
@@ -170,10 +138,6 @@ function insertChurchMainRow(bookletdb, body) {
 }
 
 module.exports = {
-  TEMPLATE_STR_TO_INT,
-  TEMPLATE_INT_TO_STR,
-  toTemplateInt,
-  toTemplateStr,
   toChurchMainIdInt,
   insertChurchMainRow,
 };

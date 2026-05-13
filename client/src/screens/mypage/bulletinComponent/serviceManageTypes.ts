@@ -1,10 +1,10 @@
 export interface BookletItem {
   id: number;
   title: string;
-  type: string;
   churchName: string;
   mainPastor: string;
   imageMainName: string;
+  link?: string;
 }
 
 export interface EventBookletItem {
@@ -15,6 +15,7 @@ export interface EventBookletItem {
   address: string;
   superViser: string;
   imageMainName: string;
+  link?: string;
 }
 
 export interface BulletinItem {

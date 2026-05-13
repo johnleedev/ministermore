@@ -13,8 +13,7 @@ const cors = require('cors');
 router.use(cors());
 
 const { bookleteventdb } = require('../dbdatas/bookletdb');
-const { templateIdStrFromBody, normalizeVisibleTabsArray } = require('../service/bookletEvent/bookletEventMerge');
-const { toTemplateInt } = require('../service/bookletEvent/bookletEventShared');
+const { normalizeVisibleTabsArray } = require('../service/bookletEvent/bookletEventMerge');
 const {
   findHomeinappOrderByPaymentId,
   insertHomeinappOrderWithPayment,
@@ -130,7 +129,6 @@ function ensureEventMainPortoneColumns() {
 function insertEventMainWithPayment(bookletdbConn, body) {
   const {
     userAccount,
-    templateId,
     ordererName,
     ordererPhone,
     orderTitle,
@@ -143,8 +141,6 @@ function insertEventMainWithPayment(bookletdbConn, body) {
     portonePaidAt,
   } = body;
 
-  const templateIdStr = templateIdStrFromBody(templateId || 'classic');
-  const templateIdMain = toTemplateInt(templateIdStr);
   const bookletTypeStr = normalizeBookletTypeForBilling(bookletType);
   const payId = portonePaymentId != null ? String(portonePaymentId).trim() : '';
 
@@ -171,12 +167,11 @@ function insertEventMainWithPayment(bookletdbConn, body) {
     function runInsert() {
       bookletdbConn.query(
         `INSERT INTO eventMain (
-          userAccount, templateId, ordererName, ordererPhone, orderTitle, eventBookletType,
+          userAccount, ordererName, ordererPhone, orderTitle, eventBookletType,
           portonePaymentId, portoneTxId, portonePaidAmount, portoneOrderName, portonePaidAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userAccount || '',
-          templateIdMain,
           ordererName || '',
           ordererPhone || '',
           String(orderTitle || '').trim(),
@@ -191,8 +186,8 @@ function insertEventMainWithPayment(bookletdbConn, body) {
           if (err) return reject(err);
           const newId = result.insertId;
           bookletdbConn.query(
-            'INSERT INTO eventInfo (bookletId, userAccount, templateId, visibleTabs) VALUES (?, ?, ?, ?)',
-            [String(newId), userAccount || '', templateIdStr, visibleTabsJson],
+            'INSERT INTO eventInfo (bookletId, userAccount, visibleTabs) VALUES (?, ?, ?)',
+            [String(newId), userAccount || '', visibleTabsJson],
             (e2) => {
               if (e2) return reject(e2);
               resolve(newId);
@@ -212,7 +207,6 @@ router.post('/event/complete-browser', async (req, res) => {
     ordererName,
     ordererPhone,
     userAccount,
-    templateId,
     bookletType,
     visibleTabs,
     totalAmount: totalAmountBody,
@@ -291,7 +285,6 @@ router.post('/event/complete-browser', async (req, res) => {
     }
 
     const orderNameResolved = getOrderNameFromRecord(record) || EVENT_ORDER_NAME;
-
     const paidAtResolved = pickPaidAt(payParsed);
 
     let visibleTabsJson = JSON.stringify(['info', 'program', 'profile']);
@@ -319,7 +312,6 @@ router.post('/event/complete-browser', async (req, res) => {
     try {
       eventMainId = await insertEventMainWithPayment(bookleteventdb, {
         userAccount: userAccountNorm,
-        templateId,
         ordererName: ordererNameNorm,
         ordererPhone: ordererPhoneNorm,
         orderTitle: orderTitleNorm,

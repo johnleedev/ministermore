@@ -72,7 +72,7 @@ export default function NoticeMain() {
   const onApply = useCallback(() => {
     if (isLogin) {
       window.scrollTo(0, 0);
-      navigate("/service/bookletnoticetemplates");
+      navigate("/service/bookletnoticepay");
     } else {
       alert("로그인이 필요합니다.");
     }

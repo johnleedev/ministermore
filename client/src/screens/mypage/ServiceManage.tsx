@@ -16,13 +16,13 @@ const SERVICE_META: Record<
   'mobile-church-notice': {
     title: '모바일교회전단지 관리',
     createLabel: '모바일교회전단지 만들기',
-    createPath: '/service/bookletnoticetemplates',
+    createPath: '/service/bookletnoticepay',
     emptyText: '신청한 모바일교회전단지가 없습니다.',
   },
   'mobile-event-notice': {
     title: '모바일행사전단지 관리',
     createLabel: '모바일행사전단지 만들기',
-    createPath: '/service/bookleteventtemplates',
+    createPath: '/service/bookleteventpay',
     emptyText: '신청한 모바일행사전단지가 없습니다.',
   },
 };
@@ -36,6 +36,7 @@ export default function ServiceManage() {
   const [bookletList, setBookletList] = useState<BookletItem[]>([]);
   const [eventBookletList, setEventBookletList] = useState<EventBookletItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [copiedBookletId, setCopiedBookletId] = useState<number | null>(null);
 
   const activeServiceType: ServiceType =
     serviceTypeParam === 'mobile-event-notice' ? 'mobile-event-notice' : 'mobile-church-notice';
@@ -85,6 +86,15 @@ export default function ServiceManage() {
           userAccount: userData?.userAccount,
         });
         if (res.data?.success) {
+          try {
+            await axios.post(`${MainURL}/serviceapply/updateStatus`, {
+              serviceType: 'bookletNotice',
+              churchMainId: bookletId,
+              status: '삭제됨',
+            });
+          } catch (e) {
+            console.error('serviceapply updateStatus (notice delete):', e);
+          }
           alert('전단지가 삭제되었습니다.');
           setRefresh(!refresh);
         } else {
@@ -105,6 +115,15 @@ export default function ServiceManage() {
           userAccount: userData?.userAccount,
         });
         if (res.data?.success) {
+          try {
+            await axios.post(`${MainURL}/serviceapply/updateStatus`, {
+              serviceType: 'bookletEvent',
+              eventMainId,
+              status: '삭제됨',
+            });
+          } catch (e) {
+            console.error('serviceapply updateStatus (event delete):', e);
+          }
           alert('행사 전단지가 삭제되었습니다.');
           setRefresh(!refresh);
         } else {
@@ -125,12 +144,30 @@ export default function ServiceManage() {
     window.open(`/event?id=${eventMainId}`, '_blank', 'noopener,noreferrer');
   };
 
-  const handleEditBooklet = (bookletId: number) => {
-    navigate(`/service/bookletnoticecreate?id=${bookletId}`);
+  const handleEditBooklet = async (bookletId: number) => {
+    try {
+      await axios.post(`${MainURL}/serviceapply/updateStatus`, {
+        serviceType: 'bookletNotice',
+        churchMainId: bookletId,
+        status: '수정됨',
+      });
+    } catch (e) {
+      console.error('serviceapply updateStatus (notice edit):', e);
+    }
+    navigate(`/service/bookletnoticecreate?id=${bookletId}&namesLocked=1`);
     window.scrollTo(0, 0);
   };
 
-  const handleEditEventBooklet = (eventMainId: number) => {
+  const handleEditEventBooklet = async (eventMainId: number) => {
+    try {
+      await axios.post(`${MainURL}/serviceapply/updateStatus`, {
+        serviceType: 'bookletEvent',
+        eventMainId,
+        status: '수정됨',
+      });
+    } catch (e) {
+      console.error('serviceapply updateStatus (event edit):', e);
+    }
     navigate(`/service/bookleteventcreate?id=${eventMainId}`);
     window.scrollTo(0, 0);
   };
@@ -138,6 +175,35 @@ export default function ServiceManage() {
   const handleCreateBooklet = () => {
     navigate(serviceMeta.createPath);
     window.scrollTo(0, 0);
+  };
+
+  const handleCopyLink = async (bookletId: number, link: string) => {
+    if (!link) return;
+    const showCopied = () => {
+      setCopiedBookletId(bookletId);
+      window.setTimeout(() => {
+        setCopiedBookletId((prev) => (prev === bookletId ? null : prev));
+      }, 1800);
+    };
+    try {
+      await navigator.clipboard.writeText(link);
+      showCopied();
+    } catch {
+      const tmp = document.createElement('textarea');
+      tmp.value = link;
+      tmp.style.position = 'fixed';
+      tmp.style.opacity = '0';
+      document.body.appendChild(tmp);
+      tmp.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch {
+        alert('복사에 실패했습니다. 주소를 직접 선택해 복사해 주세요.');
+      } finally {
+        document.body.removeChild(tmp);
+      }
+    }
   };
 
   return (
@@ -235,6 +301,43 @@ export default function ServiceManage() {
                               <span className="infoLabel">담임목사:</span>
                               <span className="infoValue">{item.mainPastor || '-'}</span>
                             </div>
+                            <div
+                              className="infoRow"
+                              style={{ gridColumn: '1 / -1', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}
+                            >
+                              <span className="infoLabel">링크:</span>
+                              {item.link ? (
+                                <>
+                                  <a
+                                    href={item.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="infoValue"
+                                    style={{
+                                      color: '#2563eb',
+                                      textDecoration: 'underline',
+                                      wordBreak: 'break-all',
+                                      flex: '1 1 240px',
+                                      minWidth: 0,
+                                    }}
+                                    title={item.link}
+                                  >
+                                    {item.link}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className={`actionBtn copyLinkBtn${
+                                      copiedBookletId === item.id ? ' copyLinkBtn--copied' : ''
+                                    }`}
+                                    onClick={() => handleCopyLink(item.id, item.link as string)}
+                                  >
+                                    {copiedBookletId === item.id ? '복사됨' : '주소 복사'}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="infoValue">아직 생성되지 않았습니다.</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -293,6 +396,43 @@ export default function ServiceManage() {
                             <div className="infoRow">
                               <span className="infoLabel">장소:</span>
                               <span className="infoValue">{item.place || '-'}</span>
+                            </div>
+                            <div
+                              className="infoRow"
+                              style={{ gridColumn: '1 / -1', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}
+                            >
+                              <span className="infoLabel">링크:</span>
+                              {item.link ? (
+                                <>
+                                  <a
+                                    href={item.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="infoValue"
+                                    style={{
+                                      color: '#2563eb',
+                                      textDecoration: 'underline',
+                                      wordBreak: 'break-all',
+                                      flex: '1 1 240px',
+                                      minWidth: 0,
+                                    }}
+                                    title={item.link}
+                                  >
+                                    {item.link}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className={`actionBtn copyLinkBtn${
+                                      copiedBookletId === item.id ? ' copyLinkBtn--copied' : ''
+                                    }`}
+                                    onClick={() => handleCopyLink(item.id, item.link as string)}
+                                  >
+                                    {copiedBookletId === item.id ? '복사됨' : '주소 복사'}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="infoValue">아직 생성되지 않았습니다.</span>
+                              )}
                             </div>
                           </div>
                         </div>

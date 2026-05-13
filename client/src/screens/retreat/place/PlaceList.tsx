@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import MainURL from '../../../MainURL';
+import Loading from '../../../components/Loading';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import './Place.scss';
 
@@ -225,8 +226,8 @@ export default function PlaceList() {
           <div className="subpage__main__content">
             <div className="main__content">
               {isLoading ? (
-                <div className="place__wrap--category">
-                  <div className="place__title">불러오는 중입니다.</div>
+                <div className="list-loading">
+                  <Loading />
                 </div>
               ) : placeData.length > 0 && !isResdataFalse ? (
                 placeData.map((item) => (

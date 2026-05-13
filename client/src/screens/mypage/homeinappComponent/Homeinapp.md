@@ -7,17 +7,17 @@
 - 기존에는 `ServiceManage.tsx` 내부 우측 콘텐츠로 `교회주보`, `홈인앱알림`을 렌더링했음.
 - 요구사항에 맞춰 두 화면을 `ServiceManage.tsx`와 분리하여 독립 페이지로 이동함.
 - 신규 라우팅을 `MypageRouter.tsx`에 추가:
-  - `/mypage/church-bulletin`
-  - `/mypage/homeinapp-notification`
-- `MypageMenu.tsx`의 서비스 하위 메뉴 경로도 독립 페이지 경로로 변경함.
+    - `/mypage/church-bulletin`
+    - `/mypage/homeinapp-notification` — 계정별 **홈인앱 교회 목록** (`HomeinappNotificationList.tsx`)
+    - `/mypage/homeinapp-notification/:churchId` — 해당 교회 **푸시 알림** 화면 (`HomeinappNotificationMain.tsx`)
+- `MypageMenu.tsx`의 서비스 하위 메뉴 경로도 독립 페이지 경로로 변경함. 하위 활성 표시는 `homeinapp-notification` 또는 `homeinapp-notification/...` 접두로 처리.
 - 기존 `/servicemanage/church-bulletin`, `/servicemanage/homeinapp-notification` 진입은 새 경로로 리다이렉트 처리함.
 
-## 2. HomeinappNotificationMain 구성 로직
+## 2. HomeinappNotificationList / Main 구성 로직
 
-- 파일: `HomeinappNotificationMain.tsx`
-- 목적: 홈인앱 알림 관리자 화면(발송 작성, 분석, 이력 확인)을 한 페이지에서 제공.
+- **목록** `HomeinappNotificationList.tsx`: 모바일 전단지 관리와 동일하게 `postingList` 스타일로 항목 나열. 항목당 **관리** → `/mypage/homeinapp-notification/:churchId`.
+- **푸시** `HomeinappNotificationMain.tsx`: URL의 `churchId`로 `getChurchForUser` 조회 후 기존 발송·이력 UI 유지. 상단 우측 **목록으로** → `/mypage/homeinapp-notification`. 좌측 마이페이지 메뉴는 숨김(`mypage--service-full` 단독 레이아웃).
 - 기존 분리 컴포넌트(`ChurchPush...`)는 요청에 따라 모두 인라인(단일 파일)로 통합함.
-- 상단 우측 버튼은 `서비스관리`로 고정하고 `/mypage/servicemanage/mobile-church-notice`로 이동하도록 설정함.
 - 상단 정보 영역은 셀렉트/프로필 UI를 제거하고 텍스트 기반으로 변경:
   - 좌측: 현재 교회명
   - 우측: 관리자/계정/연락처
@@ -25,11 +25,11 @@
 ## 3. 데이터 연동 로직 (churches 조회)
 
 - 클라이언트에서 로그인 사용자 `userAccount` 기반으로 교회 정보를 요청.
-- 서버 라우터 `server/routers/service/homeinapp/HomeinappMain.js` 추가:
-  - `GET /homeinappmain/getChurchByUser/:userAccount`
-  - `churches` 테이블에서 최신 1건 조회 후 반환.
-- 조회 결과를 `HomeinappNotificationMain.tsx` 상단 정보에 반영.
-- 데이터가 없을 때는 Recoil 사용자 정보 기반 fallback 값 표시.
+- 서버 라우터 `server/routers/service/homeinapp/HomeinappMain.js`:
+  - `GET /homeinappmain/getChurchByUser/:userAccount` — 최신 1건 (기타 호환용)
+  - `GET /homeinappmain/getChurchesByUser/:userAccount` — 동일 계정의 `churches` 전체, 최신순 (목록)
+  - `GET /homeinappmain/getChurchForUser/:userAccount/:churchId` — 소유 검증 후 단건 (푸시 페이지)
+- 푸시 페이지는 조회 결과를 상단 정보에 반영. 데이터가 없을 때는 Recoil 사용자 정보 기반 fallback 값 표시.
 
 ## 4. 결제 플로우 변경 로직
 

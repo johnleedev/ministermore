@@ -204,34 +204,9 @@ $site-header-height: 150px; // Header.tsx 영역 높이 (대략)
   letter-spacing: -0.02em;
 }
 
-// 탭 래퍼 (디자인별 색상 적용)
+// 탭 래퍼
 .event-create__tabs-wrap {
   width: 100%;
-}
-
-.event-create__tabs-wrap--classic .event-create__preview-tab.on {
-  color: #475569; border-bottom-color: #475569; background-color: #f1f5f9;
-}
-.event-create__tabs-wrap--modern .event-create__preview-tab.on {
-  color: #2563eb; border-bottom-color: #2563eb; background-color: #eff6ff;
-}
-.event-create__tabs-wrap--minimal .event-create__preview-tab.on {
-  color: #64748b; border-bottom-color: #64748b; background-color: #f8fafc;
-}
-.event-create__tabs-wrap--warm .event-create__preview-tab.on {
-  color: #b45309; border-bottom-color: #b45309; background-color: #fffbeb;
-}
-.event-create__tabs-wrap--forest .event-create__preview-tab.on {
-  color: #15803d; border-bottom-color: #15803d; background-color: #f0fdf4;
-}
-.event-create__tabs-wrap--rose .event-create__preview-tab.on {
-  color: #e11d48; border-bottom-color: #e11d48; background-color: #fff1f2;
-}
-.event-create__tabs-wrap--navy .event-create__preview-tab.on {
-  color: #1e3a8a; border-bottom-color: #1e3a8a; background-color: #eff6ff;
-}
-.event-create__tabs-wrap--violet .event-create__preview-tab.on {
-  color: #7c3aed; border-bottom-color: #7c3aed; background-color: #f5f3ff;
 }
 
 // 탭 — 유형에 따라 2~6열
@@ -309,95 +284,6 @@ $site-header-height: 150px; // Header.tsx 영역 높이 (대략)
     min-height: 0;
     background: transparent;
   }
-}
-
-// ----- 템플릿별 소개 탭 색상 -----
-.event-create__preview-body--classic {
-  .event-create__preview-section-label { color: #475569; }
-  .event-create__preview-welcome-sub { color: #64748b; }
-  .event-create__preview-welcome-title { color: #334155; }
-  .event-create__preview-worship-day { color: #94a3b8; }
-  .event-create__preview-worship-time { color: #475569; }
-  .event-create__preview-chip-label { color: #475569; }
-  .event-create__preview-chip-value { color: #334155; }
-  .event-create__preview-btn--secondary { border-color: #475569; color: #334155; }
-}
-
-.event-create__preview-body--modern {
-  .event-create__preview-section-label { color: #2563eb; }
-  .event-create__preview-welcome-sub { color: #3b82f6; }
-  .event-create__preview-welcome-title { color: #1d4ed8; }
-  .event-create__preview-worship-day { color: #93c5fd; }
-  .event-create__preview-worship-time { color: #2563eb; }
-  .event-create__preview-chip-label { color: #2563eb; }
-  .event-create__preview-chip-value { color: #1e40af; }
-  .event-create__preview-btn--secondary { border-color: #3b82f6; color: #1d4ed8; }
-}
-
-.event-create__preview-body--minimal {
-  .event-create__preview-section-label { color: #64748b; }
-  .event-create__preview-welcome-sub { color: #94a3b8; }
-  .event-create__preview-welcome-title { color: #475569; }
-  .event-create__preview-worship-day { color: #94a3b8; }
-  .event-create__preview-worship-time { color: #64748b; }
-  .event-create__preview-chip-label { color: #64748b; }
-  .event-create__preview-chip-value { color: #475569; }
-  .event-create__preview-btn--secondary { border-color: #94a3b8; color: #475569; }
-}
-
-.event-create__preview-body--warm {
-  .event-create__preview-section-label { color: #b45309; }
-  .event-create__preview-welcome-sub { color: #d97706; }
-  .event-create__preview-welcome-title { color: #92400e; }
-  .event-create__preview-worship-day { color: #d4a574; }
-  .event-create__preview-worship-time { color: #b45309; }
-  .event-create__preview-chip-label { color: #b45309; }
-  .event-create__preview-chip-value { color: #92400e; }
-  .event-create__preview-btn--secondary { border-color: #d97706; color: #92400e; }
-}
-
-.event-create__preview-body--forest {
-  .event-create__preview-section-label { color: #15803d; }
-  .event-create__preview-welcome-sub { color: #22c55e; }
-  .event-create__preview-welcome-title { color: #166534; }
-  .event-create__preview-worship-day { color: #86efac; }
-  .event-create__preview-worship-time { color: #15803d; }
-  .event-create__preview-chip-label { color: #15803d; }
-  .event-create__preview-chip-value { color: #166534; }
-  .event-create__preview-btn--secondary { border-color: #22c55e; color: #166534; }
-}
-
-.event-create__preview-body--rose {
-  .event-create__preview-section-label { color: #e11d48; }
-  .event-create__preview-welcome-sub { color: #f43f5e; }
-  .event-create__preview-welcome-title { color: #be123c; }
-  .event-create__preview-worship-day { color: #fda4af; }
-  .event-create__preview-worship-time { color: #e11d48; }
-  .event-create__preview-chip-label { color: #e11d48; }
-  .event-create__preview-chip-value { color: #be123c; }
-  .event-create__preview-btn--secondary { border-color: #f43f5e; color: #be123c; }
-}
-
-.event-create__preview-body--navy {
-  .event-create__preview-section-label { color: #1e3a8a; }
-  .event-create__preview-welcome-sub { color: #2563eb; }
-  .event-create__preview-welcome-title { color: #1e40af; }
-  .event-create__preview-worship-day { color: #93c5fd; }
-  .event-create__preview-worship-time { color: #1e3a8a; }
-  .event-create__preview-chip-label { color: #1e3a8a; }
-  .event-create__preview-chip-value { color: #1e40af; }
-  .event-create__preview-btn--secondary { border-color: #2563eb; color: #1e40af; }
-}
-
-.event-create__preview-body--violet {
-  .event-create__preview-section-label { color: #7c3aed; }
-  .event-create__preview-welcome-sub { color: #8b5cf6; }
-  .event-create__preview-welcome-title { color: #6d28d9; }
-  .event-create__preview-worship-day { color: #c4b5fd; }
-  .event-create__preview-worship-time { color: #7c3aed; }
-  .event-create__preview-chip-label { color: #7c3aed; }
-  .event-create__preview-chip-value { color: #6d28d9; }
-  .event-create__preview-btn--secondary { border-color: #8b5cf6; color: #6d28d9; }
 }
 
 // ----- 기본 정보 미리보기 (교회명, 담임, 교단, 주소, 연락처) -----
@@ -2164,6 +2050,54 @@ $site-header-height: 150px; // Header.tsx 영역 높이 (대략)
 .event-create__label-text {
   flex-shrink: 0;
   min-width: 140px;
+}
+
+// 행사 영문명 — 입력란 바로 아래 예시 칩
+.event-create__name-en-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: -2px 0 10px 0;
+  padding-left: 152px; // 라벨 min-width(140) + gap(12) — 입력 열과 맞춤
+
+  @media (max-width: 900px) {
+    padding-left: 0;
+    margin-top: 4px;
+  }
+}
+
+.event-create__name-en-examples__lead {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 2px;
+}
+
+.event-create__name-en-example-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1e40af;
+  }
+
+  &--on {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1d4ed8;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+  }
 }
 
 // 교단 선택 (RecruitMinisterPost 참조: 이미지 + 체크)

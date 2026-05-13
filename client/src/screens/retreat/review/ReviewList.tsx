@@ -6,8 +6,10 @@ import { MdOutlineAccessTime, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { FaPen } from 'react-icons/fa6';
 import MainURL from '../../../MainURL';
 import DateFormmating from '../../../components/DateFormmating';
+import Loading from '../../../components/Loading';
 import { recoilLoginState } from '../../../RecoilStore';
 import './Review.scss';
+import '../../ForListPage.scss';
 
 interface ReviewPost {
   id: number;
@@ -38,11 +40,13 @@ export default function ReviewList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [list, setList] = useState<ReviewPost[]>([]);
   const [listAllLength, setListAllLength] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(listAllLength / itemsPerPage);
 
   const fetchDatas = async () => {
+    setIsLoading(true);
     try {
       const res = await axios.get(`${MainURL}/retreatreview/getposts/${currentPage}`);
       if (res.data) {
@@ -53,6 +57,8 @@ export default function ReviewList() {
       console.error(error);
       setList([]);
       setListAllLength(0);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -124,6 +130,11 @@ export default function ReviewList() {
 
           <div className="subpage__main__content">
 
+            {isLoading ? (
+              <div className="list-loading">
+                <Loading />
+              </div>
+            ) : (
             <div className="review-list">
               {list.length > 0 ? (
                 list.map((item) => {
@@ -167,6 +178,7 @@ export default function ReviewList() {
                 <div className="review-empty">작성된 글이 없습니다.</div>
               )}
             </div>
+            )}
 
             {totalPages > 0 && (
               <div className="btn-row">

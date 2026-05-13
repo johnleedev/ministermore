@@ -7,6 +7,7 @@ import WorshipManage from './worship/WorshipManage';
 import AdminEmail from './email/AdminEmail';
 import PushNotificationAdmin from './pushNotifi/PushNotificationAdmin';
 import ServiceApplyList from './service/ServiceApplyList';
+import ServiceDetailOverview from './service/ServiceDetailOverview';
 import AdminManege from './manage/AdminManege';
 import Backup from './Backup';
 
@@ -17,6 +18,7 @@ type MenuKey =
   | 'emailmanage'
   | 'pushnotifi'
   | 'serviceapply'
+  | 'servicedetail'
   | 'adminmanage'
   | 'backup';
 
@@ -34,6 +36,7 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'emailmanage', label: '메일전송관리', adminOnly: true, icon: '✉️' },
   { key: 'pushnotifi', label: '앱 푸쉬알림 관리', adminOnly: true, icon: '🔔' },
   { key: 'serviceapply', label: '서비스 결제/신청 내역', adminOnly: true, icon: '💳' },
+  { key: 'servicedetail', label: '서비스 상세현황', adminOnly: true, icon: '📋' },
   { key: 'adminmanage', label: '통계', adminOnly: true, icon: '📊' },
   { key: 'backup', label: '백업', adminOnly: true, icon: '🗄️' },
 ];
@@ -52,6 +55,8 @@ function AdminMainContent({ activeMenu }: { activeMenu: MenuKey }) {
       return <PushNotificationAdmin />;
     case 'serviceapply':
       return <ServiceApplyList />;
+    case 'servicedetail':
+      return <ServiceDetailOverview />;
     case 'adminmanage':
       return <AdminManege />;
     case 'backup':

@@ -26,6 +26,7 @@ export interface NoticeGreeting {
 export interface NoticeIntroPostData {
   churchName?: string;
   address?: string;
+  addressDetail?: string;
   quiry?: string;
   youtube?: string;
   blog?: string;
@@ -46,6 +47,15 @@ export interface TemplateNoticeProps {
   onOpenGalleryTab?: () => void;
   onOpenSermonTab?: () => void;
   onOpenServersTab?: () => void;
+}
+
+function formatAddressLine(base?: string, detail?: string): string {
+  const a = (base || '').trim();
+  const b = (detail || '').trim();
+  if (!a && !b) return '';
+  if (!a) return b;
+  if (!b) return a;
+  return `${a} ${b}`;
 }
 
 function formatTimeForDisplay(timeStr: string): string {
@@ -250,7 +260,9 @@ export default function TemplateNotice({
           <div className="notice-create__preview-chip">
             <div>
               <p className="notice-create__preview-chip-label">주소</p>
-              <p className="notice-create__preview-chip-value">{postData?.address || '서울시 강남구'}</p>
+              <p className="notice-create__preview-chip-value">
+                {formatAddressLine(postData?.address, postData?.addressDetail) || '서울시 강남구'}
+              </p>
             </div>
           </div>
         </div>
@@ -336,8 +348,8 @@ export default function TemplateNotice({
       <div className="notice-create__preview-footer">
         <p className="notice-create__preview-footer-info">
           {postData?.quiry && `${postData.quiry}`}
-          {postData?.quiry && postData?.address && ' | '}
-          {postData?.address}
+          {postData?.quiry && formatAddressLine(postData?.address, postData?.addressDetail) && ' | '}
+          {formatAddressLine(postData?.address, postData?.addressDetail)}
           <br />© {new Date().getFullYear()} {postData?.churchName || '교회'} All Rights Reserved.
         </p>
       </div>

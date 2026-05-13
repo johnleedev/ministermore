@@ -7,6 +7,7 @@ import heroHomeinappVisual from "../../../images/service/homeinappmain.jpeg";
 import pushAdminImage from "../../../images/service/pushadmin.png";
 import googleStoreBadge from "../../../images/service/googlestore.png";
 import appStoreBadge from "../../../images/service/appstore.png";
+import sample1Logo from "./sample1logo.png";
 
 const PROBLEM_CARDS = [
   {
@@ -34,6 +35,11 @@ const PRICING_FEATURES = [
 ];
 
 const BADGES = ["기존 홈페이지 활용", "새로 개발하지 않아도 됨", "빠른 도입", "교회 맞춤"];
+
+const SAMPLE_APPSTORE_URL =
+  "https://apps.apple.com/us/app/%EC%82%AC%EC%97%AD%EC%9E%90%EB%AA%A8%EC%95%84%EC%9B%B9%EC%95%B1/id6764722269";
+const SAMPLE_PLAYSTORE_URL =
+  "https://play.google.com/store/apps/details?id=com.ministermoreweb";
 
 export default function HomeinappMain() {
   const navigate = useNavigate();
@@ -106,7 +112,63 @@ export default function HomeinappMain() {
           </div>
         </section>
 
-       
+        <section className="homeinapp-main__sample" aria-label="샘플보기">
+          <div className="homeinapp-main__container">
+            <div className="homeinapp-main__sample-card">
+              <div className="homeinapp-main__sample-copy">
+                <span className="homeinapp-main__section-kicker">Sample</span>
+                <h2 className="homeinapp-main__sample-title">샘플보기</h2>
+                <p className="homeinapp-main__section-desc">실제 사용자 화면을 스토어에서 확인해 보세요.</p>
+              </div>
+
+              <div className="homeinapp-main__sample-actions" aria-label="샘플 앱 스토어 링크">
+                <div className="homeinapp-main__sample-app">
+                  <img
+                    src={sample1Logo}
+                    alt="사역자모아 웹앱 아이콘"
+                    className="homeinapp-main__sample-app-icon"
+                    loading="lazy"
+                  />
+                  <div className="homeinapp-main__sample-app-meta">
+                    <div className="homeinapp-main__sample-app-name">사역자모아 웹앱</div>
+                    <div className="homeinapp-main__sample-app-sub">앱/웹앱 샘플</div>
+                  </div>
+                </div>
+
+                <div className="homeinapp-main__store-links">
+                  <a
+                    className="homeinapp-main__store-link"
+                    href={SAMPLE_PLAYSTORE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Google Play에서 샘플보기"
+                  >
+                    <img
+                      src={googleStoreBadge}
+                      alt="Google Play에서 보기"
+                      className="homeinapp-main__store-badge"
+                      loading="lazy"
+                    />
+                  </a>
+                  <a
+                    className="homeinapp-main__store-link"
+                    href={SAMPLE_APPSTORE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="App Store에서 샘플보기"
+                  >
+                    <img
+                      src={appStoreBadge}
+                      alt="App Store에서 보기"
+                      className="homeinapp-main__store-badge"
+                      loading="lazy"
+                    />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section id="problem" className="homeinapp-main__section homeinapp-main__section--tight">
           <div className="homeinapp-main__container">

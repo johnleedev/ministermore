@@ -21,9 +21,9 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
-const { toEventMainIdInt, getLegacyEventProgramsOrderParts, toTemplateInt } = require('./bookletEventShared');
+const { toEventMainIdInt, getLegacyEventProgramsOrderParts } = require('./bookletEventShared');
 const { EVENT_ORDER_TABLE } = require('./bookletEventOrderShared');
-const { templateIdStrFromBody, mergeEventMainRow, normalizeVisibleTabsArray } = require('./bookletEventMerge');
+const { mergeEventMainRow, normalizeVisibleTabsArray } = require('./bookletEventMerge');
 const { sendProgramRowsResponse } = require('./bookletEventProgramRead');
 const { sendCastRowsResponse } = require('./bookletEventCastRead');
 const { sendWorshipRowsResponse } = require('./bookletEventWorshipRead');
@@ -51,6 +51,10 @@ function toEnglishFilenamePart(name) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
   return asciiOnly || 'event';
+}
+
+function safeFileNameSegment(s) {
+  return String(s ?? '').replace(/[/\\.]+/g, '');
 }
 
 function makeEventHtml({ eventMainId, title, imageUrl }) {
@@ -211,8 +215,8 @@ function ensureEventInfoColumns(done) {
       const needed = [
         ['bookletId', 'VARCHAR(64) NULL'],
         ['userAccount', 'VARCHAR(100) DEFAULT \'\''],
-        ['templateId', 'VARCHAR(50) DEFAULT \'classic\''],
         ['eventName', 'VARCHAR(255) DEFAULT \'\''],
+        ['eventNameEn', "VARCHAR(100) DEFAULT ''"],
         ['date', 'VARCHAR(50) DEFAULT \'\''],
         ['place', 'VARCHAR(255) DEFAULT \'\''],
         ['superViser', 'VARCHAR(255) DEFAULT \'\''],
@@ -261,6 +265,8 @@ function ensureEventMainMetaColumns(done) {
         ['orderTitle', "VARCHAR(255) DEFAULT ''"],
         /** 기존 DB에 INT 등으로 쓰이는 `bookletType`과 충돌 방지 — 유형 id 문자열 전용 */
         ['eventBookletType', "VARCHAR(32) DEFAULT ''"],
+        /** generateEventHtml 결과 — 공유용 HTML URL */
+        ['link', 'TEXT NULL'],
       ];
       let i = 0;
       function next() {
@@ -369,7 +375,7 @@ router.get('/getUserBooklets/:userAccount', (req, res) => {
     return res.status(400).json({ success: false, data: [] });
   }
   const query = `
-    SELECT m.id, i.eventName, i.date, i.place, i.address, i.superViser, i.imageMain AS imageMainName
+    SELECT m.id, m.link, i.eventName, i.eventNameEn, i.date, i.place, i.address, i.superViser, i.imageMain AS imageMainName
     FROM eventMain m
     LEFT JOIN eventInfo i ON i.bookletId = CAST(m.id AS CHAR)
     WHERE m.userAccount = ?
@@ -384,7 +390,7 @@ router.get('/getUserBooklets/:userAccount', (req, res) => {
   });
 });
 
-/** 행사 전단지 삭제 (서비스 관리용, userAccount 검증) */
+/** 행사 전단지 삭제 (서비스 관리용, userAccount 검증) — DB 행 + 이미지 + HTML 파일 모두 정리 */
 router.post('/deleteBooklet', (req, res) => {
   const eventMainId = toEventMainIdInt(req.body?.eventMainId);
   const userAccount = req.body?.userAccount;
@@ -392,22 +398,90 @@ router.post('/deleteBooklet', (req, res) => {
     return res.status(400).json({ success: false, message: 'eventMainId와 userAccount가 필요합니다.' });
   }
   const bid = String(eventMainId);
-  bookleteventdb.query('SELECT id FROM eventMain WHERE id = ? AND userAccount = ?', [eventMainId, userAccount], (err, rows) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-    if (!rows || rows.length === 0) {
-      return res.status(403).json({ success: false, message: '권한이 없습니다.' });
-    }
-    bookleteventdb.query('DELETE FROM eventProgram WHERE bookletId = ?', [bid], () => {});
-    bookleteventdb.query('DELETE FROM eventProgramConcert WHERE bookletId = ?', [bid], () => {});
-    bookleteventdb.query('DELETE FROM eventProgramWorship WHERE bookletId = ?', [bid], () => {});
-    bookleteventdb.query('DELETE FROM eventProfile WHERE bookletId = ?', [bid], () => {});
-    bookleteventdb.query(`DELETE FROM ${EVENT_ORDER_TABLE} WHERE bookletId = ?`, [bid], () => {});
-    bookleteventdb.query('DELETE FROM eventInfo WHERE bookletId = ?', [bid], () => {});
-    bookleteventdb.query('DELETE FROM eventMain WHERE id = ?', [eventMainId], (delErr) => {
-      if (delErr) return res.status(500).json({ success: false, message: delErr.message });
-      res.json({ success: true });
-    });
-  });
+  bookleteventdb.query(
+    'SELECT id, link FROM eventMain WHERE id = ? AND userAccount = ?',
+    [eventMainId, userAccount],
+    (err, mainRows) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      if (!mainRows || mainRows.length === 0) {
+        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
+      }
+      const linkUrl = String(mainRows[0]?.link || '');
+
+      const queryAsync = (sql, params) =>
+        new Promise((resolve) => {
+          bookleteventdb.query(sql, params, (e, rows) => {
+            if (e && e.code !== 'ER_NO_SUCH_TABLE') {
+              console.error('deleteBooklet collect:', e.message);
+            }
+            resolve(Array.isArray(rows) ? rows : []);
+          });
+        });
+
+      Promise.all([
+        queryAsync('SELECT imageMain FROM eventInfo WHERE bookletId = ? LIMIT 1', [bid]),
+        queryAsync('SELECT postImage FROM eventProgram WHERE bookletId = ?', [bid]),
+        queryAsync('SELECT postImage FROM eventProgramConcert WHERE bookletId = ?', [bid]),
+        queryAsync('SELECT postImage FROM eventProgramWorship WHERE bookletId = ?', [bid]),
+        queryAsync('SELECT postImage FROM eventProfile WHERE bookletId = ?', [bid]),
+      ]).then(([infoRows, programRows, programConcertRows, programWorshipRows, profileRows]) => {
+        const imagesRoot = path.resolve(__dirname, '../../../build/images/bookletevent');
+        const safeUnlink = (subDir, fileName) => {
+          const name = String(fileName || '').trim();
+          if (!name || name.includes('..') || name.includes('/') || name.includes('\\')) return;
+          const target = path.resolve(imagesRoot, subDir, name);
+          if (!target.startsWith(imagesRoot)) return;
+          fs.unlink(target, () => {});
+        };
+
+        const unlinkImageNames = (raw, subDir) => {
+          if (raw == null) return;
+          let s = typeof raw === 'string' ? raw : String(raw);
+          s = s.trim();
+          if (!s) return;
+          if (s.startsWith('[')) {
+            try {
+              const arr = JSON.parse(s);
+              if (Array.isArray(arr)) {
+                arr.forEach((n) => safeUnlink(subDir, n));
+                return;
+              }
+            } catch (_) {
+              /* ignore */
+            }
+          }
+          safeUnlink(subDir, s);
+        };
+
+        const info = (infoRows && infoRows[0]) || {};
+        unlinkImageNames(info.imageMain, 'mainimages');
+        programRows.forEach((r) => unlinkImageNames(r.postImage, 'programimages'));
+        programConcertRows.forEach((r) => unlinkImageNames(r.postImage, 'programimages'));
+        programWorshipRows.forEach((r) => unlinkImageNames(r.postImage, 'programimages'));
+        profileRows.forEach((r) => unlinkImageNames(r.postImage, 'castimages'));
+
+        if (linkUrl) {
+          const m = linkUrl.match(/\/hp\/event\/([^/?#]+)$/);
+          const htmlName = m ? m[1] : '';
+          if (htmlName && !htmlName.includes('..') && !htmlName.includes('/') && !htmlName.includes('\\')) {
+            const htmlPath = path.resolve(__dirname, '../../../build/hp/event', htmlName);
+            fs.unlink(htmlPath, () => {});
+          }
+        }
+
+        bookleteventdb.query('DELETE FROM eventProgram WHERE bookletId = ?', [bid], () => {});
+        bookleteventdb.query('DELETE FROM eventProgramConcert WHERE bookletId = ?', [bid], () => {});
+        bookleteventdb.query('DELETE FROM eventProgramWorship WHERE bookletId = ?', [bid], () => {});
+        bookleteventdb.query('DELETE FROM eventProfile WHERE bookletId = ?', [bid], () => {});
+        bookleteventdb.query(`DELETE FROM ${EVENT_ORDER_TABLE} WHERE bookletId = ?`, [bid], () => {});
+        bookleteventdb.query('DELETE FROM eventInfo WHERE bookletId = ?', [bid], () => {});
+        bookleteventdb.query('DELETE FROM eventMain WHERE id = ?', [eventMainId], (delErr) => {
+          if (delErr) return res.status(500).json({ success: false, message: delErr.message });
+          res.json({ success: true });
+        });
+      });
+    },
+  );
 });
 
 router.post('/getdatabookletspart', (req, res) => {
@@ -467,19 +541,30 @@ router.post('/getdataworshippart', (req, res) => {
   sendWorshipRowsResponse(bookleteventdb, String(id), res);
 });
 
-router.post('/create', (req, res) => {
+/** 테이블 컬럼명을 조회. INFORMATION_SCHEMA 사용 (기존 DB 호환용) */
+function fetchTableColumns(tableName) {
+  return new Promise((resolve) => {
+    bookleteventdb.query(
+      `SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`,
+      [tableName],
+      (err, rows) => {
+        if (err || !rows) return resolve(new Set());
+        resolve(new Set(rows.map((r) => r.c)));
+      },
+    );
+  });
+}
+
+router.post('/create', async (req, res) => {
   const {
     userAccount,
-    templateId,
     ordererName,
     ordererPhone,
     orderTitle,
     visibleTabs: visibleTabsBody,
     bookletType: bookletTypeBody,
   } = req.body || {};
-  const templateIdStr = templateIdStrFromBody(templateId || 'classic');
-  /** eventMain.templateId 컬럼은 DB에서 INT(1~8)인 경우가 많음 — 문자열 키는 정수로 변환 */
-  const templateIdMain = toTemplateInt(templateIdStr);
   const bookletTypeStr = normalizeBookletType(bookletTypeBody);
   let visibleTabsJson = JSON.stringify(['info', 'program', 'profile']);
   if (visibleTabsBody != null && String(visibleTabsBody).trim() !== '') {
@@ -493,38 +578,66 @@ router.post('/create', (req, res) => {
       /* keep default */
     }
   }
-  const insertQuery =
-    'INSERT INTO eventMain (userAccount, templateId, ordererName, ordererPhone, orderTitle, eventBookletType) VALUES (?, ?, ?, ?, ?, ?)';
-  bookleteventdb.query(
-    insertQuery,
-    [
+
+  try {
+    const [mainCols, infoCols] = await Promise.all([
+      fetchTableColumns('eventMain'),
+      fetchTableColumns('eventInfo'),
+    ]);
+
+    // eventMain — 레거시 templateId / bookletType(INT) 등 NOT NULL 컬럼 호환
+    const mainFields = ['userAccount', 'ordererName', 'ordererPhone', 'orderTitle'];
+    const mainValues = [
       userAccount || '',
-      templateIdMain,
       ordererName || '',
       ordererPhone || '',
       String(orderTitle || '').trim(),
-      bookletTypeStr,
-    ],
-    (err, result) => {
+    ];
+    if (mainCols.has('eventBookletType')) {
+      mainFields.push('eventBookletType');
+      mainValues.push(bookletTypeStr);
+    }
+    if (mainCols.has('templateId')) {
+      mainFields.push('templateId');
+      // 레거시 INT(1) 또는 VARCHAR('classic') — 어느 타입이든 안전한 1을 넣음
+      mainValues.push(1);
+    }
+    if (mainCols.has('bookletType') && !mainCols.has('eventBookletType')) {
+      mainFields.push('bookletType');
+      mainValues.push(0);
+    }
+
+    const insertMain = `INSERT INTO eventMain (${mainFields.map((f) => `\`${f}\``).join(', ')})
+      VALUES (${mainFields.map(() => '?').join(', ')})`;
+    bookleteventdb.query(insertMain, mainValues, (err, result) => {
       if (err) {
-        console.error('bookletevent create:', err.message);
+        console.error('bookletevent create eventMain:', err.message);
         return res.status(500).json({ success: false, message: err.message });
       }
       const newId = result.insertId;
       const bid = String(newId);
-      bookleteventdb.query(
-        `INSERT INTO eventInfo (bookletId, userAccount, templateId, visibleTabs) VALUES (?, ?, ?, ?)`,
-        [bid, userAccount || '', templateIdStr, visibleTabsJson],
-        (e2) => {
-          if (e2) {
-            console.error('bookletevent create eventInfo:', e2.message);
-            return res.status(500).json({ success: false, message: e2.message });
-          }
-          res.json({ success: true, id: newId });
+
+      // eventInfo — 레거시 templateId 등 NOT NULL 컬럼 호환
+      const infoFields = ['bookletId', 'userAccount', 'visibleTabs'];
+      const infoValues = [bid, userAccount || '', visibleTabsJson];
+      if (infoCols.has('templateId')) {
+        infoFields.push('templateId');
+        infoValues.push('classic');
+      }
+      const insertInfo = `INSERT INTO eventInfo (${infoFields.map((f) => `\`${f}\``).join(', ')})
+        VALUES (${infoFields.map(() => '?').join(', ')})`;
+      bookleteventdb.query(insertInfo, infoValues, (e2) => {
+        if (e2) {
+          console.error('bookletevent create eventInfo:', e2.message);
+          return res.status(500).json({ success: false, message: e2.message });
         }
-      );
-    }
-  );
+        res.json({ success: true, id: newId });
+      });
+    });
+  } catch (e) {
+    console.error('bookletevent create handler:', e?.message || e);
+    return res.status(500).json({ success: false, message: e?.message || String(e) });
+  }
 });
 
 const MAIN_IMAGE_SLOT_COUNT = 5;
@@ -552,6 +665,172 @@ function serializeImageMainNameSlots(slots) {
   if (a.every((x) => !x)) return '';
   return JSON.stringify(a);
 }
+
+/** eventProgram.postImage — 클라이언트 `parsePostImageLoad` / `serializeProgramPostImageForSave` 와 동일 규칙 */
+function parseEventProgramPostImageRaw(raw) {
+  const names = [];
+  const positions = [];
+  if (raw == null || raw === '') return { names, positions };
+  let arr;
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw || '[]');
+    } catch {
+      return { names, positions };
+    }
+  } else {
+    return { names, positions };
+  }
+  if (!Array.isArray(arr) || arr.length === 0) return { names, positions };
+  const first = arr[0];
+  if (typeof first === 'object' && first !== null && 'name' in first) {
+    arr.forEach((x) => {
+      names.push(String(x.name || '').trim());
+      positions.push(String(x.pos || '50% 50%'));
+    });
+  } else {
+    arr.forEach((x) => names.push(String(x).trim()));
+  }
+  return { names, positions };
+}
+
+function serializeEventProgramPostImage(names, positions) {
+  if (!names || names.length === 0) return '[]';
+  const pos = positions || [];
+  return JSON.stringify(names.map((name, i) => ({ name, pos: pos[i] || '50% 50%' })));
+}
+
+function safeUploadedImageBasename(name) {
+  const n = String(name || '').trim();
+  if (!n || n.includes('/') || n.includes('\\') || n.includes('..')) return '';
+  return n;
+}
+
+/**
+ * 행사 전단지 편집 화면에서 이미지 삭제 시 즉시 디스크 + DB 반영
+ * body: { eventMainId, userAccount, kind, fileName, slotIndex? }
+ * kind: mainSlot | program | cast
+ */
+router.post('/deleteBookletUploadedImage', (req, res) => {
+  const eventMainId = toEventMainIdInt(req.body?.eventMainId);
+  const userAccount = req.body?.userAccount;
+  const kind = String(req.body?.kind || '').trim();
+  const fileName = safeUploadedImageBasename(req.body?.fileName);
+  const slotIndexRaw = req.body?.slotIndex;
+
+  if (eventMainId == null || !userAccount || !fileName || !kind) {
+    return res.status(400).json({ success: false, message: 'eventMainId, userAccount, kind, fileName이 필요합니다.' });
+  }
+
+  const bid = String(eventMainId);
+  const imagesRoot = path.resolve(__dirname, '../../../build/images/bookletevent');
+  const unlinkUploaded = (subDir) => {
+    const target = path.join(imagesRoot, subDir, fileName);
+    if (!target.startsWith(imagesRoot)) return;
+    fs.unlink(target, () => {});
+  };
+
+  bookleteventdb.query(
+    'SELECT id FROM eventMain WHERE id = ? AND userAccount = ?',
+    [eventMainId, userAccount],
+    (ownerErr, mainRows) => {
+      if (ownerErr) return res.status(500).json({ success: false, message: ownerErr.message });
+      if (!mainRows || mainRows.length === 0) {
+        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
+      }
+
+      if (kind === 'mainSlot') {
+        const idx = Number(slotIndexRaw);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= MAIN_IMAGE_SLOT_COUNT) {
+          return res.status(400).json({ success: false, message: 'slotIndex가 올바르지 않습니다.' });
+        }
+        return bookleteventdb.query(
+          'SELECT imageMain FROM eventInfo WHERE bookletId = ? LIMIT 1',
+          [bid],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            const slots = parseImageMainNameSlots(rows?.[0]?.imageMain);
+            if (String(slots[idx] || '').trim() !== fileName) {
+              return res.status(400).json({ success: false, message: '해당 슬롯의 이미지가 일치하지 않습니다.' });
+            }
+            slots[idx] = '';
+            const newJson = serializeImageMainNameSlots(slots);
+            bookleteventdb.query(
+              'UPDATE eventInfo SET imageMain = ? WHERE bookletId = ?',
+              [newJson, bid],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('mainimages');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'program') {
+        return bookleteventdb.query(
+          'SELECT id, postImage FROM eventProgram WHERE bookletId = ?',
+          [bid],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            const list = Array.isArray(rows) ? rows : [];
+            const row = list.find((r) => {
+              const { names } = parseEventProgramPostImageRaw(r.postImage);
+              return names.some((n) => n === fileName);
+            });
+            if (!row) {
+              return res.status(400).json({ success: false, message: '프로그램에서 해당 이미지를 찾을 수 없습니다.' });
+            }
+            const { names, positions } = parseEventProgramPostImageRaw(row.postImage);
+            const at = names.indexOf(fileName);
+            if (at < 0) {
+              return res.status(400).json({ success: false, message: '프로그램에서 해당 이미지를 찾을 수 없습니다.' });
+            }
+            names.splice(at, 1);
+            if (positions.length > at) positions.splice(at, 1);
+            else while (positions.length > names.length) positions.pop();
+            const nextJson = serializeEventProgramPostImage(names, positions);
+            bookleteventdb.query(
+              'UPDATE eventProgram SET postImage = ? WHERE id = ? AND bookletId = ?',
+              [nextJson, row.id, bid],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('programimages');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      if (kind === 'cast') {
+        return bookleteventdb.query(
+          'SELECT id FROM eventProfile WHERE bookletId = ? AND postImage = ? LIMIT 1',
+          [bid, fileName],
+          (e, rows) => {
+            if (e) return res.status(500).json({ success: false, message: e.message });
+            if (!rows || rows.length === 0) {
+              return res.status(400).json({ success: false, message: '프로필에서 해당 사진을 찾을 수 없습니다.' });
+            }
+            const rowId = rows[0].id;
+            bookleteventdb.query(
+              'UPDATE eventProfile SET postImage = ? WHERE id = ? AND bookletId = ?',
+              ['', rowId, bid],
+              (uerr) => {
+                if (uerr) return res.status(500).json({ success: false, message: uerr.message });
+                unlinkUploaded('castimages');
+                return res.json({ success: true });
+              },
+            );
+          },
+        );
+      }
+
+      return res.status(400).json({ success: false, message: 'kind 값이 올바르지 않습니다.' });
+    },
+  );
+});
 
 const storageMainImage = multer.diskStorage({
   destination(req, file, done) {
@@ -617,8 +896,8 @@ function upsertEventInfo(
   bookletIdStr,
   {
     userAccount,
-    templateIdStr,
     eventName,
+    eventNameEn,
     date,
     place,
     superViser,
@@ -646,8 +925,8 @@ function upsertEventInfo(
       if (err) return callback(err);
       const vals = [
         userAccount || '',
-        templateIdStr,
         eventName,
+        eventNameEn || '',
         date,
         place,
         superViser,
@@ -661,13 +940,13 @@ function upsertEventInfo(
       ];
       if (rows && rows[0]) {
         bookleteventdb.query(
-          `UPDATE eventInfo SET userAccount=?, templateId=?, eventName=?, date=?, place=?, superViser=?, address=?, quiry=?, imageMain=?, placeNaver=?, placeKakao=?, visibleTabs=?, applyNote=? WHERE bookletId=?`,
+          `UPDATE eventInfo SET userAccount=?, eventName=?, eventNameEn=?, date=?, place=?, superViser=?, address=?, quiry=?, imageMain=?, placeNaver=?, placeKakao=?, visibleTabs=?, applyNote=? WHERE bookletId=?`,
           [...vals, bookletIdStr],
           callback
         );
       } else {
         bookleteventdb.query(
-          `INSERT INTO eventInfo (bookletId, userAccount, templateId, eventName, date, place, superViser, address, quiry, imageMain, placeNaver, placeKakao, visibleTabs, applyNote) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO eventInfo (bookletId, userAccount, eventName, eventNameEn, date, place, superViser, address, quiry, imageMain, placeNaver, placeKakao, visibleTabs, applyNote) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [bookletIdStr, ...vals],
           callback
         );
@@ -681,13 +960,13 @@ router.post('/saveIntro', uploadIntro, (req, res) => {
   const q = req.query || {};
   const eventMainIdRaw = body.eventMainId || q.eventMainId;
   const eventMainId = eventMainIdRaw != null ? toEventMainIdInt(eventMainIdRaw) : null;
-  const templateId = body.templateId || q.templateId || 'classic';
   const userAccount = body.userAccount || '';
   const ordererName = body.ordererName || '';
   const ordererPhone = body.ordererPhone || '';
   const orderTitle = String(body.orderTitle || '').trim();
 
   const eventName = body.eventName || '';
+  const eventNameEn = String(body.eventNameEn || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 100);
   const date = body.date || '';
   const place = body.place || '';
   const superViser = body.superViser || '';
@@ -708,18 +987,16 @@ router.post('/saveIntro', uploadIntro, (req, res) => {
     if (f) mainSlots[i] = f.filename;
   }
   const imageMainName = serializeImageMainNameSlots(mainSlots);
-  const templateIdStr = templateIdStrFromBody(templateId || 'classic');
-  const templateIdMain = toTemplateInt(templateIdStr);
 
   if (eventMainId == null) {
     const bookletTypeSave = normalizeBookletType(body.bookletType);
     const insertMain = `
-      INSERT INTO eventMain (userAccount, templateId, ordererName, ordererPhone, orderTitle, eventBookletType)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO eventMain (userAccount, ordererName, ordererPhone, orderTitle, eventBookletType)
+      VALUES (?, ?, ?, ?, ?)
     `;
     bookleteventdb.query(
       insertMain,
-      [userAccount, templateIdMain, ordererName, ordererPhone, orderTitle, bookletTypeSave],
+      [userAccount, ordererName, ordererPhone, orderTitle, bookletTypeSave],
       (err, result) => {
         if (err) {
           console.error('saveIntro INSERT eventMain:', err.message);
@@ -731,8 +1008,8 @@ router.post('/saveIntro', uploadIntro, (req, res) => {
           bookletIdStr,
           {
             userAccount,
-            templateIdStr,
             eventName,
+            eventNameEn,
             date,
             place,
             superViser,
@@ -768,8 +1045,8 @@ router.post('/saveIntro', uploadIntro, (req, res) => {
       bookletIdStr,
       {
         userAccount,
-        templateIdStr,
         eventName,
+        eventNameEn,
         date,
         place,
         superViser,
@@ -1063,7 +1340,7 @@ router.post('/saveWorship', (req, res) => {
   });
 });
 
-// 완료 시 공유용 HTML 생성 (build/hp/event)
+// 완료 시 공유용 HTML 생성 (build/hp/event) + eventMain.link 갱신
 router.post('/generateEventHtml', (req, res) => {
   const eventMainId = toEventMainIdInt(req.body?.eventMainId);
   if (eventMainId == null) {
@@ -1071,7 +1348,7 @@ router.post('/generateEventHtml', (req, res) => {
   }
 
   const query = `
-    SELECT eventName, imageMain
+    SELECT eventName, eventNameEn, imageMain
     FROM eventInfo
     WHERE bookletId = ?
     LIMIT 1
@@ -1094,20 +1371,33 @@ router.post('/generateEventHtml', (req, res) => {
       ? `https://www.ministermore.co.kr/images/bookletevent/mainimages/${firstImage}`
       : '';
 
-    const englishName = toEnglishFilenamePart(eventName);
+    const englishFromName = safeFileNameSegment(row.eventNameEn || '').replace(/[^a-zA-Z0-9]/g, '');
+    const englishName = englishFromName || toEnglishFilenamePart(eventName);
     const fileName = `id${eventMainId}${englishName}.html`;
     const targetDir = path.resolve(__dirname, '../../../build/hp/event');
     const targetPath = path.join(targetDir, fileName);
     const html = makeEventHtml({ eventMainId, title: eventName, imageUrl });
+    const fileUrl = `https://www.ministermore.co.kr/hp/event/${fileName}`;
 
     try {
       fs.mkdirSync(targetDir, { recursive: true });
       fs.writeFileSync(targetPath, html, 'utf8');
-      return res.json({
-        success: true,
-        fileName,
-        filePath: `/hp/event/${fileName}`,
-      });
+
+      bookleteventdb.query(
+        'UPDATE eventMain SET link = ? WHERE id = ?',
+        [fileUrl, eventMainId],
+        (uErr) => {
+          if (uErr) console.error('generateEventHtml UPDATE link:', uErr.message);
+          return res.json({
+            success: true,
+            fileName,
+            filePath: `/hp/event/${fileName}`,
+            fileUrl,
+            eventName,
+            eventNameEn: englishFromName,
+          });
+        },
+      );
     } catch (writeErr) {
       console.error('generateEventHtml write error:', writeErr.message);
       return res.status(500).json({ success: false, message: writeErr.message });

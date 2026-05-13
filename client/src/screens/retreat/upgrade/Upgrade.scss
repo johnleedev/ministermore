@@ -269,32 +269,6 @@
           font-size: 16px;
         }
 
-        .btn-row {
-          width: 100%;
-          margin: 28px 0;
-          @include middle();
-          gap: 8px;
-
-          .btn {
-            min-width: 40px;
-            height: 40px;
-            border: 0;
-            border-radius: 20px;
-            background-color: #eaeaea;
-            color: #333;
-            cursor: pointer;
-          }
-
-          .btn--on {
-            background-color: #2c3d54;
-            color: #fff;
-          }
-
-          .btn:disabled {
-            color: #ccc;
-            cursor: default;
-          }
-        }
       }
     }
   }
@@ -405,9 +379,6 @@
             }
           }
 
-          .btn-row {
-            flex-wrap: wrap;
-          }
         }
       }
     }

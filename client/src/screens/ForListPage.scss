@@ -170,3 +170,12 @@
     color: #2c3d54;
   }
 }
+
+/** 리스트 페이지 공용 로딩 스피너 영역 */
+.list-loading {
+  width: 100%;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

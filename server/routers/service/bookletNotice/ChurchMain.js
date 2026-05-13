@@ -17,9 +17,9 @@ router.use(bodyParser.urlencoded({ extended: true }));
 // 팜플렛 데이터 리스트 보내기 (churchMain + churchInfo JOIN)
 router.post('/getdatabooklets', async (req, res) => {
   const query = `
-    SELECT m.id, m.userAccount, m.templateId, m.created_at, m.updated_at,
-           i.title, i.type, i.categoryOrder, i.churchName, i.mainPastor, i.religiousbody,
-           i.address, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
+    SELECT m.id, m.userAccount, m.link, m.created_at, m.updated_at,
+           i.title, i.churchName, i.churchNameEn, i.mainPastor, i.religiousbody,
+           i.address, i.addressDetail, i.quiry, i.youtube, i.blog, i.instar, i.facebook,
            i.mainPastorMessage, i.mainPastorCareer, i.worshipTimes,
            i.placeNaver, i.placeKakao, i.placeHomepage, i.imageMainName, i.mainLogo,
            i.mainPastorImage, i.worshipImage, i.youtubeNoticeImage, i.youtubeNoticeUrl
@@ -46,7 +46,7 @@ router.get('/getUserBooklets/:userAccount', (req, res) => {
     return res.status(400).json({ success: false, data: [] });
   }
   const query = `
-    SELECT m.id, i.title, i.type, i.churchName, i.mainPastor, i.imageMainName
+    SELECT m.id, m.link, i.title, i.churchName, i.churchNameEn, i.mainPastor, i.imageMainName
     FROM churchMain m
     LEFT JOIN churchInfo i ON m.id = i.churchMainId
     WHERE m.userAccount = ?
@@ -100,16 +100,14 @@ router.post('/getdataeventspart', async (req, res) => {
 
 // 팜플렛 데이터 검색하기 (churchInfo.title 기준)
 router.post('/getdatabookletsearch', async (req, res) => {
-  var { word, type } = req.body;
-  const whereType = type === 'all' ? '' : `AND i.type = '${type}'`;
+  var { word } = req.body;
 
   const query = `
-    SELECT m.id, m.userAccount, m.templateId,
-           i.title, i.type, i.churchName, i.mainPastor, i.imageMainName
+    SELECT m.id, m.userAccount, m.link,
+           i.title, i.churchName, i.churchNameEn, i.mainPastor, i.imageMainName
     FROM churchMain m
     LEFT JOIN churchInfo i ON m.id = i.churchMainId
-    WHERE (i.title LIKE '%${word}%' OR i.churchName LIKE '%${word}%')
-    ${whereType}
+    WHERE (i.title LIKE '%${word}%' OR i.churchName LIKE '%${word}%' OR i.churchNameEn LIKE '%${word}%')
   `;
   bookletnoticedb.query(query, function (error, result) {
     if (error) throw error;

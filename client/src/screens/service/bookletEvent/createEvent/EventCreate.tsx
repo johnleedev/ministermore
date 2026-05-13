@@ -28,7 +28,6 @@ import {
   normalizeImageMainNameForSnapshot,
 } from '../../../../exceptbooklets/component/mainImageNames';
 import {
-  type EventTemplateId,
   type EventVisibleTabId,
   type EventBookletTypeId,
   EVENT_VISIBLE_TAB_ORDER,
@@ -51,6 +50,15 @@ const TAB_DEFS: { id: EventCreateTabId; label: string }[] = EVENT_VISIBLE_TAB_OR
 }));
 
 const DEFAULT_VISIBLE_TABS: EventCreateTabId[] = ['info', 'program', 'profile'];
+
+/** 행사 영문·숫자 식별명 — 탭 한 번으로 입력 필드 채우기 */
+const EVENT_NAME_EN_EXAMPLES = [
+  'SpringRetreat2026',
+  'SummerConcert2026',
+  'YouthCamp2026',
+  'Ordination2026',
+  'FamilyWorship1',
+] as const;
 
 function orderVisibleTabs(ids: readonly string[] | null | undefined): EventCreateTabId[] {
   const base = ids && ids.length ? ids : DEFAULT_VISIBLE_TABS;
@@ -492,9 +500,6 @@ export default function EventCreate() {
   const userAccount = userData?.userAccount || '';
 
   const urlParams = new URLSearchParams(location.search);
-  const [templateId, setTemplateId] = useState<EventTemplateId>(
-    (urlParams.get('template') as EventTemplateId) || 'classic'
-  );
   const ordererName = urlParams.get('ordererName') || '';
   const ordererPhone = urlParams.get('ordererPhone') || '';
 
@@ -506,6 +511,10 @@ export default function EventCreate() {
   const visibleTabList = useMemo(() => orderVisibleTabs(visibleTabIds), [visibleTabIds]);
 
   const [eventName, setEventName] = useState('');
+  const [eventNameEn, setEventNameEn] = useState('');
+  const lastEventNameEnAlertRef = useRef<number>(0);
+  /** 완료 시 필수 미입력 안내 후 소개 탭의 행사명 입력으로 스크롤·포커스 (NoticeCreate `churchNameInputRef` 패턴) */
+  const eventNameInputRef = useRef<HTMLInputElement | null>(null);
   const [date, setDate] = useState('');
   const [dateMode, setDateMode] = useState<'single' | 'range'>('single');
   const [dateStart, setDateStart] = useState('');
@@ -540,6 +549,12 @@ export default function EventCreate() {
   const [eventMainId, setEventMainId] = useState<string | null>(() =>
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
   );
+  /** `getdatabookletspart` 병합값 — 완료 시 관리자 `serviceApply` 기록용 */
+  const [savedOrderMeta, setSavedOrderMeta] = useState({
+    orderTitle: '',
+    ordererName: '',
+    ordererPhone: '',
+  });
   const [saveLoading, setSaveLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<EventCreateTabId>('info');
   const [dirtyTabs, setDirtyTabs] = useState<Record<EventCreateTabId, boolean>>({
@@ -580,7 +595,7 @@ export default function EventCreate() {
     if (id) {
       setEventMainId(id);
     } else {
-      navigate('/service/bookleteventtemplates', { replace: true });
+      navigate('/service/bookleteventpay', { replace: true });
     }
   }, [location.search, navigate]);
 
@@ -653,12 +668,18 @@ export default function EventCreate() {
         const res = introResult.value;
         if (res.data?.[0]) {
           const d = res.data[0];
+          setSavedOrderMeta({
+            orderTitle: String((d as { orderTitle?: unknown }).orderTitle ?? ''),
+            ordererName: String((d as { ordererName?: unknown }).ordererName ?? ''),
+            ordererPhone: String((d as { ordererPhone?: unknown }).ordererPhone ?? '').replace(/\s/g, ''),
+          });
           loadedProgramType = d.programType === 'worship' ? 'worship' : 'concert';
           setProgramType(loadedProgramType);
-          if (d.templateId && ['classic', 'modern', 'minimal', 'warm', 'forest', 'rose', 'navy', 'violet'].includes(d.templateId)) {
-            setTemplateId(d.templateId as EventTemplateId);
-          }
           setEventName(d.eventName || '');
+          const loadedEventNameEn = String(
+            (d as { eventNameEn?: unknown }).eventNameEn ?? ''
+          ).replace(/[^a-zA-Z0-9]/g, '');
+          setEventNameEn(loadedEventNameEn);
           const parsedDate = parseDateRangeValue(d.date || '');
           setDate(d.date || '');
           setDateMode(parsedDate.mode);
@@ -697,6 +718,7 @@ export default function EventCreate() {
           lastSavedApplyRef.current = JSON.stringify({ applyNote: loadedApply });
           lastSavedInfoRef.current = JSON.stringify({
             eventName: d.eventName || '',
+            eventNameEn: loadedEventNameEn,
             date: d.date || '',
             place: d.place || '',
             superViser: d.superViser || '',
@@ -810,6 +832,7 @@ export default function EventCreate() {
     if (lastSavedInfoRef.current === null) return;
     const snapshot = JSON.stringify({
       eventName,
+      eventNameEn,
       date,
       place,
       superViser,
@@ -822,7 +845,7 @@ export default function EventCreate() {
       visibleTabs: JSON.stringify(orderVisibleTabs(visibleTabIds)),
     });
     setDirtyTabs((prev) => (prev.info !== (snapshot !== lastSavedInfoRef.current) ? { ...prev, info: snapshot !== lastSavedInfoRef.current } : prev));
-  }, [eventName, date, place, superViser, address, placeNaver, placeKakao, quiry, mainImages, visibleTabIds]);
+  }, [eventName, eventNameEn, date, place, superViser, address, placeNaver, placeKakao, quiry, mainImages, visibleTabIds]);
 
   useEffect(() => {
     if (lastSavedProgramRef.current === null) return;
@@ -1009,11 +1032,11 @@ export default function EventCreate() {
         if (currentEventMainId) formData.append('eventMainId', currentEventMainId);
         if (userAccount) formData.append('userAccount', userAccount);
         if (!currentEventMainId) {
-          formData.append('templateId', templateId);
           if (ordererName) formData.append('ordererName', ordererName);
           if (ordererPhone) formData.append('ordererPhone', ordererPhone);
         }
         formData.append('eventName', eventName);
+        formData.append('eventNameEn', eventNameEn);
         formData.append('date', date);
         formData.append('place', place);
         formData.append('superViser', superViser);
@@ -1044,6 +1067,7 @@ export default function EventCreate() {
         }
         lastSavedInfoRef.current = JSON.stringify({
           eventName,
+          eventNameEn,
           date,
           place,
           superViser,
@@ -1192,6 +1216,18 @@ export default function EventCreate() {
   };
 
   const handleCompleteClick = async () => {
+    // 필수 입력 검증: 행사명·행사 영문명 (NoticeCreate 교회명·교회 영문명과 동일 역할)
+    if (!eventName.trim() || !eventNameEn.trim()) {
+      alert('행사명과 행사 영문명을 입력해 주세요');
+      if (activeTab !== 'info') {
+        setActiveTab('info');
+      }
+      setTimeout(() => {
+        eventNameInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        eventNameInputRef.current?.focus({ preventScroll: true });
+      }, 50);
+      return;
+    }
     if (dirtyTabs[activeTab]) {
       alert('변경 사항을 저장한 후 완료해 주세요.');
       return;
@@ -1202,10 +1238,50 @@ export default function EventCreate() {
     }
     try {
       setSaveLoading(true);
-      await axios.post(`${MainURL}/bookleteventcreate/generateEventHtml`, {
+      const res = await axios.post<{
+        success: boolean;
+        fileName?: string;
+        filePath?: string;
+        fileUrl?: string;
+        eventName?: string;
+        eventNameEn?: string;
+        message?: string;
+      }>(`${MainURL}/bookleteventcreate/generateEventHtml`, {
         eventMainId,
       });
-      navigate('/service/bookleteventcomplete');
+      if (!res.data?.success) {
+        alert(res.data?.message || '완료 처리에 실패했습니다.');
+        return;
+      }
+      try {
+        await axios.post(`${MainURL}/serviceapply/record`, {
+          serviceType: 'bookletEvent',
+          orderName: savedOrderMeta.orderTitle.trim() || '행사 전단지 제작',
+          userAccount: userAccount || undefined,
+          churchName: (res.data?.eventName || eventName).trim() || null,
+          ordererName: (savedOrderMeta.ordererName || ordererName).trim() || null,
+          ordererPhone: (savedOrderMeta.ordererPhone || ordererPhone).trim() || null,
+          amount: null,
+          vat: null,
+          totalAmount: null,
+          paymentStatus: 'completed',
+          paymentId: null,
+          memo: `eventMainId=${eventMainId}`,
+          status: '등록',
+        });
+      } catch (e) {
+        console.error('serviceapply /record (event complete):', e);
+      }
+      navigate('/service/bookleteventcomplete', {
+        state: {
+          eventMainId,
+          fileName: res.data?.fileName,
+          filePath: res.data?.filePath,
+          fileUrl: res.data?.fileUrl,
+          eventName: res.data?.eventName,
+          eventNameEn: res.data?.eventNameEn,
+        },
+      });
       window.scrollTo(0, 0);
     } catch (e) {
       console.error('행사 완료 HTML 생성 실패:', e);
@@ -1385,6 +1461,102 @@ export default function EventCreate() {
     );
   };
 
+  const DELETE_IMAGE_CONFIRM = '정말 삭제 하시겠습니까?';
+
+  type DeleteEventImageKind = 'mainSlot' | 'program' | 'cast';
+
+  const deletePersistedEventImage = async (payload: {
+    kind: DeleteEventImageKind;
+    fileName: string;
+    slotIndex?: number;
+  }) => {
+    const res = await axios.post<{ success?: boolean; message?: string }>(
+      `${MainURL}/bookleteventcreate/deleteBookletUploadedImage`,
+      {
+        eventMainId,
+        userAccount,
+        ...payload,
+      }
+    );
+    return res.data;
+  };
+
+  const confirmClearMainImageSlot = async (slotIndex: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const slot = mainImages[slotIndex];
+    const persistedName = (slot?.serverName || '').trim();
+    if (eventMainId && userAccount && persistedName) {
+      try {
+        setMainImageLoadingSlot(slotIndex);
+        const data = await deletePersistedEventImage({
+          kind: 'mainSlot',
+          fileName: persistedName,
+          slotIndex,
+        });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setMainImageLoadingSlot(null);
+      }
+    }
+    clearMainImageSlot(slotIndex);
+  };
+
+  const confirmRemoveServerProgramImage = async (rowIndex: number, imgIndex: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const fileName = (programData[rowIndex]?.postImage?.[imgIndex] || '').trim();
+    if (eventMainId && userAccount && fileName) {
+      try {
+        setProgramImageLoading((prev) => ({ ...prev, [`r${rowIndex}`]: true }));
+        const data = await deletePersistedEventImage({ kind: 'program', fileName });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setProgramImageLoading((prev) => ({ ...prev, [`r${rowIndex}`]: false }));
+      }
+    }
+    removeServerProgramImage(rowIndex, imgIndex);
+  };
+
+  const confirmRemovePendingProgramImage = async (rowIndex: number, fileIndex: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    removePendingProgramImage(rowIndex, fileIndex);
+  };
+
+  const confirmClearCastPostImage = async (castIndex: number) => {
+    if (!window.confirm(DELETE_IMAGE_CONFIRM)) return;
+    const persisted = (castData[castIndex]?.postImage || '').trim();
+    if (eventMainId && userAccount && persisted) {
+      try {
+        setCastImageLoadingIndex(castIndex);
+        const data = await deletePersistedEventImage({ kind: 'cast', fileName: persisted });
+        if (!data?.success) {
+          alert(data?.message || '서버에서 이미지 삭제에 실패했습니다.');
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버에서 이미지 삭제에 실패했습니다.');
+        return;
+      } finally {
+        setCastImageLoadingIndex(null);
+      }
+    }
+    setCastData((prev) => prev.map((r, i) => (i === castIndex ? { ...r, postImage: '' } : r)));
+  };
+
   /** 소개 탭의 당일/기간 — 프로그램 행의 시간·일시 라벨에 연동 */
   const programScheduleFieldLabel = dateMode === 'single' ? '시간' : '일시';
   const programSchedulePlaceholder =
@@ -1483,7 +1655,7 @@ export default function EventCreate() {
                     </div>
                   </div>
 
-                  <div className={`event-create__tabs-wrap event-create__tabs-wrap--${templateId}`}>
+                  <div className="event-create__tabs-wrap">
                     <div
                       className={`event-create__preview-tabs event-create__preview-tabs--n${visibleTabList.length}`}
                     >
@@ -1501,10 +1673,10 @@ export default function EventCreate() {
                     </div>
                   </div>
 
-                  <div className={`event-create__preview-body ${activeTab === 'info' ? `event-create__preview-body--${templateId}` : ''}`}>
+                  <div className="event-create__preview-body">
                     {activeTab === 'info' ? (
                       <>
-                        <div className={`notice-create__preview-body notice-create__preview-body--${templateId}`}>
+                        <div className="notice-create__preview-body">
                           <TemplateNotice
                             postData={templateNoticePostData}
                             showFooter={false}
@@ -1638,7 +1810,7 @@ export default function EventCreate() {
                               <button
                                 type="button"
                                 className="event-create__main-image-slot-remove"
-                                onClick={() => clearMainImageSlot(i)}
+                                onClick={() => void confirmClearMainImageSlot(i)}
                               >
                                 삭제
                               </button>
@@ -1660,8 +1832,68 @@ export default function EventCreate() {
                   <div className="event-create__form">
                     <label className="event-create__label">
                       <span className="event-create__label-text">행사명</span>
-                      <input type="text" className="event-create__input" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="행사명" />
+                      <input
+                        ref={eventNameInputRef}
+                        type="text"
+                        className="event-create__input"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                        placeholder="행사명"
+                      />
                     </label>
+                    <label className="event-create__label">
+                      <span className="event-create__label-text">행사 영문명</span>
+                      <input
+                        type="text"
+                        className="event-create__input"
+                        value={eventNameEn}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(raw)) {
+                            const now = Date.now();
+                            if (now - lastEventNameEnAlertRef.current > 500) {
+                              lastEventNameEnAlertRef.current = now;
+                              alert('영문과 숫자만 입력 가능합니다');
+                            }
+                          }
+                          setEventNameEn(raw.replace(/[^a-zA-Z0-9]/g, ''));
+                        }}
+                        placeholder="행사 영문·숫자 식별명 (예: SpringRetreat2026)"
+                        autoCapitalize="off"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </label>
+                    <div
+                      className="event-create__name-en-examples"
+                      role="group"
+                      aria-label="행사 영문명 예시"
+                    >
+                      <span className="event-create__name-en-examples__lead">예시</span>
+                      {EVENT_NAME_EN_EXAMPLES.map((ex) => (
+                        <button
+                          key={ex}
+                          type="button"
+                          className={`event-create__name-en-example-btn${
+                            eventNameEn === ex ? ' event-create__name-en-example-btn--on' : ''
+                          }`}
+                          onClick={() => setEventNameEn(ex)}
+                        >
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
+                    <p
+                      style={{
+                        margin: '-4px 0 8px 0',
+                        fontSize: '12px',
+                        fontWeight: 400,
+                        color: '#94a3b8',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      영문과 숫자만 입력 가능합니다 (공백·한글·특수문자 입력 불가). 모바일 행사전단지 링크 주소로 만들어집니다.
+                    </p>
                     <label className="event-create__label">
                       <span className="event-create__label-text">날짜</span>
                       <div className="event-create__date-mode-wrap">
@@ -2020,8 +2252,8 @@ export default function EventCreate() {
                                             onPointerDown={(e) => e.stopPropagation()}
                                             onClick={() =>
                                               slot.kind === 'server'
-                                                ? removeServerProgramImage(index, fi)
-                                                : removePendingProgramImage(index, fi - row.postImage.length)
+                                                ? void confirmRemoveServerProgramImage(index, fi)
+                                                : void confirmRemovePendingProgramImage(index, fi - row.postImage.length)
                                             }
                                             aria-label={slot.kind === 'server' ? '이미지 삭제' : '첨부 취소'}
                                           >
@@ -2136,11 +2368,7 @@ export default function EventCreate() {
                               <button
                                 type="button"
                                 className="event-create__cast-image-remove"
-                                onClick={() =>
-                                  setCastData((prev) =>
-                                    prev.map((r, i) => (i === index ? { ...r, postImage: '' } : r))
-                                  )
-                                }
+                                onClick={() => void confirmClearCastPostImage(index)}
                               >
                                 사진 제거
                               </button>

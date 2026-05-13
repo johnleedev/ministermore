@@ -36,7 +36,8 @@ export default function AdminManage ( props: any) {
   const [visitStatsByIp, setVisitStatsByIp] = useState<VisitStatByIp[]>([]);
   const [mainConnectStats, setMainConnectStats] = useState<VisitStatByAll[]>([]);
   const [recruitViewStats, setRecruitViewStats] = useState<VisitStatByAll[]>([]);
-  const [newsViewStats, setNewsViewStats] = useState<VisitStatByAll[]>([]);
+  const [retreatMenuStats, setRetreatMenuStats] = useState<VisitStatByAll[]>([]);
+  const [serviceMenuStats, setServiceMenuStats] = useState<VisitStatByAll[]>([]);
   const [praiseViewStats, setPraiseViewStats] = useState<VisitStatByAll[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,10 +68,13 @@ export default function AdminManage ( props: any) {
       // 3. recruit 상세페이지 접속수
       const recruitRes = await axios.get(`${MainURL}/admin/countall?type=recruitview`);
       setRecruitViewStats(recruitRes.data || []);
-      // 4. 뉴스 클릭수
-      const newsRes = await axios.get(`${MainURL}/admin/countall?type=newsview`);
-      setNewsViewStats(newsRes.data || []);
-      // 5. 찬양 클릭수
+      // 4. 수련회 메뉴 클릭수
+      const retreatRes = await axios.get(`${MainURL}/admin/countall?type=retreatmenu`);
+      setRetreatMenuStats(retreatRes.data || []);
+      // 5. 서비스 메뉴 클릭수
+      const serviceRes = await axios.get(`${MainURL}/admin/countall?type=servicemenu`);
+      setServiceMenuStats(serviceRes.data || []);
+      // 6. 찬양 클릭수
       const praiseRes = await axios.get(`${MainURL}/admin/countall?type=praisewordclick`);
       setPraiseViewStats(praiseRes.data || []);
     } catch (err: any) {
@@ -92,7 +96,8 @@ export default function AdminManage ( props: any) {
     totalVisits: number;
     mainConnect: number;
     recruitView: number;
-    newsView: number;
+    retreatMenu: number;
+    serviceMenu: number;
     praiseView: number;
   }> = [];
 
@@ -101,7 +106,8 @@ export default function AdminManage ( props: any) {
     ...visitStatsByIp.map(s => s.date),
     ...mainConnectStats.map(s => s.date),
     ...recruitViewStats.map(s => s.date),
-    ...newsViewStats.map(s => s.date),
+    ...retreatMenuStats.map(s => s.date),
+    ...serviceMenuStats.map(s => s.date),
     ...praiseViewStats.map(s => s.date),
   ])).sort((a, b) => b.localeCompare(a)); // 내림차순
 
@@ -109,7 +115,8 @@ export default function AdminManage ( props: any) {
     const ipStat = visitStatsByIp.find(s => s.date === date);
     const mainStat = mainConnectStats.find(s => s.date === date);
     const recruitStat = recruitViewStats.find(s => s.date === date);
-    const newsStat = newsViewStats.find(s => s.date === date);
+    const retreatStat = retreatMenuStats.find(s => s.date === date);
+    const serviceStat = serviceMenuStats.find(s => s.date === date);
     const praiseStat = praiseViewStats.find(s => s.date === date);
     mergedStats.push({
       date,
@@ -117,7 +124,8 @@ export default function AdminManage ( props: any) {
       totalVisits: ipStat?.totalVisits ?? 0,
       mainConnect: mainStat?.totalVisits ?? 0,
       recruitView: recruitStat?.totalVisits ?? 0,
-      newsView: newsStat?.totalVisits ?? 0,
+      retreatMenu: retreatStat?.totalVisits ?? 0,
+      serviceMenu: serviceStat?.totalVisits ?? 0,
       praiseView: praiseStat?.totalVisits ?? 0,
     });
   });
@@ -140,7 +148,8 @@ export default function AdminManage ( props: any) {
                   <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>총 방문수</th>
                   <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>메인 접속수</th>
                   <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>recruit 상세 접속수</th>
-                  <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>뉴스 클릭수</th>
+                  <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>수련회 클릭수</th>
+                  <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>서비스 클릭수</th>
                   <th style={{padding: '8px 12px', border: '1px solid #ddd'}}>찬양 클릭수</th>
                 </tr>
               </thead>
@@ -152,7 +161,8 @@ export default function AdminManage ( props: any) {
                     <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.totalVisits}</td>
                     <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.mainConnect}</td>
                     <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.recruitView}</td>
-                    <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.newsView}</td>
+                    <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.retreatMenu}</td>
+                    <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.serviceMenu}</td>
                     <td style={{padding: '8px 12px', border: '1px solid #ddd'}}>{stat.praiseView}</td>
                   </tr>
                 ))}
@@ -195,10 +205,17 @@ export default function AdminManage ( props: any) {
                   tension: 0.2,
                 },
                 {
-                  label: '뉴스 클릭수',
-                  data: mergedStats.map(stat => stat.newsView).reverse(),
+                  label: '수련회 클릭수',
+                  data: mergedStats.map(stat => stat.retreatMenu).reverse(),
                   borderColor: 'rgb(153, 102, 255)',
                   backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                  tension: 0.2,
+                },
+                {
+                  label: '서비스 클릭수',
+                  data: mergedStats.map(stat => stat.serviceMenu).reverse(),
+                  borderColor: 'rgb(99, 255, 132)',
+                  backgroundColor: 'rgba(99, 255, 132, 0.2)',
                   tension: 0.2,
                 },
                 {

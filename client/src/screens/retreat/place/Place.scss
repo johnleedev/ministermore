@@ -67,6 +67,48 @@
         }
       }
 
+      .place__detail-actions--bottom {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 40px;
+
+        .btn {
+          @include middle();
+          flex: 0 0 auto;
+          height: 48px;
+          min-width: 78px;
+          margin: 0;
+          padding: 0 18px;
+          border: 1px solid #33383f;
+          border-radius: 10px;
+          appearance: none;
+          box-sizing: border-box;
+          font-size: 15px;
+          font-weight: 600;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .btn--primary {
+          background-color: #33383f;
+          color: #fff;
+        }
+
+        .btn--primary:hover {
+          background-color: #1f2329;
+        }
+
+        .btn--secondary {
+          background-color: #fff;
+          color: #33383f;
+        }
+
+        .btn--secondary:hover {
+          background-color: #f1f3f5;
+        }
+      }
+
       .place__region-tabs {
         display: flex;
         flex-wrap: wrap;

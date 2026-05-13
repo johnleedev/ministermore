@@ -4,8 +4,11 @@ import { format } from 'date-fns';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import MainURL from '../../../MainURL';
 import DateFormmating from '../../../components/DateFormmating';
+import Pagination from '../../../components/Pagination';
+import Loading from '../../../components/Loading';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import './Upgrade.scss';
+import '../../ForListPage.scss';
 
 interface UpgradePost {
   id: number;
@@ -27,11 +30,13 @@ export default function UpgradeList() {
   const [isWriting, setIsWriting] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(listAllLength / itemsPerPage);
 
   const fetchDatas = async () => {
+    setIsLoading(true);
     try {
       const res = await axios.get(`${MainURL}/retreatupgrade/getposts/${currentPage}`);
       if (res.data) {
@@ -42,6 +47,8 @@ export default function UpgradeList() {
       console.error(error);
       setList([]);
       setListAllLength(0);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,33 +59,6 @@ export default function UpgradeList() {
   const renderPreview = (value: string) => {
     if (value?.length > 40) return `${value.substring(0, 40)}...`;
     return value;
-  };
-
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 4;
-    const half = Math.floor(maxPagesToShow / 2);
-    let start = Math.max(1, currentPage - half);
-    let end = Math.min(totalPages, currentPage + half);
-
-    if (currentPage - half < 1) {
-      end = Math.min(totalPages, end + (half - currentPage + 1));
-    }
-
-    if (currentPage + half > totalPages) {
-      start = Math.max(1, start - (currentPage + half - totalPages));
-    }
-
-    for (let i = start; i <= end; i++) {
-      pageNumbers.push(i);
-    }
-
-    return pageNumbers;
-  };
-
-  const changePage = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setCurrentPage(newPage);
   };
 
   const openWriteBox = async () => {
@@ -203,6 +183,11 @@ export default function UpgradeList() {
               </div>
             )}
 
+            {isLoading ? (
+              <div className="list-loading">
+                <Loading />
+              </div>
+            ) : (
             <div className="upgrade-grid">
               {list.length > 0 ? (
                 list.map((item) => (
@@ -227,33 +212,13 @@ export default function UpgradeList() {
                 <div className="upgrade-empty">작성된 글이 없습니다.</div>
               )}
             </div>
-
-            {totalPages > 0 && (
-              <div className="btn-row">
-                <button type="button" className="btn" onClick={() => changePage(1)} disabled={currentPage === 1}>
-                  {'<<'}
-                </button>
-                <button type="button" className="btn" onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1}>
-                  {'<'}
-                </button>
-                {getPageNumbers().map((page) => (
-                  <button
-                    type="button"
-                    key={page}
-                    className={currentPage === page ? 'btn btn--on' : 'btn'}
-                    onClick={() => changePage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button type="button" className="btn" onClick={() => changePage(currentPage + 1)} disabled={currentPage === totalPages}>
-                  {'>'}
-                </button>
-                <button type="button" className="btn" onClick={() => changePage(totalPages)} disabled={currentPage === totalPages}>
-                  {'>>'}
-                </button>
-              </div>
             )}
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </main>
       </div>

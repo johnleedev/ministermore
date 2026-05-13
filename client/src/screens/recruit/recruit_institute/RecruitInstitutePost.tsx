@@ -57,6 +57,14 @@ export default function RecruitPost (props:any) {
 
   const [customInput, setCustomInput] = useState('');
 
+  /** 페이지 하단까지 스크롤되면 저장 버튼을 우측 → 중앙으로 옮김 */
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const handleRecruitScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const reached = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setIsAtBottom(reached);
+  };
+
 
 
   // 주소 입력 함수
@@ -176,7 +184,12 @@ export default function RecruitPost (props:any) {
   };
 
   return (
-    <div className="recruit" style={{ height: '700px', overflowY: 'auto' }}>
+    <>
+    <div
+      className="recruit"
+      style={{ height: '700px', overflowY: 'auto', paddingBottom: 88 }}
+      onScroll={handleRecruitScroll}
+    >
 
       <div className="inner">
 
@@ -852,46 +865,64 @@ export default function RecruitPost (props:any) {
               </div>
             </div>
           </section>
-          
+
+          {/* 본문 끝 인라인 저장 버튼 — 스크롤이 끝에 도달했을 때 노출됨 (플로팅은 숨김) */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              margin: '20px 0 40px',
+            }}
+          >
+            <div
+              className="submitBtn"
+              onClick={registerPost}
+              style={{
+                padding: '14px 36px',
+                minWidth: 160,
+                fontSize: 15,
+                fontWeight: 'bold',
+                color: '#fff',
+                backgroundColor: '#000',
+                textAlign: 'center',
+                borderRadius: 5,
+                cursor: 'pointer',
+              }}
+            >
+              저장하기
+            </div>
+          </div>
+
         </div>
       </div>
+    </div>
 
-      {/* 저장하기 버튼 - 하단 고정 */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '15px 20px',
-        backgroundColor: '#fff',
-        borderTop: '1px solid #eee',
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-        zIndex: 1000
-      }}>
-        <div 
-          className="submitBtn" 
+      {/* 플로팅 저장 버튼 — 우측 하단 고정, 페이지 끝에서는 숨김(본문 끝의 인라인 버튼이 그 자리를 대체) */}
+      {!isAtBottom && (
+        <div
+          className="floating-save-btn"
           onClick={registerPost}
           style={{
-            padding: '10px 30px',
-            fontSize: '15px',
-            minWidth: '120px',
-            backgroundColor: '#000',
-            color: '#fff',
-            textAlign: 'center',
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            padding: '14px 28px',
+            minWidth: 120,
+            fontSize: 15,
             fontWeight: 'bold',
-            borderRadius: '5px',
+            color: '#fff',
+            backgroundColor: '#000',
+            textAlign: 'center',
+            borderRadius: 999,
+            boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
             cursor: 'pointer',
-            transition: 'opacity 0.2s'
+            zIndex: 1100,
           }}
         >
           저장하기
         </div>
-      </div>
-      
-    </div>
+      )}
+    </>
   )
 }
 

@@ -16,6 +16,7 @@ interface PostProps {
   mainPastor: string;
   religiousbody: string;
   address: string;
+  addressDetail?: string;
   quiry: string;
   youtube: string;
   blog: string;

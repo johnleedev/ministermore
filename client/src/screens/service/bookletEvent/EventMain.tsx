@@ -513,7 +513,7 @@ export default function EventMain() {
   const onApply = useCallback(() => {
     if (isLogin) {
       window.scrollTo(0, 0);
-      navigate("/service/bookleteventtemplates");
+      navigate("/service/bookleteventpay");
     } else {
       alert("로그인이 필요합니다.");
     }

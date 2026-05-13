@@ -12,15 +12,7 @@ import {
   FaTimes,
 } from 'react-icons/fa';
 import './NoticeApplyPay.scss';
-import type { NoticeTemplateId } from './noticeTemplateTypes';
 import * as PortOne from '@portone/browser-sdk/v2';
-
-
-
-export type { NoticeTemplateId };
-
-/** 디자인 선택 UI 제거 — 제작·미리보기 기본값 */
-const DEFAULT_NOTICE_TEMPLATE: NoticeTemplateId = 'classic';
 
 /** 월 이용료 공급가액(원) */
 const PLAN_MONTHLY_PRICE = 10000;
@@ -37,7 +29,6 @@ const NOTICE_PORTONE_CUSTOMER_KEY = 'portone_notice_customer_id';
 /** `POST /paymentbilling/billingkey` 성공 시 서버와 동일한 형태 */
 type NoticeBillingCustomData = {
   userAccount: string;
-  templateId: string;
   serviceType: string;
   plan: string;
 };
@@ -69,9 +60,18 @@ type NoticeAlertState = {
 
 type PaymentSuccessState = {
   churchMainId: number;
-  /** 결제 완료 시점 기준 ‘매달 n일’ 안내용 (로컬 날짜의 일) */
-  billingDayOfMonth: number;
 };
+
+/** 전화번호 앞자리 선택지 — 휴대전화/주요 지역번호/인터넷전화 등 */
+const PHONE_PREFIX_OPTIONS = [
+  '010', '011', '016', '017', '018', '019',
+  '02',
+  '031', '032', '033',
+  '041', '042', '043', '044',
+  '051', '052', '053', '054', '055',
+  '061', '062', '063', '064',
+  '070', '080',
+] as const;
 
 function getOrCreateNoticeCustomerId(userAccount: string): string {
   const acc = userAccount.trim();
@@ -243,7 +243,12 @@ export default function NoticeApplyPay() {
 
   const [orderTitle, setOrderTitle] = useState('');
   const [ordererName, setOrdererName] = useState('');
-  const [ordererPhone, setOrdererPhone] = useState('');
+  /** 전화번호: 셀렉트·가운데·끝을 각각 state로 둠(입력 중 재파싱으로 자리수가 깨지지 않도록) */
+  const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
+  const [phoneMid, setPhoneMid] = useState('');
+  const [phoneLast, setPhoneLast] = useState('');
+  const phoneMidRef = useRef<HTMLInputElement | null>(null);
+  const phoneLastRef = useRef<HTMLInputElement | null>(null);
   const [cardNumberParts, setCardNumberParts] = useState<CardPanParts>(EMPTY_CARD_PAN);
   const panInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [cardExpiryMonth, setCardExpiryMonth] = useState('');
@@ -272,20 +277,20 @@ export default function NoticeApplyPay() {
       setAlertCopyDone(false);
     }
   };
-
   const handlePaymentSubmit = async () => {
     setPaymentLoading(true);
     try {
       const customerId = getOrCreateNoticeCustomerId(userAccount);
+      /** PortOne `customer.phoneNumber` 허용: digits + `+- ` 만. 다른 문자(괄호/점/한글 등) 포함 시 400. */
+      const phoneDigits =
+        `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20) || '01000000000';
       const customer = {
         fullName: ordererName.trim() || userAccount || '주문자',
-        phoneNumber: ordererPhone.trim().replace(/\s/g, '') || '01000000000',
+        phoneNumber: phoneDigits,
         email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
       };
       const customData = {
         userAccount,
-        templateId: DEFAULT_NOTICE_TEMPLATE,
-        serviceType: 'notice',
         plan: 'monthly',
       };
 
@@ -302,39 +307,6 @@ export default function NoticeApplyPay() {
         return;
       }
 
-      // 포트원 sdk 결제 --------------------------------------------------------------
-
-      // const issueResponse = await PortOne.requestIssueBillingKey({
-      //   storeId: "store-ca1b10da-c69c-4054-90ca-9410bf6ecbed",
-      //   channelKey: "channel-key-9115b093-e87f-41bc-a761-2f69d7fc6f2b",
-      //   billingKeyMethod: "CARD",
-      //   customer: {
-      //     fullName: ordererName.trim() || userAccount || '주문자',
-      //     phoneNumber: ordererPhone.trim().replace(/\s/g, '') || '01000000000',
-      //     email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
-      //   },
-      //   currency: "CURRENCY_KRW",
-      //   displayAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
-      //   issueName: orderTitle.trim(),
-      //   issueId: customerId,
-        
-      // });
-      
-      
-
-      // const billingRes = await axios.post(
-      //   `${MainURL}/paymentbilling/billingkey`,
-      //   {
-      //     billingKey: issueResponse?.billingKey, 
-      //     transactionType: "issue",
-      //     customerId,
-      //     customer,
-      //     amount: PLAN_MONTHLY_PRICE_WITH_VAT,
-      //     customData,
-      //     orderTitle: orderTitle.trim(),
-      //   },
-      // );
-     
 
       const billingRes = await axios.post<NoticeBillingKeySuccessResponse>(
         `${MainURL}/paymentbilling/billingkey`,
@@ -352,7 +324,6 @@ export default function NoticeApplyPay() {
         },
       );
 
-
       const payload = billingRes.data;
       if (!payload?.ok || !payload.paymentId || !payload.schedulePaymentId || !payload.billingKey) {
         openErrorAlert('결제 응답이 올바르지 않습니다. 고객센터로 문의해 주세요.', '결제 응답');
@@ -363,26 +334,9 @@ export default function NoticeApplyPay() {
         return;
       }
 
-      await recordServiceApply({
-        serviceType: 'bookletNotice',
-        orderName: orderTitle.trim() || '교회 전단지 제작',
-        userAccount,
-        ordererName: ordererName.trim(),
-        ordererPhone: ordererPhone.trim().replace(/\s/g, ''),
-        amount: PLAN_MONTHLY_PRICE,
-        vat: Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE),
-        totalAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
-        paymentStatus: 'paid',
-        paymentId: payload.paymentId,
-        billingKey: payload.billingKey,
-      });
-
-      const id = payload.churchMainId;
-      window.alert('결제가 되었습니다');
-      navigate(`/service/bookletnoticecreate?id=${id}`);
+      setPaymentModalOpen(false);
       setPaymentSuccessState({
         churchMainId: Number(payload.churchMainId),
-        billingDayOfMonth: new Date().getDate(),
       });
     } catch (err) {
       /** 400은 대부분 PortOne 빌링키/첫결제/예약 실패(churchMain INSERT는 500·409). 원인은 `response.data` 참고. */
@@ -394,9 +348,9 @@ export default function NoticeApplyPay() {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         const d = err.response.data as { churchMainId?: number };
         if (d.churchMainId != null) {
+          setPaymentModalOpen(false);
           setPaymentSuccessState({
             churchMainId: Number(d.churchMainId),
-            billingDayOfMonth: new Date().getDate(),
           });
           return;
         }
@@ -458,28 +412,35 @@ export default function NoticeApplyPay() {
     if (!paymentModalOpen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    if (!paymentSuccessState) {
-      requestAnimationFrame(() => panInputRefs.current[0]?.focus());
-    }
+    requestAnimationFrame(() => panInputRefs.current[0]?.focus());
     return () => {
       document.body.style.overflow = prevOverflow;
     };
-  }, [paymentModalOpen, paymentSuccessState]);
+  }, [paymentModalOpen]);
 
   useEffect(() => {
-    if (!paymentSuccessState || !paymentModalOpen) return;
+    if (!paymentSuccessState) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [paymentSuccessState]);
+
+  useEffect(() => {
+    if (!paymentSuccessState) return;
     const id = requestAnimationFrame(() => {
       document.getElementById('notice-payment-success-confirm')?.focus();
     });
     return () => cancelAnimationFrame(id);
-  }, [paymentSuccessState, paymentModalOpen]);
+  }, [paymentSuccessState]);
 
   const finalizeSuccessfulPayment = useCallback(() => {
     if (!paymentSuccessState) return;
     const id = paymentSuccessState.churchMainId;
     setPaymentSuccessState(null);
-    setPaymentModalOpen(false);
     navigate(`/service/bookletnoticecreate?id=${id}`);
+    window.scrollTo(0, 0);
   }, [navigate, paymentSuccessState]);
 
   useEffect(() => {
@@ -490,7 +451,7 @@ export default function NoticeApplyPay() {
         e.preventDefault();
         return;
       }
-      if (paymentModalOpen && paymentSuccessState) {
+      if (paymentSuccessState) {
         finalizeSuccessfulPayment();
         e.preventDefault();
         return;
@@ -509,8 +470,6 @@ export default function NoticeApplyPay() {
     !cardExpiryYear.trim() ||
     !cardBirthOrBiz.trim() ||
     cardPasswordTwoDigits.trim().length !== 2;
-
-  const showPaymentSuccess = paymentSuccessState !== null;
 
   return (
     <div className="notice-template-select">
@@ -555,13 +514,60 @@ export default function NoticeApplyPay() {
               </div>
               <div className="notice-template-select__form-row">
                 <label className="notice-template-select__form-label">전화번호</label>
-                <input
-                  type="tel"
-                  className="notice-template-select__input"
-                  placeholder="전화번호를 입력하세요"
-                  value={ordererPhone}
-                  onChange={(e) => setOrdererPhone(e.target.value)}
-                />
+                <div className="notice-template-select__field-with-hint">
+                  <div className="notice-template-select__phone-row" role="group" aria-label="전화번호">
+                    <select
+                      className="notice-template-select__phone-prefix"
+                      value={phonePrefix}
+                      onChange={(e) => setPhonePrefix(e.target.value)}
+                      aria-label="전화번호 앞자리"
+                    >
+                      {PHONE_PREFIX_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="notice-template-select__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneMidRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="notice-template-select__phone-part"
+                      maxLength={4}
+                      value={phoneMid}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneMid(next);
+                        if (next.length === 4) {
+                          requestAnimationFrame(() => phoneLastRef.current?.focus());
+                        }
+                      }}
+                      aria-label="전화번호 가운데 자리"
+                    />
+                    <span className="notice-template-select__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneLastRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="notice-template-select__phone-part"
+                      maxLength={4}
+                      value={phoneLast}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneLast(next);
+                      }}
+                      aria-label="전화번호 끝자리"
+                    />
+                  </div>
+                  <p className="notice-template-select__form-hint">
+                    전화번호를 올바르게 입력하셔야 결제가 됩니다
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -671,7 +677,6 @@ export default function NoticeApplyPay() {
                   type="button"
                   className="notice-template-select__pay-btn"
                   onClick={() => {
-                    // handlePaymentSubmit();
                     setPaymentModalOpen(true);
                   }}
                   disabled={paymentLoading}
@@ -681,7 +686,10 @@ export default function NoticeApplyPay() {
                 <button
                   type="button"
                   className="notice-template-select__back-btn"
-                  onClick={() => navigate('/service/bookletnoticetemplates')}
+                  onClick={() => {
+                    navigate('/service/notice');
+                    window.scrollTo(0, 0);
+                  }}
                 >
                   이전으로
                 </button>
@@ -689,11 +697,11 @@ export default function NoticeApplyPay() {
             </div>
           </aside>
 
-          {paymentModalOpen && (
+          {paymentModalOpen && !paymentSuccessState && (
               <div
                 className="notice-template-select__modal-backdrop"
                 role="presentation"
-                onClick={() => !paymentLoading && !showPaymentSuccess && setPaymentModalOpen(false)}
+                onClick={() => !paymentLoading && setPaymentModalOpen(false)}
               >
                 <div
                   className="notice-template-select__modal"
@@ -702,44 +710,6 @@ export default function NoticeApplyPay() {
                   aria-labelledby="notice-payment-modal-title"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {showPaymentSuccess && paymentSuccessState ? (
-                    <>
-                      <div className="notice-template-select__modal-header notice-template-select__modal-header--success">
-                        <div className="notice-template-select__modal-header-main">
-                          <h2 className="notice-template-select__modal-title" id="notice-payment-modal-title">
-                            결제 완료
-                          </h2>
-                        </div>
-                      </div>
-                      <div className="notice-template-select__modal-body notice-template-select__modal-body--success">
-                        <div className="notice-template-select__modal-success">
-                          <div className="notice-template-select__modal-success-icon" aria-hidden>
-                            <FaCheck />
-                          </div>
-                          <p className="notice-template-select__modal-success-head">결제가 되었습니다.</p>
-                          <p className="notice-template-select__modal-success-line">
-                            매달 {paymentSuccessState.billingDayOfMonth}일에 결제됩니다.
-                          </p>
-                          <p className="notice-template-select__modal-success-line notice-template-select__modal-success-line--muted">
-                            구독을 취소하시려면 취소신청을 해주세요.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="notice-template-select__modal-footer notice-template-select__modal-footer--success">
-                        <div className="notice-template-select__modal-footer-actions notice-template-select__modal-footer-actions--single">
-                          <button
-                            id="notice-payment-success-confirm"
-                            type="button"
-                            className="notice-template-select__modal-btn notice-template-select__modal-btn--primary"
-                            onClick={finalizeSuccessfulPayment}
-                          >
-                            확인
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
                       <div className="notice-template-select__modal-header">
                         <div className="notice-template-select__modal-header-main">
                           <h2 className="notice-template-select__modal-title" id="notice-payment-modal-title">
@@ -821,7 +791,15 @@ export default function NoticeApplyPay() {
                                 placeholder="MM"
                                 maxLength={2}
                                 value={cardExpiryMonth}
-                                onChange={(e) => setCardExpiryMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                                onChange={(e) => {
+                                  const next = e.target.value.replace(/\D/g, '').slice(0, 2);
+                                  setCardExpiryMonth(next);
+                                  if (next.length === 2) {
+                                    requestAnimationFrame(() => {
+                                      document.getElementById('notice-modal-card-exp-y')?.focus();
+                                    });
+                                  }
+                                }}
                               />
                             </div>
                             <div className="notice-template-select__card-field">
@@ -882,6 +860,21 @@ export default function NoticeApplyPay() {
                         <div className="notice-template-select__modal-footer-actions">
                           <button
                             type="button"
+                            className="notice-template-select__modal-btn notice-template-select__modal-btn--ghost"
+                            disabled={paymentLoading}
+                            onClick={() => {
+                              setCardNumberParts(EMPTY_CARD_PAN);
+                              setCardExpiryMonth('');
+                              setCardExpiryYear('');
+                              setCardBirthOrBiz('');
+                              setCardPasswordTwoDigits('');
+                              requestAnimationFrame(() => panInputRefs.current[0]?.focus());
+                            }}
+                          >
+                            초기화
+                          </button>
+                          <button
+                            type="button"
                             className="notice-template-select__modal-btn notice-template-select__modal-btn--secondary"
                             disabled={paymentLoading}
                             onClick={() => {
@@ -902,13 +895,54 @@ export default function NoticeApplyPay() {
                           </button>
                         </div>
                       </div>
-                    </>
-                  )}
                 </div>
               </div>
           )}
         </div>
       </div>
+
+      {paymentSuccessState && (
+        <div className="notice-template-select__modal-backdrop" role="presentation">
+          <div
+            className="notice-template-select__modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notice-payment-success-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="notice-template-select__modal-header notice-template-select__modal-header--success">
+              <div className="notice-template-select__modal-header-main">
+                <h2 className="notice-template-select__modal-title" id="notice-payment-success-title">
+                  결제 완료
+                </h2>
+              </div>
+            </div>
+            <div className="notice-template-select__modal-body notice-template-select__modal-body--success">
+              <div className="notice-template-select__modal-success">
+                <div className="notice-template-select__modal-success-icon" aria-hidden>
+                  <FaCheck />
+                </div>
+                <p className="notice-template-select__modal-success-head">결제가 되었습니다.</p>
+                <p className="notice-template-select__modal-success-line">
+                  확인을 누르면 교회 전단지 제작 화면으로 이동합니다.
+                </p>
+              </div>
+            </div>
+            <div className="notice-template-select__modal-footer notice-template-select__modal-footer--success">
+              <div className="notice-template-select__modal-footer-actions notice-template-select__modal-footer-actions--single">
+                <button
+                  id="notice-payment-success-confirm"
+                  type="button"
+                  className="notice-template-select__modal-btn notice-template-select__modal-btn--primary"
+                  onClick={finalizeSuccessfulPayment}
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {noticeAlert && (
         <div

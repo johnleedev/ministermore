@@ -1,14 +1,7 @@
 /**
- * EventCreate / 행사 전단지(bookleteventcreate 등) 라우트에서 쓰는 templateId·id 변환
- * 템플릿 키는 Notice(교회 소개)와 동일하게 유지합니다.
+ * EventCreate / 행사 전단지(bookleteventcreate 등) 라우트에서 쓰는 id 변환·레거시 보조 함수
  */
-const {
-  TEMPLATE_STR_TO_INT,
-  TEMPLATE_INT_TO_STR,
-  toTemplateInt,
-  toTemplateStr,
-  toChurchMainIdInt,
-} = require('../bookletNotice/bookletNoticeShared');
+const { toChurchMainIdInt } = require('../bookletNotice/bookletNoticeShared');
 
 /** eventMain.id — Notice의 churchMainId와 동일한 정수 파싱 */
 function toEventMainIdInt(v) {
@@ -77,10 +70,6 @@ function getLegacyEventProgramsOrderParts(bookletdb, callback) {
 }
 
 module.exports = {
-  TEMPLATE_STR_TO_INT,
-  TEMPLATE_INT_TO_STR,
-  toTemplateInt,
-  toTemplateStr,
   toEventMainIdInt,
   computeLegacyEventProgramsOrderParts,
   getLegacyEventProgramsOrderParts,

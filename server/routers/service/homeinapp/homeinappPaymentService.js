@@ -1,5 +1,10 @@
 const { homeinappdb } = require('../../dbdatas/homeinappdb');
 
+/** 신규 결제·주문 INSERT 시 `churches.status` 기본값 */
+const CHURCH_STATUS_APPLIED = 'applied';
+
+/** Firebase 서비스 계정 JSON은 업로드 시 `homeinappkeys`에 저장되며, DB에는 파일명만 둡니다(경로 접두사 없음). */
+
 function createChurchId() {
   const d = new Date();
   const yy = String(d.getFullYear()).slice(-2);
@@ -51,8 +56,9 @@ function insertHomeinappOrderWithPayment(payload) {
       `INSERT INTO churches (
         id, churchName, representatives, phoneNumber, userAccount,
         portonePaymentId, portonePaidAmount, portoneOrderName, portonePlan,
-        schedulePaymentId, billingKey, portonePaidAt, portoneTimeToPay, portoneScheduleId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        schedulePaymentId, billingKey, portonePaidAt, portoneTimeToPay, portoneScheduleId,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         churchId,
         String(churchName || '').trim().slice(0, 120),
@@ -68,6 +74,7 @@ function insertHomeinappOrderWithPayment(payload) {
         portonePaidAt != null ? String(portonePaidAt).trim().slice(0, 64) : null,
         portoneTimeToPay != null ? String(portoneTimeToPay).trim().slice(0, 64) : null,
         portoneScheduleId != null ? String(portoneScheduleId).trim().slice(0, 255) : null,
+        CHURCH_STATUS_APPLIED,
       ],
       (err) => {
         if (err) return reject(err);

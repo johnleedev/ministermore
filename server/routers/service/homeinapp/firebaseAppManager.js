@@ -2,6 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const admin = require('firebase-admin');
 
+/** `HomeinappMain` multer와 동일 — JSON 키 파일 디렉터리 */
+const HOMEINAPP_FIREBASE_KEYS_DIR = path.resolve(__dirname, '../homeinappkeys');
+
 // churchId -> firebase app instance
 const firebaseApps = {};
 
@@ -11,9 +14,14 @@ function resolveKeyPath(rawKeyPath) {
     throw new Error('Firebase key path is required.');
   }
 
-  // Allow both absolute path and project-relative path.
   if (path.isAbsolute(keyPath)) return keyPath;
-  return path.resolve(process.cwd(), keyPath);
+
+  const normalized = keyPath.replace(/\\/g, '/');
+  // DB에는 파일명만 저장. 상대 전체 경로(레거시)는 cwd 기준 유지.
+  if (!normalized.includes('/')) {
+    return path.resolve(HOMEINAPP_FIREBASE_KEYS_DIR, normalized);
+  }
+  return path.resolve(process.cwd(), normalized);
 }
 
 function getFirebaseAdmin(churchId, keyPath) {
