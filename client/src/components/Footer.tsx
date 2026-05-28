@@ -30,23 +30,23 @@ export default function Footer (props:any) {
           </ul>
 
           <ul>
-            <li className='text black'>스카이뷰티컴퍼니</li>
+            <li className='text black'>예플랫</li>
             <li className='text black'>대표자: 강신애</li>
             <li className='text'>사업자등록번호: 422-20-02318</li>
-            <li className='text'>연락처: 010-9584-5948</li>
+            <li className='text'>연락처: 010-9585-5948</li>
           </ul>
 
           <ul>
-            <li className='text black'>주소 : 대구광역시 달성군 다사읍 달구벌대로 174길 50</li>
+            <li className='text black'>주소 : 대구광역시 달성군 다사읍 대실역북로1길 15 3층</li>
           </ul>
 
           <ul>
-            <li className='text'>E-mail: skybeauty02318@naver.com</li>
+            <li className='text'>E-mail: yeplat@naver.com</li>
           </ul>
 
           <ul className='copyright'>
             <li className='text'>COPYRIGHT</li>
-            <li className='text black'>© 2026. SkybeautyCompany.</li>
+            <li className='text black'>© 2026. Yeplat.</li>
             <li className='text'>All rights reserved.</li>
           </ul>
 

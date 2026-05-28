@@ -9,6 +9,7 @@ import { recoilLoginState } from '../../../RecoilStore';
 import { religiousbodyList, locationList, sortList, citydata } from '../../../DefaultData';
 import Pagination from '../../../components/Pagination';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 
 
 
@@ -678,6 +679,7 @@ export default function RecruitList (props:any) {
 
       </div>
 
+      <ScrollToTopButton />
     </div>
   )
 }

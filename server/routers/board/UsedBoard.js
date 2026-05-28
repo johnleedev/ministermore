@@ -15,6 +15,17 @@ const escapeQuotes = (str) => {
   return str.replaceAll('è', '\è').replaceAll("'", "\\\'").replaceAll('"', '\\\"').replaceAll('\\n', '\\\\n');
 };
 
+const { handleBoardPostSearch } = require('./boardSearchHelpers');
+
+// 게시글 검색 API (구분/지역 칩 클릭 시 즉시 필터)
+router.post('/getusedpostssearch', async (req, res) => {
+  await handleBoardPostSearch(req, res, boarddb, {
+    postsTable: 'usedPosts',
+    commentsTable: 'usedComments',
+    withRegions: true,
+  });
+});
+
 // 게시글 전체 목록 조회 API
 router.get('/getusedposts/:page', async (req, res) => {
   var page = parseInt(req.params.page) || 1;
@@ -108,19 +119,20 @@ const conditionalUpload = (req, res, next) => {
 
 // 게시글 생성하기
 router.post('/usedpost', conditionalUpload, (req, res) => {
-  const { title, content, userAccount, userNickName, date, postImage, sort } = req.query;
+  const { title, content, userAccount, userNickName, date, postImage, sort, region } = req.query;
   
-  if (!title || !content || !userAccount || !userNickName || !date) {
+  if (!title || !content || !userAccount || !userNickName || !date || !sort) {
     return res.status(400).send({ error: 'Missing required fields' });
   }
   
   const titleCopy = escapeQuotes(title);
   const contentCopy = escapeQuotes(content);
-  
+  const sortCopy = escapeQuotes(sort);
+  const regionCopy = escapeQuotes(region || '');
 
   boarddb.query(`
-    INSERT IGNORE INTO usedPosts (sort, title, content, userAccount, userNickName, date, images) VALUES
-     ('${sort || 'used'}', '${titleCopy}', '${contentCopy}', '${userAccount}', '${userNickName}', '${date}', '${postImage || ''}');
+    INSERT IGNORE INTO usedPosts (sort, region, title, content, userAccount, userNickName, date, images) VALUES
+     ('${sortCopy}', '${regionCopy}', '${titleCopy}', '${contentCopy}', '${userAccount}', '${userNickName}', '${date}', '${postImage || ''}');
     `,function(error, result){
     if (error) {throw error}
     if (result.affectedRows > 0) {            
@@ -135,13 +147,24 @@ router.post('/usedpost', conditionalUpload, (req, res) => {
 
 // 게시글 수정하기
 router.post('/usedpostedit', upload_default.array('img'), (req, res) => {
-  const { postId, title, content, date, postImage } = req.query;
+  const { postId, title, content, date, postImage, sort, region } = req.query;
+  if (!postId || !title || !content) {
+    return res.status(400).send(false);
+  }
+  const titleCopy = escapeQuotes(title);
+  const contentCopy = escapeQuotes(content);
+  const dateCopy = escapeQuotes(date || '');
+  const postImageCopy = escapeQuotes(postImage || '');
+  const sortCopy = sort ? escapeQuotes(sort) : '';
+  const regionCopy = region != null ? escapeQuotes(region) : '';
+  const sortSet = sortCopy ? `, sort = '${sortCopy}'` : '';
+  const regionSet = region != null ? `, region = '${regionCopy}'` : '';
   boarddb.query(`
   UPDATE usedPosts SET 
-    title = '${title}', 
-    content = '${content}',
-    date = '${date}',
-    images = '${postImage}'
+    title = '${titleCopy}', 
+    content = '${contentCopy}',
+    date = '${dateCopy}',
+    images = '${postImageCopy}'${sortSet}${regionSet}
   WHERE id = ${postId}
   `,function(error, result){
   if (error) {throw error}

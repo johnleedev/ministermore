@@ -595,7 +595,7 @@ export default function RegisterRecruit( props: any) {
   };
   
   return (
-    <div className="admin-register">
+    <div className="admin-register register-recruit">
 
       <div className='AdminContent mobile-none' style={{height:'100px', flexDirection:'row', marginBottom:'50px'}}>
         <div className='amdin_Main_Btn' 
@@ -1175,8 +1175,8 @@ export default function RegisterRecruit( props: any) {
                 borderBottom: isCustomInputFixed ? '1px solid #eee' : 'none',
                 boxShadow: isCustomInputFixed ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
                 width: isCustomInputFixed ? '100%' : 'auto',
-                maxWidth: '1400px',
-                margin: '0 auto',
+                maxWidth: '100%',
+                margin: isCustomInputFixed ? '0' : '0 auto',
               }}
             >
               <div

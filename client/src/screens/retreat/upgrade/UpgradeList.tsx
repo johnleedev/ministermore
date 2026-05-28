@@ -6,6 +6,7 @@ import MainURL from '../../../MainURL';
 import DateFormmating from '../../../components/DateFormmating';
 import Pagination from '../../../components/Pagination';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import './Upgrade.scss';
 import '../../ForListPage.scss';
@@ -222,6 +223,7 @@ export default function UpgradeList() {
           </div>
         </main>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import { recoilLoginState } from "../../../RecoilStore";
 import "./HomeinappMain.scss";
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import heroHomeinappVisual from "../../../images/service/homeinappmain.jpeg";
 import pushAdminImage from "../../../images/service/pushadmin.png";
 import googleStoreBadge from "../../../images/service/googlestore.png";
@@ -74,7 +75,7 @@ export default function HomeinappMain() {
           <div className="homeinapp-main__container homeinapp-main__hero-inner">
             <div className="homeinapp-main__eyebrow">
               <span className="homeinapp-main__eyebrow-dot" aria-hidden />
-              기존 홈페이지 그대로 · 노코드 · 교회 맞춤 웹앱
+              기존 홈페이지 그대로 · 교회 맞춤 웹앱
             </div>
             <h1 className="homeinapp-main__title">
               기존의 교회 홈페이지를
@@ -294,6 +295,7 @@ export default function HomeinappMain() {
           </div>
         </section>
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

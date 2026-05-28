@@ -4,8 +4,13 @@ import * as PortOne from '@portone/browser-sdk/v2';
 const STORE_ID =
   process.env.REACT_APP_PORTONE_STORE_ID || 'store-ca1b10da-c69c-4054-90ca-9410bf6ecbed';
 
+// 테스트 
+// const CHANNEL_KEY_MODERN =
+//   process.env.REACT_APP_PORTONE_CHANNEL_KEY || 'channel-key-eeb61222-ee67-4a67-877e-b7a97c6c5493';
+
+// 실연동
 const CHANNEL_KEY_MODERN =
-  process.env.REACT_APP_PORTONE_CHANNEL_KEY || 'channel-key-eeb61222-ee67-4a67-877e-b7a97c6c5493';
+  process.env.REACT_APP_PORTONE_CHANNEL_KEY || 'channel-key-10cd6e06-9691-4da1-a3ed-d324f56fcd96';
 
 export type EventBookletPaymentCustomer = {
   fullName: string;

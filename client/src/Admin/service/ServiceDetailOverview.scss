@@ -342,6 +342,64 @@
   }
 }
 
+.service-detail-overview__modal-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f1f5f9;
+
+  .service-detail-overview__field-label {
+    flex-shrink: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #334155;
+    white-space: nowrap;
+  }
+}
+
+.service-detail-overview__link-url-value {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.service-detail-overview__link-url-copy-btn {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
 .service-detail-overview__modal-homeinapp-top {
   padding: 12px 18px;
   border-bottom: 1px solid #e5e7eb;

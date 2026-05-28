@@ -5,7 +5,7 @@ import AdminMain from './Admin/AdminRouter';
 import { RecoilRoot } from 'recoil';
 import MainCompt from './screens/company/MainCompt';
 import ServiceRouter from './screens/service/ServiceRouter';
-import CommunityRouter from './screens/community/CommunityRouter';
+import MainBoardRouter from './screens/board/MainBoardRouter';
 import MypageMain from './screens/mypage/MypageRouter';
 import MainRollbook from './screens/rollbook/MainRollbook';
 import WorshipRouter from './screens/worship/WorshipRouter';
@@ -44,7 +44,7 @@ function App() {
 
               <Route path="/worship/*" element={<WorshipRouter/>}/>
               
-              <Route path="/community/*" element={<CommunityRouter/>}/>
+              <Route path="/board/*" element={<MainBoardRouter/>}/>
               
               <Route path="/company/*" element={<MainCompt/>}/>
               

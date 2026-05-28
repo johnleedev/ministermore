@@ -2974,6 +2974,34 @@ body:has(.booklet-preview-page) {
   }
 }
 
+.notice-create__preview-gallery-editor-view-full {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  margin: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s, transform 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.72);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
 // ----- 탭 아래 본문: 글자 크기 단일화 -----
 .church_detail .church_detail__body {
   font-size: 17px !important;

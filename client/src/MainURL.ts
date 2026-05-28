@@ -1,3 +1,3 @@
-let MainURL = 'https://ministermore.co.kr';
+const MainURL = 'https://ministermore.co.kr';
 
 export default MainURL;

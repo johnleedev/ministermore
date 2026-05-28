@@ -105,14 +105,14 @@ const conditionalUpload = (req, res, next) => {
 
 // 게시글 생성하기
 router.post('/noticepost', conditionalUpload, (req, res) => {
-  const { title, content, userAccount, userNickName, date, postImage } = req.query;
+  const { title, content, userAccount, userNickName, date, postImage, sort } = req.query;
   const titleCopy = escapeQuotes(title);
   const contentCopy = escapeQuotes(content);
   
 
   boarddb.query(`
     INSERT IGNORE INTO noticePosts (sort, title, content, userAccount, userNickName, date, images) VALUES
-     ('${sort}', '${titleCopy}', '${contentCopy}', '${userAccount}', '${userNickName}', '${date}', '${postImage}');
+     ('${sort || 'notice'}', '${titleCopy}', '${contentCopy}', '${userAccount}', '${userNickName}', '${date}', '${postImage || ''}');
     `,function(error, result){
     if (error) {throw error}
     if (result.affectedRows > 0) {            
@@ -154,7 +154,7 @@ router.post('/noticedeleteimages', async (req, res) => {
     // 각 이미지를 삭제하는 비동기 함수
     const deleteImage = (image) => {
       return new Promise((resolve, reject) => {
-        const imagePath = `build/images/postimage/${image}`;
+        const imagePath = `build/images/postimage/notice/${image}`;
         if (fs.existsSync(imagePath)) {
           fs.unlink(imagePath, (err) => {
             if (err) reject(err);
@@ -202,7 +202,7 @@ router.post('/noticedeletepost', async (req, res) => {
     // 각 이미지를 삭제하는 비동기 함수
     const deleteImage = (image) => {
       return new Promise((resolve, reject) => {
-        const imagePath = `build/images/postimage/${image}`;
+        const imagePath = `build/images/postimage/notice/${image}`;
         if (fs.existsSync(imagePath)) {
           fs.unlink(imagePath, (err) => {
             if (err) reject(err);

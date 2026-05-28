@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import './Place.scss';
 
@@ -85,11 +86,21 @@ export default function PlaceList() {
     fetchPosts();
   }, [selectRegion]);
 
-  const placeData = useMemo(() => {
-    return list
-      .reduce((acc: PlaceGroup[], curr) => {
-        if (!isVisible(curr.isView)) return acc;
+  const visiblePlaces = useMemo(
+    () => list.filter((item) => isVisible(item.isView)),
+    [list]
+  );
 
+  /** 전체 탭: 지역 구분 없이 최신순(id 내림차순) */
+  const allPlacesNewest = useMemo(
+    () => [...visiblePlaces].sort((a, b) => b.id - a.id),
+    [visiblePlaces]
+  );
+
+  /** 지역 탭: 지역별 그룹 */
+  const placeDataByRegion = useMemo(() => {
+    return visiblePlaces
+      .reduce((acc: PlaceGroup[], curr) => {
         const existingGroup = acc.find((group) => group.region === curr.region);
         if (existingGroup) {
           existingGroup.placeList.push(curr);
@@ -99,11 +110,13 @@ export default function PlaceList() {
             placeList: [curr],
           });
         }
-
         return acc;
       }, [])
       .sort((a, b) => a.region.localeCompare(b.region));
-  }, [list]);
+  }, [visiblePlaces]);
+
+  const hasResults =
+    selectRegion === 'all' ? allPlacesNewest.length > 0 : placeDataByRegion.length > 0;
 
   const handleWordSearching = async () => {
     if (searchWord.trim().length < 2) {
@@ -161,6 +174,34 @@ export default function PlaceList() {
     }
 
     navigate('/retreat/place/request');
+  };
+
+  const renderPlaceCard = (subItem: PlaceItem) => {
+    const firstImage = getFirstImage(subItem.images);
+
+    return (
+      <div key={subItem.id} className="place__item" onClick={() => openPlaceDetail(subItem.id)}>
+        <div className="place__img--cover">
+          <div className="namecard">
+            <p>{subItem.location}</p>
+          </div>
+          <div className="imageBox">
+            {firstImage ? (
+              <img src={`${MainURL}/images/retreat/placeimage/${firstImage}`} alt={subItem.placeName} />
+            ) : (
+              <p style={{ fontSize: '14px' }}>등록된 사진이 없습니다.</p>
+            )}
+          </div>
+        </div>
+        <div className="place__coname">
+          <p>{subItem.placeName}</p>
+        </div>
+        <div className="place__name">
+          <p>종류: {subItem.sort}</p>
+          <p>규모: {subItem.size}</p>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -229,8 +270,17 @@ export default function PlaceList() {
                 <div className="list-loading">
                   <Loading />
                 </div>
-              ) : placeData.length > 0 && !isResdataFalse ? (
-                placeData.map((item) => (
+              ) : hasResults && !isResdataFalse ? (
+                selectRegion === 'all' ? (
+                  <div className="place__wrap--category" data-aos="fade-up">
+                    <div className="place__title__row">
+                      <div className="place__title">전체</div>
+                      <div className="place__link">총{allPlacesNewest.length}개</div>
+                    </div>
+                    <div className="place__wrap--item">{allPlacesNewest.map(renderPlaceCard)}</div>
+                  </div>
+                ) : (
+                  placeDataByRegion.map((item) => (
                   <div key={item.region} className="place__wrap--category" data-aos="fade-up">
                     <div className="place__title__row">
                       <div className="place__title">{item.region}</div>
@@ -238,41 +288,10 @@ export default function PlaceList() {
                         총{item.placeList.length}개
                       </div>
                     </div>
-                    <div className="place__wrap--item">
-                      {item.placeList.slice(0, selectRegion === 'all' ? 6 : undefined).map((subItem) => {
-                        const firstImage = getFirstImage(subItem.images);
-
-                        return (
-                          <div
-                            key={subItem.id}
-                            className="place__item"
-                            onClick={() => openPlaceDetail(subItem.id)}
-                          >
-                            <div className="place__img--cover">
-                              <div className="namecard">
-                                <p>{subItem.location}</p>
-                              </div>
-                              <div className="imageBox">
-                                {firstImage ? (
-                                  <img src={`${MainURL}/images/retreat/placeimage/${firstImage}`} alt={subItem.placeName} />
-                                ) : (
-                                  <p style={{ fontSize: '14px' }}>등록된 사진이 없습니다.</p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="place__coname">
-                              <p>{subItem.placeName}</p>
-                            </div>
-                            <div className="place__name">
-                              <p>종류: {subItem.sort}</p>
-                              <p>규모: {subItem.size}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <div className="place__wrap--item">{item.placeList.map(renderPlaceCard)}</div>
                   </div>
-                ))
+                  ))
+                )
               ) : (
                 <div className="place__wrap--category" data-aos="fade-up">
                   <div className="place__title">검색 결과가 없습니다.</div>
@@ -282,6 +301,7 @@ export default function PlaceList() {
           </div>
         </main>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 }

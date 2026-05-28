@@ -9,6 +9,7 @@ import { recoilLoginState } from '../../../RecoilStore';
 import { locationList, citydata } from '../../../DefaultData';
 import Pagination from '../../../components/Pagination';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 // 직무 검색 키워드: 찬양대, 방송, 직원
 const churchJobSorts = ['찬양대', '방송', '직원'];
 
@@ -602,6 +603,7 @@ export default function RecruitChurchList (props:any) {
 
       </div>
 
+      <ScrollToTopButton />
     </div>
   )
 }

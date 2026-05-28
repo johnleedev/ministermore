@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import MainURL from '../../MainURL';
+import { serviceFieldLabelKo } from './serviceAdminFieldLabels';
 import './ServiceDetailOverview.scss';
 
 /** 목록 표에서만 숨김 (상세 모달에는 유지) */
@@ -107,6 +108,18 @@ function isHomeinappFirebaseKeyStorageColumn(col: string): boolean {
   return n === 'firebasekeypath' || n === 'firebasekey';
 }
 
+function isLinkUrlColumn(col: string): boolean {
+  return normalizeColumnName(col) === 'linkurl';
+}
+
+function detailRowLinkUrlKey(row: Record<string, unknown> | null): string | null {
+  if (!row) return null;
+  for (const key of Object.keys(row)) {
+    if (isLinkUrlColumn(key)) return key;
+  }
+  return null;
+}
+
 function homeinappFirebaseKeyDraftFromRow(row: Record<string, unknown>): string {
   for (const key of Object.keys(row)) {
     if (!isHomeinappFirebaseKeyStorageColumn(key)) continue;
@@ -203,18 +216,24 @@ export default function ServiceDetailOverview() {
 
   /** 홈인앱: 상단에 id·status를 두고 그리드에서는 중복 표시하지 않음 */
   const detailModalKeysForGrid = useMemo(() => {
-    if (tab !== 'homeinapp') return detailModalKeys;
-    return detailModalKeys.filter((k) => {
+    const withoutLink = detailModalKeys.filter((k) => !isLinkUrlColumn(k));
+    if (tab !== 'homeinapp') return withoutLink;
+    return withoutLink.filter((k) => {
       const n = normalizeColumnName(k);
       return n !== 'status' && n !== 'id' && !isHomeinappFirebaseKeyStorageColumn(k);
     });
   }, [detailModalKeys, tab]);
 
+  const detailLinkUrlKey = useMemo(
+    () => (detailRow ? detailRowLinkUrlKey(detailRow) : null),
+    [detailRow],
+  );
+
   const copyDetailRowId = useCallback(async () => {
     if (!detailRow) return;
     const idVal = detailRow.id;
     if (idVal == null || idVal === '') {
-      alert('복사할 id가 없습니다.');
+      alert('복사할 ID가 없습니다.');
       return;
     }
     const text = String(idVal);
@@ -232,7 +251,35 @@ export default function ServiceDetailOverview() {
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      alert('id가 클립보드에 복사되었습니다.');
+      alert('ID가 클립보드에 복사되었습니다.');
+    } catch {
+      alert('클립보드 복사에 실패했습니다.');
+    }
+  }, [detailRow]);
+
+  const copyDetailRowLinkUrl = useCallback(async () => {
+    if (!detailRow) return;
+    const linkKey = detailRowLinkUrlKey(detailRow);
+    const text = linkKey ? String(detailRow[linkKey] ?? '').trim() : '';
+    if (!text) {
+      alert('복사할 링크가 없습니다.');
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      alert('링크가 클립보드에 복사되었습니다.');
     } catch {
       alert('클립보드 복사에 실패했습니다.');
     }
@@ -257,7 +304,7 @@ export default function ServiceDetailOverview() {
     if (!detailRow || tab !== 'homeinapp') return;
     const id = detailRow.id;
     if (id == null || id === '') {
-      alert('레코드 id가 없어 저장할 수 없습니다.');
+      alert('레코드 ID가 없어 저장할 수 없습니다.');
       return;
     }
     setHomeinappStatusSaving(true);
@@ -281,6 +328,7 @@ export default function ServiceDetailOverview() {
           prev.map((r) => (String(r.id) === String(id) ? { ...r, ...data } : r)),
         );
       }
+      alert('저장되었습니다');
     } catch (err) {
       console.error('homeinapp status save failed:', err);
       alert('상태 저장 요청 중 오류가 발생했습니다.');
@@ -293,7 +341,7 @@ export default function ServiceDetailOverview() {
     if (!detailRow || tab !== 'homeinapp') return;
     const id = detailRow.id;
     if (id == null || id === '') {
-      alert('레코드 id가 없어 저장할 수 없습니다.');
+      alert('레코드 ID가 없어 저장할 수 없습니다.');
       return;
     }
     setHomeinappFirebaseKeySaving(true);
@@ -334,7 +382,7 @@ export default function ServiceDetailOverview() {
   return (
     <div className="service-detail-overview">
       <p className="service-detail-overview__hint">
-        각 탭별로 연결된 DB 테이블의 최신 데이터를 조회합니다. (최대 400건)
+        탭별로 연결된 DB 테이블의 최신 데이터를 조회합니다. (최대 400건)
       </p>
 
       <div className="service-detail-overview__tabs" role="tablist" aria-label="서비스 구분">
@@ -408,7 +456,7 @@ export default function ServiceDetailOverview() {
                   <tr>
                     {listColumnsForTable.map((col) => (
                       <th key={col} scope="col" className={listTableHeadClass(tab, col)}>
-                        {col}
+                        {serviceFieldLabelKo(col)}
                       </th>
                     ))}
                   </tr>
@@ -479,21 +527,40 @@ export default function ServiceDetailOverview() {
                 ×
               </button>
             </div>
+            {detailLinkUrlKey ? (
+              <div className="service-detail-overview__modal-link-row">
+                <span className="service-detail-overview__field-label">
+                  {serviceFieldLabelKo(detailLinkUrlKey)}
+                </span>
+                <code className="service-detail-overview__link-url-value">
+                  {formatCell(detailRow[detailLinkUrlKey])}
+                </code>
+                <button
+                  type="button"
+                  className="service-detail-overview__link-url-copy-btn"
+                  onClick={() => void copyDetailRowLinkUrl()}
+                  disabled={!String(detailRow[detailLinkUrlKey] ?? '').trim()}
+                  aria-label="링크 URL 클립보드에 복사"
+                >
+                  복사
+                </button>
+              </div>
+            ) : null}
             {tab === 'homeinapp' && detailRow ? (
               <div className="service-detail-overview__modal-homeinapp-top">
                 <div className="service-detail-overview__modal-homeinapp-line">
-                  <span className="service-detail-overview__field-label">id</span>
+                  <span className="service-detail-overview__field-label">{serviceFieldLabelKo('id')}</span>
                   <code className="service-detail-overview__id-value">{formatCell(detailRow.id)}</code>
                   <button
                     type="button"
                     className="service-detail-overview__id-copy-btn"
                     onClick={() => void copyDetailRowId()}
                     disabled={detailRow.id == null || detailRow.id === ''}
-                    aria-label="id 클립보드에 복사"
+                    aria-label="ID 클립보드에 복사"
                   >
                     복사
                   </button>
-                  <span className="service-detail-overview__field-label">status</span>
+                  <span className="service-detail-overview__field-label">{serviceFieldLabelKo('status')}</span>
                   <select
                     id="service-detail-homeinapp-status"
                     className="service-detail-overview__status-select"
@@ -521,7 +588,9 @@ export default function ServiceDetailOverview() {
                   </button>
                 </div>
                 <div className="service-detail-overview__modal-homeinapp-line service-detail-overview__modal-homeinapp-line--firebase">
-                  <span className="service-detail-overview__field-label">firebaseKeyPath</span>
+                  <span className="service-detail-overview__field-label">
+                    {serviceFieldLabelKo('firebaseKeyPath')}
+                  </span>
                   <input
                     type="text"
                     className="service-detail-overview__firebase-key-input"
@@ -551,7 +620,7 @@ export default function ServiceDetailOverview() {
               <div className="service-detail-overview__card-grid service-detail-overview__card-grid--modal">
                 {detailModalKeysForGrid.map((col) => (
                   <div className="service-detail-overview__field" key={col}>
-                    <span className="service-detail-overview__field-label">{col}</span>
+                    <span className="service-detail-overview__field-label">{serviceFieldLabelKo(col)}</span>
                     <span className="service-detail-overview__field-value">
                       {formatCell(detailRow[col])}
                     </span>

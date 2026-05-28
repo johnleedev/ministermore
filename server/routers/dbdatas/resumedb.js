@@ -1,14 +1,7 @@
-// 클라우드 업로드용 (naver)
-var mysql = require('mysql');
-var resumedb = mysql.createPool({
-  host     : 'localhost',
-  port     : '3306',
-  user     : 'root',
-  password : 'gksksla6985!',
-  database : 'resume'
-});
+const { createDbPool } = require('./createDbPool');
 
+const resumedb = createDbPool('resume');
 
 module.exports = {
-    resumedb
+  resumedb,
 };

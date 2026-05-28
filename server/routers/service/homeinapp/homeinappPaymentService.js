@@ -1,5 +1,3 @@
-const { homeinappdb } = require('../../dbdatas/homeinappdb');
-
 /** 신규 결제·주문 INSERT 시 `churches.status` 기본값 */
 const CHURCH_STATUS_APPLIED = 'applied';
 
@@ -18,11 +16,14 @@ function createChurchId() {
   return `${yy}${mm}${dd}${suffix}`;
 }
 
-function findHomeinappOrderByPaymentId(paymentId) {
+/**
+ * @param {import('mysql').Pool} db — `homeinapp` DB 풀 (`../dbdatas/homeinappdb`)
+ */
+function findHomeinappOrderByPaymentId(db, paymentId) {
   const pid = paymentId != null ? String(paymentId).trim() : '';
   if (!pid) return Promise.resolve(null);
   return new Promise((resolve, reject) => {
-    homeinappdb.query(
+    db.query(
       'SELECT id FROM churches WHERE portonePaymentId = ? LIMIT 1',
       [pid],
       (err, rows) => {
@@ -33,7 +34,10 @@ function findHomeinappOrderByPaymentId(paymentId) {
   });
 }
 
-function insertHomeinappOrderWithPayment(payload) {
+/**
+ * @param {import('mysql').Pool} db — `homeinapp` DB 풀
+ */
+function insertHomeinappOrderWithPayment(db, payload) {
   const {
     userAccount,
     churchName,
@@ -52,7 +56,7 @@ function insertHomeinappOrderWithPayment(payload) {
 
   return new Promise((resolve, reject) => {
     const churchId = createChurchId();
-    homeinappdb.query(
+    db.query(
       `INSERT INTO churches (
         id, churchName, representatives, phoneNumber, userAccount,
         portonePaymentId, portonePaidAmount, portoneOrderName, portonePlan,

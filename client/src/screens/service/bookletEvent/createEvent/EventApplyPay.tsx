@@ -69,6 +69,7 @@ async function recordServiceApply(payload: {
   totalAmount: number;
   paymentStatus: string;
   paymentId?: string;
+  memo?: string;
 }) {
   try {
     await axios.post(`${MainURL}/serviceapply/record`, payload);
@@ -99,6 +100,7 @@ export default function EventApplyPay() {
   );
   const [tabHelpOpen, setTabHelpOpen] = useState<Partial<Record<EventVisibleTabId, boolean>>>({});
   const [orderTitle, setOrderTitle] = useState('');
+  const [memo, setMemo] = useState('');
   const [ordererName, setOrdererName] = useState('');
   const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
   const [phoneMid, setPhoneMid] = useState('');
@@ -179,6 +181,8 @@ export default function EventApplyPay() {
         return;
       }
 
+      const eventMainIdStr = String(data.eventMainId);
+      const memoWithRef = [memo.trim(), `eventMainId=${eventMainIdStr}`].filter(Boolean).join('\n\n');
       await recordServiceApply({
         serviceType: 'bookletEvent',
         orderName: EVENT_ORDER_NAME,
@@ -190,6 +194,7 @@ export default function EventApplyPay() {
         totalAmount: EVENT_TEMPLATE_PRICE_WITH_VAT,
         paymentStatus: 'paid',
         paymentId: data.paymentId,
+        memo: memoWithRef || undefined,
       });
 
       setPaymentSuccessState({
@@ -389,6 +394,23 @@ export default function EventApplyPay() {
                     전화번호를 올바르게 입력하셔야 결제가 됩니다
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <h2 className="event-template-select__form-title">요청사항</h2>
+            <div className="event-template-select__form-block">
+              <div className="event-template-select__form-row event-template-select__form-row--memo">
+                <label className="event-template-select__form-label" htmlFor="event-apply-memo">
+                  메모
+                </label>
+                <textarea
+                  id="event-apply-memo"
+                  className="event-template-select__textarea"
+                  rows={5}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  placeholder="원하시는 메뉴 구성이나 참고 사이트를 적어주세요."
+                />
               </div>
             </div>
 

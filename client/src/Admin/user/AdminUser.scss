@@ -1,0 +1,120 @@
+@import '../service/ServiceDetailOverview.scss';
+
+.admin-user-manage {
+  .admin-user-manage__hint {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  .admin-user-manage__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .admin-user-manage__toolbar-btn {
+    appearance: none;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease;
+
+    &:hover:not(:disabled) {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    &--primary {
+      border-color: #334968;
+      background: #334968;
+      color: #fff;
+
+      &:hover:not(:disabled) {
+        background: #2a3d57;
+        border-color: #2a3d57;
+      }
+    }
+  }
+
+  .admin-user-manage__search {
+    flex: 1;
+    min-width: 200px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+
+  .admin-user-manage__grade-select {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .admin-user-manage__save-btn {
+    appearance: none;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #334968;
+    border-radius: 8px;
+    background: #334968;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  .admin-user-manage__grade-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+
+    &--regular {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    &--general {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    &--other {
+      background: #f1f5f9;
+      color: #475569;
+    }
+  }
+}

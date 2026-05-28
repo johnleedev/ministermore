@@ -78,6 +78,14 @@ router.post('/loginsnstoken', async (req, res) => {
 // 카카오 & 네이버 로그인 로직
 router.post('/login', async (req, res) => {
   var { url, AccessToken, token } = req.body;
+  console.log(url, AccessToken, token);
+
+  if (process.env.DEBUG_SNS_LOGIN === '1') {
+    console.log('[login/sns]', new Date().toISOString(), {
+      urlField: url,
+      hasAccessToken: Boolean(AccessToken),
+    });
+  }
 
   try {
     const apiURL = url.includes('kakao') ?

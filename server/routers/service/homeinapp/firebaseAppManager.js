@@ -17,11 +17,21 @@ function resolveKeyPath(rawKeyPath) {
   if (path.isAbsolute(keyPath)) return keyPath;
 
   const normalized = keyPath.replace(/\\/g, '/');
-  // DB에는 파일명만 저장. 상대 전체 경로(레거시)는 cwd 기준 유지.
   if (!normalized.includes('/')) {
     return path.resolve(HOMEINAPP_FIREBASE_KEYS_DIR, normalized);
   }
   return path.resolve(process.cwd(), normalized);
+}
+
+function resolveHomeinappKeyFilePath(rawKeyPath) {
+  let resolvedPath = resolveKeyPath(rawKeyPath);
+  if (!fs.existsSync(resolvedPath)) {
+    const fallback = path.resolve(HOMEINAPP_FIREBASE_KEYS_DIR, path.basename(String(rawKeyPath || '').trim()));
+    if (fallback !== resolvedPath && fs.existsSync(fallback)) {
+      resolvedPath = fallback;
+    }
+  }
+  return resolvedPath;
 }
 
 function getFirebaseAdmin(churchId, keyPath) {
@@ -34,7 +44,7 @@ function getFirebaseAdmin(churchId, keyPath) {
     return firebaseApps[appName];
   }
 
-  const resolvedPath = resolveKeyPath(keyPath);
+  const resolvedPath = resolveHomeinappKeyFilePath(keyPath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(`Firebase key file not found: ${resolvedPath}`);
   }

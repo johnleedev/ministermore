@@ -14,6 +14,7 @@ import { BsFileEarmarkPerson } from "react-icons/bs";
 import { RiAdvertisementLine } from "react-icons/ri";
 import { FaItunesNote } from "react-icons/fa";
 import Header from '../../components/Header';
+import ScrollToTopButton from '../../components/ScrollToTopButton';
 import { IoIosArrowForward } from "react-icons/io";
 import { motion } from "framer-motion";
 
@@ -508,6 +509,7 @@ export default function Main(props:any) {
     
       
            
+			<ScrollToTopButton />
 			<Footer />
 
 		</div>

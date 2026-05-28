@@ -57,7 +57,9 @@ export default function HomeinappNotificationMain() {
     avgOpenRate7d: number;
     openRateDenominator: number;
   } | null>(null);
-  const [bodyModal, setBodyModal] = useState<{ title: string; content: string } | null>(null);
+  const [bodyModal, setBodyModal] = useState<{ id: number; title: string; content: string } | null>(null);
+  const [historyDeleteLoading, setHistoryDeleteLoading] = useState(false);
+  const [pushResultModal, setPushResultModal] = useState<{ title: string; body: string } | null>(null);
 
   const fetchNotificationSummary = async (churchId: string) => {
     const res = await axios.get(`${MainURL}/homeinappmain/notifications/summary/${encodeURIComponent(churchId)}`);
@@ -212,11 +214,17 @@ export default function HomeinappNotificationMain() {
     const pushMessage = String(message || '').trim();
 
     if (!churchId) {
-      window.alert('교회 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      setPushResultModal({
+        title: '알림',
+        body: '교회 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.',
+      });
       return;
     }
     if (!pushTitle || !pushMessage) {
-      window.alert('제목과 메시지를 모두 입력해주세요.');
+      setPushResultModal({
+        title: '알림',
+        body: '제목과 메시지를 모두 입력해주세요.',
+      });
       return;
     }
 
@@ -232,20 +240,60 @@ export default function HomeinappNotificationMain() {
       const result = response?.data?.result;
       const successCount = Number(result?.successCount || 0);
       const total = Number(result?.total || 0);
+      const failureCount = Number(result?.failureCount || 0);
       const cleanedCount = Number(result?.cleanedCount || 0);
-      window.alert(
-        cleanedCount > 0
-          ? `푸시 발송 완료: ${successCount} / ${total}건\n무효 토큰 정리: ${cleanedCount}건`
-          : `푸시 발송 완료: ${successCount} / ${total}건`
-      );
+
+      let bodyText: string;
+      if (total === 0) {
+        bodyText = '발송 대상 토큰이 없어 FCM 발송은 하지 않았습니다.';
+      } else if (successCount === 0) {
+        bodyText = `기기로 전달된 푸시가 없습니다. (${successCount} / ${total})`;
+      } else if (failureCount > 0) {
+        bodyText = `푸시 발송: 성공 ${successCount}건 / 전체 ${total}건 (실패 ${failureCount}건)`;
+        if (cleanedCount > 0) bodyText += `\n무효 토큰 정리: ${cleanedCount}건`;
+      } else {
+        bodyText =
+          cleanedCount > 0
+            ? `푸시 발송 완료: ${successCount} / ${total}건\n무효 토큰 정리: ${cleanedCount}건`
+            : `푸시 발송 완료: ${successCount} / ${total}건`;
+      }
+      setPushResultModal({ title: '푸시 발송 결과', body: bodyText });
       await fetchNotificationSummary(churchId);
     } catch (error: any) {
       console.error('homeinapp push send fail:', error);
       const messageText =
         error?.response?.data?.message || error?.response?.data?.error || '푸시 발송 중 오류가 발생했습니다.';
-      window.alert(messageText);
+      setPushResultModal({
+        title: '푸시 발송 오류',
+        body: messageText,
+      });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const onDeleteHistoryItem = async () => {
+    if (!bodyModal) return;
+    const cid = String(churchInfo?.id || '').trim();
+    if (!cid) {
+      window.alert('교회 정보가 없습니다.');
+      return;
+    }
+    if (!window.confirm('이 발송 이력을 삭제할까요? 삭제하면 되돌릴 수 없습니다. 삭제시 사용자의 기기의 알림목록에서도 삭제됩니다.')) return;
+
+    setHistoryDeleteLoading(true);
+    try {
+      await axios.delete(
+        `${MainURL}/homeinappmain/notifications/${encodeURIComponent(cid)}/${bodyModal.id}`,
+      );
+      setBodyModal(null);
+      await fetchNotificationSummary(cid);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message || err?.response?.data?.error || '삭제에 실패했습니다.';
+      window.alert(msg);
+    } finally {
+      setHistoryDeleteLoading(false);
     }
   };
 
@@ -432,7 +480,11 @@ export default function HomeinappNotificationMain() {
                                         type="button"
                                         className="hipush-btn-ghost"
                                         onClick={() =>
-                                          setBodyModal({ title: r.title, content: String(r.content || '') })
+                                          setBodyModal({
+                                            id: Number(r.id),
+                                            title: r.title,
+                                            content: String(r.content || ''),
+                                          })
                                         }
                                       >
                                         본문보기
@@ -459,6 +511,70 @@ export default function HomeinappNotificationMain() {
         </div>
       </div>
 
+      {pushResultModal ? (
+        <div
+          className="hipush-modal-backdrop"
+          role="presentation"
+          onClick={() => setPushResultModal(null)}
+        >
+          <div
+            className="hipush-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hipush-push-result-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="hipush-modal__head">
+              <h2 id="hipush-push-result-title" className="hipush-modal__title">
+                {pushResultModal.title}
+              </h2>
+              <button
+                type="button"
+                className="hipush-modal__close"
+                onClick={() => setPushResultModal(null)}
+                aria-label="닫기"
+              >
+                ×
+              </button>
+            </div>
+            <div className="hipush-modal__body">
+              <p className="hipush-modal__text hipush-modal__text--selectable">{pushResultModal.body}</p>
+            </div>
+            <div className="hipush-modal__foot hipush-modal__foot--split">
+              <button
+                type="button"
+                className="hipush-btn-ghost"
+                onClick={async () => {
+                  try {
+                    const t = pushResultModal.body;
+                    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(t);
+                    else {
+                      const ta = document.createElement('textarea');
+                      ta.value = t;
+                      ta.setAttribute('readonly', '');
+                      ta.style.position = 'fixed';
+                      ta.style.left = '-9999px';
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(ta);
+                    }
+                    setPushResultModal(null);
+                  } catch {
+                    /* 복사 실패 시 모달 유지 */
+                  }
+                }}
+              >
+                전체 복사
+              </button>
+              <button type="button" className="hipush-btn-primary" onClick={() => setPushResultModal(null)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {bodyModal ? (
         <div
           className="hipush-modal-backdrop"
@@ -483,7 +599,15 @@ export default function HomeinappNotificationMain() {
             <div className="hipush-modal__body">
               <p className="hipush-modal__text">{bodyModal.content || '내용이 없습니다.'}</p>
             </div>
-            <div className="hipush-modal__foot">
+            <div className="hipush-modal__foot hipush-modal__foot--with-delete">
+              <button
+                type="button"
+                className="hipush-btn-danger"
+                disabled={historyDeleteLoading}
+                onClick={() => void onDeleteHistoryItem()}
+              >
+                {historyDeleteLoading ? '삭제 중…' : '이 항목 삭제'}
+              </button>
               <button type="button" className="hipush-btn-primary" onClick={() => setBodyModal(null)}>
                 닫기
               </button>

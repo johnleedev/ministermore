@@ -162,15 +162,31 @@ async function churchExists(churchId) {
 }
 
 async function upsertUserTokenByDevice({ churchId, fcmToken, deviceType, deviceId }) {
+  const did = String(deviceId || '').trim();
+  if (!did) {
+    throw new Error('deviceId is required for upsertUserTokenByDevice');
+  }
+
+  const updateResult = await queryAsync(
+    `UPDATE users
+     SET fcmToken = ?, deviceType = ?, isActive = TRUE
+     WHERE church_id = ? AND deviceId = ?`,
+    [fcmToken, deviceType, churchId, did],
+  );
+  if (updateResult && Number(updateResult.affectedRows) > 0) {
+    return;
+  }
+
   await queryAsync(
     `INSERT INTO users (church_id, deviceId, fcmToken, deviceType, isActive)
      VALUES (?, ?, ?, ?, TRUE)
      ON DUPLICATE KEY UPDATE
        church_id = VALUES(church_id),
+       deviceId = VALUES(deviceId),
        fcmToken = VALUES(fcmToken),
        deviceType = VALUES(deviceType),
        isActive = TRUE`,
-    [churchId, deviceId, fcmToken, deviceType]
+    [churchId, did, fcmToken, deviceType],
   );
 }
 
@@ -187,9 +203,10 @@ async function upsertUserTokenByToken({ churchId, fcmToken, deviceType }) {
 }
 
 async function registerUserPushToken({ churchId, fcmToken, deviceType, deviceId }) {
-  if (deviceId) {
+  const did = String(deviceId ?? '').trim();
+  if (did) {
     try {
-      await upsertUserTokenByDevice({ churchId, fcmToken, deviceType, deviceId });
+      await upsertUserTokenByDevice({ churchId, fcmToken, deviceType, deviceId: did });
       return { mode: 'deviceId' };
     } catch (error) {
       // Backward compatibility for schemas without deviceId column
@@ -454,6 +471,40 @@ router.post('/notifications/:churchId/:id/read', async (req, res) => {
   }
 });
 
+router.delete('/notifications/:churchId/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const churchId = String(req.params.churchId || '').trim();
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ success: false, message: '유효한 notifications.id가 필요합니다.' });
+  }
+  if (!churchId) {
+    return res.status(400).json({ success: false, message: '유효한 church_id가 필요합니다.' });
+  }
+
+  try {
+    const result = await queryAsync(
+      'DELETE FROM notifications WHERE id = ? AND church_id = ? LIMIT 1',
+      [id, churchId],
+    );
+    const affected = Number(result?.affectedRows ?? 0);
+    if (!affected) {
+      return res.status(404).json({
+        success: false,
+        message: '해당 알림을 찾을 수 없습니다.',
+      });
+    }
+    return res.json({ success: true, message: '삭제되었습니다.' });
+  } catch (error) {
+    console.error('delete notification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '알림 삭제 중 오류가 발생했습니다.',
+      error: error?.message || 'unknown error',
+    });
+  }
+});
+
 router.post('/updateUserActive', async (req, res) => {
   const churchId = String(req.body?.churchId || '').trim();
   const fcmToken = String(req.body?.fcmToken || '').trim();
@@ -490,6 +541,9 @@ router.post('/updateUserActive', async (req, res) => {
   }
 });
 
+// 홈입앱 관련 코드 ------------------------------------------------------------------------------------
+
+// 토큰 등록 확인
 router.post('/registerUserToken', async (req, res) => {
   const churchId = String(req.body?.churchId || '').trim();
   const fcmToken = String(req.body?.fcmToken || '').trim();
@@ -580,39 +634,34 @@ router.post('/refreshUserToken', async (req, res) => {
 
 async function getChurchFirebaseKeyName(churchId) {
   try {
-    const rows = await queryAsync('SELECT id, firebaseKey FROM churches WHERE id = ? LIMIT 1', [churchId]);
+    const rows = await queryAsync(
+      'SELECT id, firebaseKeyPath FROM churches WHERE id = ? LIMIT 1',
+      [churchId],
+    );
     if (!rows.length) return { exists: false, keyName: '' };
+    const raw = String(rows[0].firebaseKeyPath ?? '').trim();
     return {
       exists: true,
-      keyName: path.basename(String(rows[0].firebaseKey || '').trim()),
+      keyName: raw ? path.basename(raw) : '',
     };
   } catch (error) {
-    // Backward compatibility for old schema (firebaseKeyPath)
-    if (error && error.code === 'ER_BAD_FIELD_ERROR') {
-      const rows = await queryAsync('SELECT id, firebaseKeyPath FROM churches WHERE id = ? LIMIT 1', [churchId]);
-      if (!rows.length) return { exists: false, keyName: '' };
-      const oldPath = String(rows[0].firebaseKeyPath || '').trim();
-      return {
-        exists: true,
-        keyName: path.basename(oldPath),
-      };
-    }
-    throw error;
+    if (!(error && error.code === 'ER_BAD_FIELD_ERROR')) throw error;
+    const rows = await queryAsync('SELECT id, firebaseKey FROM churches WHERE id = ? LIMIT 1', [churchId]);
+    if (!rows.length) return { exists: false, keyName: '' };
+    const raw = String(rows[0].firebaseKey || '').trim();
+    return { exists: true, keyName: raw ? path.basename(raw) : '' };
   }
 }
 
 async function updateChurchFirebaseKeyName(churchId, keyName) {
   const fileOnly = path.basename(String(keyName || '').trim());
   try {
+    await queryAsync('UPDATE churches SET firebaseKeyPath = ? WHERE id = ?', [fileOnly, churchId]);
+    return 'firebaseKeyPath';
+  } catch (error) {
+    if (!(error && error.code === 'ER_BAD_FIELD_ERROR')) throw error;
     await queryAsync('UPDATE churches SET firebaseKey = ? WHERE id = ?', [fileOnly, churchId]);
     return 'firebaseKey';
-  } catch (error) {
-    // Backward compatibility for old schema (firebaseKeyPath)
-    if (error && error.code === 'ER_BAD_FIELD_ERROR') {
-      await queryAsync('UPDATE churches SET firebaseKeyPath = ? WHERE id = ?', [fileOnly, churchId]);
-      return 'firebaseKeyPath';
-    }
-    throw error;
   }
 }
 
@@ -655,7 +704,7 @@ router.post('/uploadFirebaseKey', firebaseKeyUpload.single('firebaseKey'), async
     return res.json({
       success: true,
       message: `Firebase 키 파일이 업로드되었고 churches.${updatedColumn} 값이 갱신되었습니다.`,
-      data: { churchId, firebaseKey: keyFileName },
+      data: { churchId, firebaseKeyPath: keyFileName },
     });
   } catch (error) {
     fs.unlink(uploaded.path, () => {});
@@ -692,7 +741,7 @@ router.post('/sendPushByChurch', async (req, res) => {
     if (!keyName) {
       return res.status(404).json({
         success: false,
-        message: '해당 교회의 firebaseKey가 없습니다. 키 파일을 먼저 업로드해주세요.',
+        message: '해당 교회의 firebaseKeyPath(키 파일명)가 없습니다. 키 파일을 먼저 등록해주세요.',
       });
     }
 
@@ -700,9 +749,13 @@ router.post('/sendPushByChurch', async (req, res) => {
       'SELECT fcmToken FROM users WHERE church_id = ? AND isActive = TRUE AND fcmToken IS NOT NULL',
       [churchId]
     );
-    const tokens = users
-      .map((row) => String(row.fcmToken || '').trim())
-      .filter(Boolean);
+    const tokens = [
+      ...new Set(
+        users
+          .map((row) => String(row.fcmToken || '').trim())
+          .filter(Boolean)
+      ),
+    ];
 
     if (!tokens.length) {
       return res.json({
@@ -712,42 +765,85 @@ router.post('/sendPushByChurch', async (req, res) => {
       });
     }
 
+    await clearFirebaseAdmin(churchId);
     const app = getFirebaseAdmin(churchId, keyName);
-    const message = {
-      notification: { title, body: content },
-      tokens,
+    const messaging = app.messaging();
+
+    /** FCM multicast 상한(초과 시 sendEachForMulticast / sendMulticast 가 예외) */
+    const FCM_MULTICAST_MAX = 500;
+    let successCount = 0;
+    let failureCount = 0;
+    const invalidTokens = [];
+
+    const sendOneBatch = async (batchTokens) => {
+      const payload = {
+        notification: { title, body: content },
+        data: {
+          source: 'homeinapp',
+          title: String(title),
+          body: String(content),
+        },
+        android: {
+          priority: 'high',
+        },
+        apns: {
+          headers: {
+            'apns-priority': '10',
+          },
+          payload: {
+            aps: {
+              sound: 'default',
+            },
+          },
+        },
+        tokens: batchTokens,
+      };
+      if (typeof messaging.sendEachForMulticast === 'function') {
+        return messaging.sendEachForMulticast(payload);
+      }
+      return messaging.sendMulticast(payload);
     };
 
-    const response = await app.messaging().sendEachForMulticast(message);
-    const failed = response.responses || [];
-    const invalidTokens = [];
-    for (let i = 0; i < failed.length; i += 1) {
-      const item = failed[i];
-      if (item.success) continue;
-      const code = String(item.error?.code || '');
-      if (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token')) {
-        invalidTokens.push(tokens[i]);
+    for (let offset = 0; offset < tokens.length; offset += FCM_MULTICAST_MAX) {
+      const batch = tokens.slice(offset, offset + FCM_MULTICAST_MAX);
+      const response = await sendOneBatch(batch);
+      successCount += Number(response.successCount || 0);
+      failureCount += Number(response.failureCount || 0);
+      const failed = response.responses || [];
+      for (let i = 0; i < failed.length; i += 1) {
+        const item = failed[i];
+        if (item.success) continue;
+        const code = String(item.error?.code || '');
+        const lower = code.toLowerCase();
+        if (
+          lower.includes('registration-token-not-registered') ||
+          lower.includes('invalid-registration-token')
+        ) {
+          invalidTokens.push(batch[i]);
+        }
       }
     }
+
     const cleanedCount = await deactivateInvalidTokens(invalidTokens);
     await insertNotificationHistory({ churchId, adminLoginId, title, content });
 
     return res.json({
       success: true,
-      message: `${churchId} 프로젝트를 통해 ${response.successCount}건 발송 완료`,
+      message: `${churchId} 프로젝트를 통해 ${successCount}건 발송 완료`,
       result: {
-        successCount: response.successCount,
-        failureCount: response.failureCount,
+        successCount,
+        failureCount,
         total: tokens.length,
         cleanedCount,
       },
     });
   } catch (error) {
     console.error('sendPushByChurch error:', error);
+    const detail = error?.message || 'unknown error';
     return res.status(500).json({
       success: false,
       message: '푸시 발송 중 오류가 발생했습니다.',
-      error: error?.message || 'unknown error',
+      error: detail,
     });
   }
 });
@@ -792,7 +888,7 @@ router.post('/admin/church-status', async (req, res) => {
   }
 });
 
-/** 관리자: churches.firebaseKey / firebaseKeyPath — homeinappkeys 기준 JSON 파일명만 저장 */
+/** 관리자: churches.firebaseKeyPath(우선) 또는 레거시 firebaseKey — homeinappkeys 기준 JSON 파일명만 저장 */
 router.post('/admin/church-firebase-key', async (req, res) => {
   try {
     const id = req.body?.id ?? req.body?.churchId;

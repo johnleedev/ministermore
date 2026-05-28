@@ -1,16 +1,6 @@
-var mysql = require('mysql');
+const { createDbPool } = require('./createDbPool');
 
-const poolOptions = {
-  host: 'localhost',
-  port: '3306',
-  user: 'root',
-  password: 'gksksla6985!',
-};
-
-var homeinappdb = mysql.createPool({
-  ...poolOptions,
-  database: 'homeinapp',
-});
+const homeinappdb = createDbPool('homeinapp');
 
 module.exports = {
   homeinappdb,

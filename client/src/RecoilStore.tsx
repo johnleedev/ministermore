@@ -38,7 +38,7 @@ export const recoilUserData = atom({
 export const recoilKaKaoLoginData = atom({
   key: "kakaoLoginData",
   default: {
-    APIKEY : 'cc1f48e0203e8c71fad8928db95cb4ef',
+    APIKEY : '0ceb02a4c2ba5343e679e135b09a649a',
     REDIRECT_URI_Auth : 'https://ministermore.co.kr/login/loginsns'
     // REDIRECT_URI_Auth : 'http://localhost:3000/login/loginsns'
   },

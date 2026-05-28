@@ -18,6 +18,7 @@ import imageCompression from 'browser-image-compression';
 import { religiousbodySubSort } from '../../../recruit/recruit_minister/RecruitMinisterPostData';
 import TemplateServers from '../../../../exceptbooklets/bookletNotice/BookletNoticeTemplates/TemplateServers';
 import TemplateSermon from '../../../../exceptbooklets/bookletNotice/BookletNoticeTemplates/TemplateSermon';
+import TemplateGallery from '../../../../exceptbooklets/bookletNotice/BookletNoticeTemplates/TemplateGallery';
 import MainHeroCarousel from '../../../../exceptbooklets/component/MainHeroCarousel';
 import {
   MAIN_IMAGE_SLOT_COUNT,
@@ -2226,28 +2227,11 @@ export default function NoticeCreate() {
                       />
                     </div>
                   ) : activeTab === 'gallery' ? (
-                    <div className="notice-create__preview-gallery notice-create__preview-gallery--editor">
-                      {galleryPreviewItems.length === 0 ? (
-                        <div className="notice-create__preview-gallery-editor-empty" aria-hidden />
-                      ) : (
-                        <div className="notice-create__preview-gallery-editor-grid">
-                          {galleryPreviewItems.map(({ item, index }, thumbIdx) => (
-                            <button
-                              key={index}
-                              type="button"
-                              className={
-                                thumbIdx === galleryPreviewIndex
-                                  ? 'notice-create__preview-gallery-editor-tile notice-create__preview-gallery-editor-tile--selected'
-                                  : 'notice-create__preview-gallery-editor-tile'
-                              }
-                              onClick={() => setGalleryPreviewIndex(thumbIdx)}
-                            >
-                              <img src={galleryItemPreviewSrc(item)} alt="" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <TemplateGallery
+                      galleryPreviewItems={galleryPreviewItems}
+                      galleryPreviewIndex={galleryPreviewIndex}
+                      onSelectPreviewIndex={setGalleryPreviewIndex}
+                    />
                   ) : (
                     <div className="notice-create__preview-placeholder">
                       {TAB_LIST.find((t) => t.id === activeTab)?.label} 탭 미리보기

@@ -138,9 +138,15 @@ export default function RecruitListManagePre ( props: any) {
 
 
 
-  // 상단에 상수로 고정
-  const SOURCE_WIDTH = 80;
   const TITLE_WIDTH = 200;
+
+  const ROW_ACTION_LEGEND = [
+    { key: 'detail', label: '상세', color: '#333' },
+    { key: 'choir', label: '교회', color: '#4a90e2' },
+    { key: 'institute', label: '기관', color: '#2ecc71' },
+    { key: 'delete', label: '삭제', color: '#e74c3c' },
+    { key: 'link', label: '링크', color: '#6c5ce7', disabledColor: '#ccc' },
+  ] as const;
 
   const [refresh, setRefresh] = useState<boolean>(false); 
   const [listSort, setListSort] = useState('크롤링');
@@ -808,7 +814,7 @@ export default function RecruitListManagePre ( props: any) {
 
   // input 이동용 key 배열 (source, title, id, ... 제외, 실제 렌더 순서와 맞춰야 함)
   const editableKeys = [
-    'writer', 'date', 'link', 'church', 'religiousbody', 'location', 'locationDetail', 'address', 'mainpastor', 'homepage', 'churchLogo',
+    'writer', 'date', 'church', 'religiousbody', 'location', 'locationDetail', 'address', 'mainpastor', 'homepage', 'churchLogo',
     'school', 'career', 'sort', 'part', 'partDetail', 'recruitNum', 'pay', 'applydoc', 'applyhow', 'applytime', 'etcNotice', 'inquiry'
   ];
 
@@ -1081,11 +1087,11 @@ export default function RecruitListManagePre ( props: any) {
   const redKeys = ['church', 'religiousbody', 'location', 'locationDetail', 'address', 'sort', 'pay'];
 
   return (
-    <div className="admin-register" style={{width: '100vw', maxWidth: '1800px'}}>
-      <div className="inner" style={{width: '100vw', maxWidth: '1800px'}}>
+    <div className="admin-register recruit-list-manage-pre">
+      <div className="inner">
         <h2 style={{marginBottom: '20px', fontSize: '24px', fontWeight: 'bold'}}>일괄 관리 (입력)</h2>
         {/* 일괄저장 버튼 추가 */}
-        <div style={{marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px'}}>
+        <div className="recruit-list-toolbar">
           <button
             onClick={handleBulkSave}
             disabled={bulkLoading}
@@ -1153,13 +1159,20 @@ export default function RecruitListManagePre ( props: any) {
           >
             주소일괄클릭
           </button>
+          <div className="recruit-table__action-legend" aria-label="행 작업 버튼 안내">
+            {ROW_ACTION_LEGEND.map((item) => (
+              <span key={item.key} className="recruit-table__action-legend-item">
+                <span className="recruit-table__action-swatch" style={{ background: item.color }} />
+                <span>{item.label}</span>
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="table-container" style={{overflowX: 'auto', maxWidth: '100vw'}}>
-          <table className="recruit-table" style={{borderCollapse: 'collapse', width: '100vw'}}>
+        <div className="table-container">
+          <table className="recruit-table">
           {preEditList.length > 0 && (
             <thead>
               <tr>
-                {/* 가장 왼쪽에 source, title 고정 */}
                 <th style={{
                   textAlign: 'center',
                   padding: '0 10px',
@@ -1168,30 +1181,10 @@ export default function RecruitListManagePre ( props: any) {
                   zIndex: 4,
                   background: '#fff',
                   borderRight: '2px solid #eee',
-                  minWidth: `${SOURCE_WIDTH}px`,
-                  maxWidth: `${SOURCE_WIDTH}px`,
-                }}>소스</th>
-                <th style={{
-                  textAlign: 'center',
-                  padding: '0 10px',
-                  position: 'sticky',
-                  left: `${SOURCE_WIDTH}px`,
-                  zIndex: 3,
-                  background: '#fff',
-                  borderRight: '2px solid #eee',
                   minWidth: `${TITLE_WIDTH}px`,
                   maxWidth: `${TITLE_WIDTH}px`,
                 }}>제목</th>
-                <th style={{
-                  textAlign: 'center',
-                  padding: '0 10px',
-                  position: 'sticky',
-                  left: `${SOURCE_WIDTH + TITLE_WIDTH}px`,
-                  zIndex: 2,
-                  background: '#fff',
-                  borderRight: '2px solid #eee',
-                }}>링크</th>
-                {/* 나머지 헤더 (source, title, link 제외) */}
+                {/* 나머지 헤더 (title 제외) */}
                 {['writer','date','church','religiousbody','location','locationDetail','address','mainpastor','homepage','churchLogo','school','career','sort','part','partDetail','recruitNum','pay','applydoc','applyhow','applytime','etcNotice','inquiry'].map((key) => (
                   <th
                     key={key}
@@ -1227,10 +1220,7 @@ export default function RecruitListManagePre ( props: any) {
                     }
                   </th>
                 ))}
-                <th style={{textAlign: 'center', padding: '0 10px'}}>상세내용</th>
-                <th style={{textAlign: 'center', padding: '0 10px'}}></th>
-                <th style={{textAlign: 'center', padding: '0 10px'}}></th>
-                <th style={{textAlign: 'center', padding: '0 10px'}}></th>
+                <th className="recruit-table__actions-head">작업</th>
               </tr>
             </thead>
             )}
@@ -1238,41 +1228,14 @@ export default function RecruitListManagePre ( props: any) {
               {preEditList.length > 0 ? (
                 preEditList.map((item, idx) => (
                   <tr key={idx} style={{margin: '0', gap: '0'}}>
-                    {/* 가장 왼쪽에 source, title, link 고정 */}
-                    <td style={{
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 3,
-                      background: '#fff',
-                      borderRight: '2px solid #eee',
-                      fontWeight: 600,
-                      color: '#4a90e2',
-                      textAlign: 'center',
-                      padding: '0 10px',
-                    }}>{item.source}</td>
-                    <td style={{
-                      position: 'sticky',
-                      left: `100px`,
-                      height: '70px',
-                      zIndex: 2,
-                      background: '#fff',
-                      borderRight: '2px solid #eee',
-                      fontWeight: 600,
-                      color: '#222',
-                      textAlign: 'center',
-                      padding: '0 10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      width: '200px',
-                      flexDirection: 'column',
-                      gap: '4px',
-                    }}>
+                    <td className="recruit-table__title-cell">
+                      <div className="recruit-table__title-inner">
                       <div style={{width: '100%', textAlign: 'center'}}>{item.title}</div>
                       {extractKeywords(item.title || '').length > 0 && (
                         <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center'}}>
-                          {extractKeywords(item.title || '').map((keyword, idx) => (
+                          {extractKeywords(item.title || '').map((keyword, keywordIdx) => (
                             <span
-                              key={idx}
+                              key={keywordIdx}
                               style={{
                                 background: '#4a90e2',
                                 color: '#fff',
@@ -1288,40 +1251,9 @@ export default function RecruitListManagePre ( props: any) {
                           ))}
                         </div>
                       )}
+                      </div>
                     </td>
-                    <td style={{
-                      position: 'sticky',
-                      width: '100px',
-                      zIndex: 1,
-                      background: '#fff',
-                      borderRight: '2px solid #eee',
-                      fontWeight: 600,
-                      color: '#222',
-                      textAlign: 'center',
-                      padding: '0 10px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      left: `300px`,
-                    }}>
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: '#1a0dab',
-                          textDecoration: 'underline',
-                          display: 'inline-block',
-                          width: '100px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {item.link}
-                      </a>
-                    </td>
-                    {/* 나머지 셀 렌더링 (source, title, link 제외) */}
+                    {/* 나머지 셀 렌더링 (title, link 등 제외) */}
                     {Object.keys(item).map((key) => {
                       if (key === 'source' || key === 'title' || key === 'link' || key === 'customInput' || key === 'workday' || key === 'workTimeSunDay' || key === 'workTimeWeek' || key === 'dawnPray' || key === 'welfare' || key === 'insurance' || key === 'severance') return null;
 
@@ -1332,32 +1264,7 @@ export default function RecruitListManagePre ( props: any) {
                               idx === 0 &&
                               <p>{key as keyof ListProps}</p>
                             } */}
-                            {key === 'link' ? (
-                              item[key as keyof ListProps] ? (
-                                <a
-                                  href={item[key as keyof ListProps] as string}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    display: 'inline-block',
-                                    width: '100px',
-                                    fontSize: 14,
-                                    textAlign: 'center',
-                                    padding: '2px 4px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '3px',
-                                    color: '#1a0dab',
-                                    textDecoration: 'underline',
-                                    background: '#f9f9f9',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                    textOverflow: 'ellipsis'
-                                  }}
-                                >
-                                  {item[key as keyof ListProps]}
-                                </a>
-                              ) : null
-                            ) : key === 'sort' ? (
+                            {key === 'sort' ? (
                               <select
                                 style={{
                                   width: inputWidths[key] || '100px',
@@ -1921,89 +1828,57 @@ export default function RecruitListManagePre ( props: any) {
                       )
                     })}
                     {/* 상세내용 버튼 및 모달 */}
-                    <td
-                      style={{
-                        textAlign: 'center',
-                        padding: '0 10px',
-                        position: 'sticky',
-                        right: 0,
-                        zIndex: 2,
-                        background: '#fff',
-                        boxShadow: '-2px 0 6px -2px rgba(0,0,0,0.04)',
-                        display: 'flex',
-                        gap: '8px',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <button
-                        style={{
-                          width: '50px',
-                          height: '30px',
-                          padding: '0',
-                          borderRadius: '5px',
-                          background: '#333',
-                          color: '#fff',
-                          border: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          fontWeight: 500
-                        }}
-                        onClick={() => { setModalContent(item.customInput || ''); setModalOpen(true); }}
-                      >
-                        상세
-                      </button>
-                      <button
-                        style={{
-                          width: '50px',
-                          height: '30px',
-                          padding: '0',
-                          borderRadius: '5px',
-                          background: '#4a90e2',
-                          color: '#fff',
-                          border: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          fontWeight: 500
-                        }}
-                        onClick={() => handleSaveToChoir(item)}
-                      >
-                        교회
-                      </button>
-                      <button
-                        style={{
-                          width: '50px',
-                          height: '30px',
-                          padding: '0',
-                          borderRadius: '5px',
-                          background: '#2ecc71',
-                          color: '#fff',
-                          border: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          fontWeight: 500
-                        }}
-                        onClick={() => handleSaveToInstitute(item)}
-                      >
-                        기관
-                      </button>
-                      <button
-                        style={{
-                          width: '50px',
-                          height: '30px',
-                          padding: '0',
-                          borderRadius: '5px',
-                          background: '#e74c3c',
-                          color: '#fff',
-                          border: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          fontWeight: 500
-                        }}
-                        onClick={() => handleDeleteRow(item.id)}
-                      >
-                        삭제
-                      </button>
+                    <td className="recruit-table__actions">
+                      <div className="recruit-table__actions-inner">
+                        <button
+                          type="button"
+                          className="recruit-table__action-btn"
+                          style={{ background: '#333' }}
+                          aria-label="상세"
+                          title="상세"
+                          onClick={() => {
+                            setModalContent(item.customInput || '');
+                            setModalOpen(true);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="recruit-table__action-btn"
+                          style={{ background: '#4a90e2' }}
+                          aria-label="교회"
+                          title="교회"
+                          onClick={() => handleSaveToChoir(item)}
+                        />
+                        <button
+                          type="button"
+                          className="recruit-table__action-btn"
+                          style={{ background: '#2ecc71' }}
+                          aria-label="기관"
+                          title="기관"
+                          onClick={() => handleSaveToInstitute(item)}
+                        />
+                        <button
+                          type="button"
+                          className="recruit-table__action-btn"
+                          style={{ background: '#e74c3c' }}
+                          aria-label="삭제"
+                          title="삭제"
+                          onClick={() => handleDeleteRow(item.id)}
+                        />
+                        <button
+                          type="button"
+                          className="recruit-table__action-btn"
+                          style={{ background: item.link ? '#6c5ce7' : '#ccc' }}
+                          aria-label="링크"
+                          title="링크"
+                          disabled={!item.link}
+                          onClick={() => {
+                            if (item.link) {
+                              window.open(item.link, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                        />
+                      </div>
                     </td>
                     {clickedRow === idx && (
                       <div
@@ -2042,7 +1917,7 @@ export default function RecruitListManagePre ( props: any) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={32} style={{textAlign: 'center'}}>등록된 글이 없습니다.</td>
+                  <td colSpan={30} style={{textAlign: 'center'}}>등록된 글이 없습니다.</td>
                 </tr>
               )}
             </tbody>

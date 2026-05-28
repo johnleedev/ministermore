@@ -117,6 +117,41 @@ $white: #ffffff;
   min-height: 44px;
 }
 
+.event-template-select__form-row--memo {
+  align-items: flex-start;
+  min-height: 0;
+
+  .event-template-select__form-label {
+    line-height: 1.35;
+    padding-top: 10px;
+  }
+}
+
+.event-template-select__textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 120px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: $blue-600;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
 .event-template-select__field-with-hint {
   flex: 1;
   display: flex;

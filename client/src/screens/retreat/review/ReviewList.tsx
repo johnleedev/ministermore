@@ -7,6 +7,7 @@ import { FaPen } from 'react-icons/fa6';
 import MainURL from '../../../MainURL';
 import DateFormmating from '../../../components/DateFormmating';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState } from '../../../RecoilStore';
 import './Review.scss';
 import '../../ForListPage.scss';
@@ -209,6 +210,7 @@ export default function ReviewList() {
           </div>
         </main>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 }

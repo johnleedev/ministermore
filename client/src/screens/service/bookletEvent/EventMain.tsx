@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import { recoilLoginState } from "../../../RecoilStore";
 import "./EventMain.scss";
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import "../../service/bookletEvent/createEvent/EventCreate.scss";
 import mockupOrdination from "../../../images/bookletevent/mockups/4weLbRv9.jpeg";
 import mockupNewcomer from "../../../images/bookletevent/mockups/LHik6kjh.jpeg";
@@ -739,6 +740,7 @@ export default function EventMain() {
           </div>
         </div>
       </section>
+      <ScrollToTopButton />
     </div>
   );
 }

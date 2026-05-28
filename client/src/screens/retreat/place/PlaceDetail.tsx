@@ -1,12 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import type { Swiper as SwiperType } from 'swiper';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Scrollbar, A11y } from 'swiper/modules';
+import { A11y } from 'swiper/modules';
 import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import 'swiper/css/scrollbar';
 import MainURL from '../../../MainURL';
 import './Place.scss';
 
@@ -40,6 +38,7 @@ export default function PlaceDetail() {
   const id = url.searchParams.get('id');
   const navigate = useNavigate();
   const mapElement = useRef<HTMLDivElement | null>(null);
+  const thumbnailSwiperRef = useRef<SwiperType | null>(null);
   const { naver } = window;
 
   const [detailData, setDetailData] = useState<PlaceDetailData>();
@@ -107,6 +106,26 @@ export default function PlaceDetail() {
     fetchPosts();
   }, []);
 
+  const currentImageIndex = images.length > 0 ? Math.max(0, images.indexOf(selectImage)) : 0;
+
+  const changeMainImage = (direction: 'prev' | 'next') => {
+    if (images.length === 0) return;
+    const nextIndex =
+      direction === 'prev'
+        ? (currentImageIndex - 1 + images.length) % images.length
+        : (currentImageIndex + 1) % images.length;
+    setSelectImage(images[nextIndex]);
+    thumbnailSwiperRef.current?.slideTo(nextIndex);
+  };
+
+  const selectThumbnail = (fileName: string) => {
+    setSelectImage(fileName);
+    const index = images.indexOf(fileName);
+    if (index >= 0) {
+      thumbnailSwiperRef.current?.slideTo(index);
+    }
+  };
+
   const handleCopy = () => {
     navigator.clipboard
       .writeText(url.href)
@@ -137,23 +156,47 @@ export default function PlaceDetail() {
           <div className="subpage__main__content">
             <div className="main__content">
               <div className="imagearea desktop">
-                <div className="mainimage">
+                <div className="imagearea__hero">
+                  {images.length > 1 && (
+                    <button
+                      type="button"
+                      className="imagearea__nav imagearea__nav--prev"
+                      aria-label="이전 사진"
+                      onClick={() => changeMainImage('prev')}
+                    />
+                  )}
+                  <div className="mainimage">
                   {selectImage ? (
                     <img src={`${MainURL}/images/retreat/placeimage/${selectImage}`} alt={detailData?.placeName || '수련회장소'} />
                   ) : (
                     <p>등록된 사진이 없습니다.</p>
                   )}
+                  </div>
+                  {images.length > 1 && (
+                    <button
+                      type="button"
+                      className="imagearea__nav imagearea__nav--next"
+                      aria-label="다음 사진"
+                      onClick={() => changeMainImage('next')}
+                    />
+                  )}
                 </div>
 
                 {images.length > 0 && (
-                  <Swiper modules={[Navigation, Pagination, Scrollbar, A11y]} spaceBetween={0} slidesPerView={8} navigation className="swiperimagerow">
+                  <Swiper
+                    modules={[A11y]}
+                    spaceBetween={8}
+                    slidesPerView={8}
+                    className="swiperimagerow"
+                    onSwiper={(swiper: SwiperType) => {
+                      thumbnailSwiperRef.current = swiper;
+                    }}
+                  >
                     {images.map((item) => (
                       <SwiperSlide
-                        className="slide"
+                        className={`slide${selectImage === item ? ' is-active' : ''}`}
                         key={item}
-                        onClick={() => {
-                          setSelectImage(item);
-                        }}
+                        onClick={() => selectThumbnail(item)}
                       >
                         <img src={`${MainURL}/images/retreat/placeimage/${item}`} alt={detailData?.placeName || '수련회장소'} />
                       </SwiperSlide>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import { recoilLoginState } from "../../../RecoilStore";
 import "./NoticeMain.scss";
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import "../../service/bookletNotice/createNotice/NoticeCreate.scss";
 import sampleMockupImage from "../../../images/booklet/samplemockup.jpeg";
 import kakaosampleImage from "../../../images/booklet/kakaosample.png";
@@ -297,6 +298,7 @@ export default function NoticeMain() {
       </section>
 
       
+      <ScrollToTopButton />
     </div>
   );
 }

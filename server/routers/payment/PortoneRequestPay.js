@@ -13,6 +13,7 @@ const cors = require('cors');
 router.use(cors());
 
 const { bookleteventdb } = require('../dbdatas/bookletdb');
+const { homeinappdb } = require('../dbdatas/homeinappdb');
 const { normalizeVisibleTabsArray } = require('../service/bookletEvent/bookletEventMerge');
 const {
   findHomeinappOrderByPaymentId,
@@ -360,6 +361,7 @@ router.post('/homeinapp/complete-browser', async (req, res) => {
     txId,
     totalAmount: totalAmountBody,
     churchName,
+    lilnkUrl,
     ordererName,
     ordererPhone,
     ordererEmail,
@@ -378,6 +380,10 @@ router.post('/homeinapp/complete-browser', async (req, res) => {
   const ordererEmailNorm = ordererEmail != null ? String(ordererEmail).trim() : '';
   const memoNorm = memo != null ? String(memo) : '';
   const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
+  const lilnkUrlNorm =
+    lilnkUrl != null && String(lilnkUrl).trim() !== ''
+      ? String(lilnkUrl).trim().slice(0, 2048)
+      : null;
 
   if (!churchNameNorm || !ordererNameNorm || !ordererPhoneNorm) {
     return res.status(400).json({ ok: false, message: '교회명, 주문자명, 전화번호는 필수입니다.' });
@@ -445,7 +451,7 @@ router.post('/homeinapp/complete-browser', async (req, res) => {
       }
     }
 
-    const existingId = await findHomeinappOrderByPaymentId(pid);
+    const existingId = await findHomeinappOrderByPaymentId(homeinappdb, pid);
     if (existingId != null) {
       return res.status(409).json({
         ok: false,
@@ -458,9 +464,10 @@ router.post('/homeinapp/complete-browser', async (req, res) => {
     const paidAtResolved = pickPaidAt(payParsed);
     const orderNameResolved = getOrderNameFromRecord(record) || HOMEINAPP_ORDER_NAME;
 
-    const homeinappMainId = await insertHomeinappOrderWithPayment({
+    const homeinappMainId = await insertHomeinappOrderWithPayment(homeinappdb, {
       userAccount: userAccountNorm,
       churchName: churchNameNorm,
+      lilnkUrl: lilnkUrlNorm,
       ordererName: ordererNameNorm,
       ordererPhone: ordererPhoneNorm,
       ordererEmail: ordererEmailNorm,

@@ -30,6 +30,8 @@ type HomeinappBillingCustomData = {
   serviceType: string;
   plan: string;
   churchName: string;
+  /** `churches.lilnkUrl` — DB 컬럼명과 동일 */
+  lilnkUrl?: string;
 };
 
 type HomeinappBillingKeySuccessResponse = {
@@ -249,6 +251,7 @@ export default function HomeinappPayment() {
   const [phoneLast, setPhoneLast] = useState('');
   const phoneMidRef = useRef<HTMLInputElement | null>(null);
   const phoneLastRef = useRef<HTMLInputElement | null>(null);
+  const [lilnkUrl, setLilnkUrl] = useState('');
   const [memo, setMemo] = useState('');
   const [cardNumberParts, setCardNumberParts] = useState<CardPanParts>(EMPTY_CARD_PAN);
   const panInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -295,11 +298,13 @@ export default function HomeinappPayment() {
         openErrorAlert('교회명과 담당자명을 입력해 주세요.', '입력 정보 확인');
         return;
       }
+      const lilnkUrlTrim = lilnkUrl.trim().slice(0, 2048);
       const customData: HomeinappBillingCustomData = {
         userAccount,
         serviceType: 'homeinapp',
         plan: 'monthly',
         churchName: churchTrim,
+        ...(lilnkUrlTrim ? { lilnkUrl: lilnkUrlTrim } : {}),
       };
 
       const cardnum = cardNumberParts.join('');
@@ -593,6 +598,25 @@ export default function HomeinappPayment() {
                     전화번호를 올바르게 입력하셔야 결제가 됩니다
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <h2 className="homeinapp-payment__form-title">참조url</h2>
+            <div className="homeinapp-payment__form-block homeinapp-payment__form-block--reference-url">
+              <div className="homeinapp-payment__form-row">
+                <label className="homeinapp-payment__form-label" htmlFor="homeinapp-lilnk-url">
+                  URL
+                </label>
+                <input
+                  id="homeinapp-lilnk-url"
+                  type="url"
+                  inputMode="url"
+                  className="homeinapp-payment__input"
+                  placeholder="참고할 페이지 주소 (https://…)"
+                  value={lilnkUrl}
+                  onChange={(e) => setLilnkUrl(e.target.value)}
+                  autoComplete="url"
+                />
               </div>
             </div>
 

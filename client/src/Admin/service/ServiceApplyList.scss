@@ -1,134 +1,58 @@
-.service-apply-admin {
-  width: 100%;
-  margin: 0;
-  background: #fff;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import './ServiceDetailOverview.scss';
+
+/**
+ * 세로 스크롤 중복 제거
+ * - 목록: 테이블 래퍼는 가로만 스크롤, 세로는 페이지(창)에 맡김
+ * - 모달: 본문 max-height 스크롤 제거 → 배경(backdrop) 한 곳만 세로 스크롤
+ */
+.service-detail-overview--apply-list .service-detail-overview__scroll {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
-.service-apply-admin__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+.service-detail-overview--apply-list .service-detail-overview__modal-body {
+  max-height: none;
+  overflow-y: visible;
 }
 
-.service-apply-admin__head h2 {
-  margin: 0;
-  font-size: 20px;
+/** 목록 전용: 필터는 탭과 함께 두 줄일 때 간격 */
+.service-detail-overview__toolbar--apply {
+  margin-bottom: 12px;
 }
 
-.service-apply-admin__controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.service-apply-admin__controls select,
-.service-apply-admin__controls button {
-  height: 36px;
+.service-detail-overview__toolbar-select {
+  min-height: 40px;
+  padding: 0 14px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  padding: 0 10px;
   background: #fff;
-}
-
-.service-apply-admin__controls button {
-  cursor: pointer;
-}
-
-.service-apply-admin__table-wrap {
-  overflow: auto;
-}
-
-.service-apply-admin__table {
-  width: 100%;
-  min-width: 1200px;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.service-apply-admin__table th,
-.service-apply-admin__table td {
-  border-bottom: 1px solid #e5e7eb;
-  padding: 10px 8px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.service-apply-admin__table th {
-  background: #f8fafc;
-  position: sticky;
-  top: 0;
-}
-
-.service-apply-admin__empty {
-  text-align: center !important;
-  color: #64748b;
-  padding: 20px 8px !important;
-}
-
-.service-apply-admin__total-amount {
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.service-apply-admin__amount-pair {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.35;
-  gap: 2px;
-}
-
-.service-apply-admin__amount-pair-amount {
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.service-apply-admin__amount-pair-vat {
-  font-size: 12px;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.service-apply-admin__created-at {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.35;
-  gap: 2px;
-}
-
-.service-apply-admin__created-at-date {
+  font-size: 16px;
   font-weight: 600;
   color: #0f172a;
-  white-space: nowrap;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 }
 
-.service-apply-admin__created-at-time {
-  font-size: 12px;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.service-apply-admin__row-delete {
+.service-detail-overview__delete-in-table {
   appearance: none;
-  height: 28px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   border: 1px solid #fecaca;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #fff5f5;
   color: #b91c1c;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 
   &:hover:not(:disabled) {
     background: #fee2e2;
@@ -141,32 +65,73 @@
   }
 }
 
-.service-apply-admin__status {
-  display: inline-block;
-  padding: 2px 8px;
+.service-detail-overview__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.service-detail-overview__apply-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: #f1f5f9;
-  color: #334155;
-  border: 1px solid #e2e8f0;
   white-space: nowrap;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
 
-  &--registered {
-    background: #ecfeff;
-    color: #0e7490;
-    border-color: #a5f3fc;
-  }
+.service-detail-overview__apply-pill--registered {
+  color: #0e7490;
+  background: #ecfeff;
+  border-color: #a5f3fc;
+}
 
-  &--modified {
-    background: #fef9c3;
-    color: #854d0e;
-    border-color: #fde68a;
-  }
+.service-detail-overview__apply-pill--modified {
+  color: #854d0e;
+  background: #fef9c3;
+  border-color: #fde68a;
+}
 
-  &--deleted {
-    background: #fee2e2;
-    color: #991b1b;
-    border-color: #fecaca;
-  }
+.service-detail-overview__apply-pill--deleted {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.service-detail-overview__created-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.service-detail-overview__created-stack-date {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.service-detail-overview__created-stack-time {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/** 상세 모달: memo 전체 폭 */
+.service-detail-overview__field--memo-block {
+  grid-column: 1 / -1;
+}
+
+.service-detail-overview__field-value--multiline {
+  white-space: pre-wrap;
+  font-family: inherit;
 }

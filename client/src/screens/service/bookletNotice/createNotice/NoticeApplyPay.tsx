@@ -20,6 +20,10 @@ const PLAN_MONTHLY_PRICE = 10000;
 const PLAN_MONTHLY_VAT_RATE = 0.1;
 /** 부가세 포함 실결제 금액 (원, 정수) */
 const PLAN_MONTHLY_PRICE_WITH_VAT = Math.round(PLAN_MONTHLY_PRICE * (1 + PLAN_MONTHLY_VAT_RATE));
+const PLAN_MONTHLY_VAT_AMOUNT = Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE);
+
+/** `serviceApply.orderName` 기본값 — NoticeCreate 완료 시와 동일한 표기 */
+const NOTICE_SERVICEAPPLY_ORDER_NAME = '모바일 교회 전단지';
 
 /** `portonePayment.ts` 의 일반결제 storeId 와 동일 — 운영은 REACT_APP_PORTONE_STORE_ID 로 덮어쓰기 */
 const PORTONE_STORE_ID_DEFAULT = 'store-ca1b10da-c69c-4054-90ca-9410bf6ecbed';
@@ -112,6 +116,7 @@ async function recordServiceApply(payload: {
   serviceType: string;
   orderName: string;
   userAccount: string;
+  churchName?: string | null;
   ordererName: string;
   ordererPhone: string;
   amount: number;
@@ -120,6 +125,7 @@ async function recordServiceApply(payload: {
   paymentStatus: string;
   paymentId?: string;
   billingKey?: string;
+  memo?: string;
 }) {
   try {
     await axios.post(`${MainURL}/serviceapply/record`, payload);
@@ -242,6 +248,7 @@ export default function NoticeApplyPay() {
   const userAccount = userData?.userAccount || '';
 
   const [orderTitle, setOrderTitle] = useState('');
+  const [memo, setMemo] = useState('');
   const [ordererName, setOrdererName] = useState('');
   /** 전화번호: 셀렉트·가운데·끝을 각각 state로 둠(입력 중 재파싱으로 자리수가 깨지지 않도록) */
   const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
@@ -289,8 +296,9 @@ export default function NoticeApplyPay() {
         phoneNumber: phoneDigits,
         email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
       };
-      const customData = {
+      const customData: NoticeBillingCustomData = {
         userAccount,
+        serviceType: 'bookletNotice',
         plan: 'monthly',
       };
 
@@ -333,6 +341,23 @@ export default function NoticeApplyPay() {
         openErrorAlert('전단지 저장에 실패했습니다. 고객센터로 문의해 주세요.', '저장 오류');
         return;
       }
+
+      const churchMainIdStr = String(payload.churchMainId);
+      const memoWithRef = [memo.trim(), `churchMainId=${churchMainIdStr}`].filter(Boolean).join('\n\n');
+      await recordServiceApply({
+        serviceType: 'bookletNotice',
+        orderName: orderTitle.trim() || NOTICE_SERVICEAPPLY_ORDER_NAME,
+        userAccount: userAccount.trim(),
+        ordererName: ordererName.trim(),
+        ordererPhone: phoneDigits,
+        amount: PLAN_MONTHLY_PRICE,
+        vat: PLAN_MONTHLY_VAT_AMOUNT,
+        totalAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
+        paymentStatus: 'paid',
+        paymentId: payload.paymentId,
+        billingKey: payload.billingKey,
+        memo: memoWithRef || undefined,
+      });
 
       setPaymentModalOpen(false);
       setPaymentSuccessState({
@@ -568,6 +593,23 @@ export default function NoticeApplyPay() {
                     전화번호를 올바르게 입력하셔야 결제가 됩니다
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <h2 className="notice-template-select__form-title">요청사항</h2>
+            <div className="notice-template-select__form-block">
+              <div className="notice-template-select__form-row notice-template-select__form-row--memo">
+                <label className="notice-template-select__form-label" htmlFor="notice-apply-memo">
+                  메모
+                </label>
+                <textarea
+                  id="notice-apply-memo"
+                  className="notice-template-select__textarea"
+                  rows={5}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  placeholder="원하시는 메뉴 구성이나 참고 사이트를 적어주세요."
+                />
               </div>
             </div>
 

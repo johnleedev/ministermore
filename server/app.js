@@ -55,10 +55,14 @@ app.use('/retreatcasting', RetreatCastingRouter);
 
 
 var NoticeBoardRouter = require('./routers/board/NoticeBoard');
-app.use('/noticeboard', NoticeBoardRouter);
-
 var UsedBoardRouter = require('./routers/board/UsedBoard');
+var FreeBoardRouter = require('./routers/board/FreeBoard');
+var EventsBoardRouter = require('./routers/board/EventsBoard');
+app.use('/noticeboard', NoticeBoardRouter);
 app.use('/usedboard', UsedBoardRouter);
+app.use('/freeboard', FreeBoardRouter);
+app.use('/eventsboard', EventsBoardRouter);
+
 
 const ChurchesRouter = require('./routers/rollbook/Churches');
 const DepartmentsRouter = require('./routers/rollbook/Departments');
@@ -79,6 +83,7 @@ const EventCreateBookletRouter = require('./routers/service/bookletEvent/EventCr
 const BulletinMainRouter = require('./routers/service/bulletin/BulletinMain');
 const BulletinCreateRouter = require('./routers/service/bulletin/BulletinCreate');
 const HomeinappMainRouter = require('./routers/service/homeinapp/HomeinappMain');
+const BibleRouter = require('./routers/service/homeinapp/Bible');
 const ServiceApplyRouter = require('./routers/service/serviceapply');
 const PortoneBillingRouter = require('./routers/payment/PortoneBilling');
 const PortoneRequestPayRouter = require('./routers/payment/PortoneRequestPay');
@@ -89,15 +94,26 @@ app.use('/bookleteventcreate', EventCreateBookletRouter);
 app.use('/bulletinmain', BulletinMainRouter);
 app.use('/bulletincreate', BulletinCreateRouter);
 app.use('/homeinappmain', HomeinappMainRouter);
+app.use('/homeinappbible', BibleRouter);
 app.use('/serviceapply', ServiceApplyRouter);
 
 app.use('/paymentbilling', PortoneBillingRouter);
 app.use('/paymentrequestpay', PortoneRequestPayRouter);
 
 
-
-const AdminRouter = require('./routers/Admin');
-app.use('/admin', AdminRouter);
+const AdminStatisticsRouter = require('./routers/admin/AdminStatistics');
+const AdminUserRouter = require('./routers/admin/AdminUser');
+const AdminTodosRouter = require('./routers/admin/AdminTodos');
+const {
+  employeeRouter: AdminAttendanceEmployeeRouter,
+  adminRouter: AdminAttendanceAdminRouter,
+} = require('./routers/admin/AdminAttendance');
+app.use('/admin', AdminStatisticsRouter);
+app.use('/adminuser', AdminUserRouter);
+app.use('/admintodos', AdminTodosRouter);
+app.use('/api/admin', AdminTodosRouter);
+app.use('/api/admin', AdminAttendanceAdminRouter);
+app.use('/api/attendance', AdminAttendanceEmployeeRouter);
 
 app.use(express.static('build'));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

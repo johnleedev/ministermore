@@ -51,17 +51,18 @@ const Header: React.FC = () => {
         // {title:"모바일주보", subUrl:"/service/bulletin"},     
       ]
     },
-    { title: "커뮤니티", url:"/community", 
+    {
+      title: "게시판", url: "/board",
       links: [
-        {title:"공지사항", subUrl:"/community"},   
-        // {title:"중고장터", subUrl:"/community/usedmarket"},
-        // {title:"익명게시판", subUrl:"/community"},
-        
-      ]
+        { title: "자유게시판", subUrl: "/board" },
+        { title: "집회세미나", subUrl: "/board/events" },
+        { title: "중고장터", subUrl: "/board/used" },
+      ],
     },
     { title: "사역자모아", url:"/company", 
       links: [
         {title:"소개", subUrl:"/company"}, 
+        {title:"공지사항", subUrl:"/company/notice"},
         {title:"자주 묻는 질문", subUrl:"/company/faq"},
         {title:"광고및제휴", subUrl:"/company/advertise"},
       ]

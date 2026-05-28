@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import { recoilLoginState } from "../../../RecoilStore";
 import "./ChurchappMain.scss";
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import church01 from "../../../images/appmockup/church_01_eunhye.jpeg";
 import church02 from "../../../images/appmockup/church_02_sarang.jpeg";
 import church03 from "../../../images/appmockup/church_03_yaksudong.jpeg";
@@ -291,6 +292,7 @@ export default function ChurchappMain() {
           </div>
         </section>
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

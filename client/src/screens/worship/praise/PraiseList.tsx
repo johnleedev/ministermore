@@ -4,6 +4,7 @@ import '../../ForListPage.scss';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import MainURL from '../../../MainURL';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { themesList } from '../../../DefaultData';
 import { MdOutlineKeyboardDoubleArrowDown } from "react-icons/md";
 
@@ -448,6 +449,7 @@ export default function PraiseMain (props:any) {
 
       </div>
 
+      <ScrollToTopButton />
     </div>
   )
 }

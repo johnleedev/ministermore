@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
+import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import '../place/Place.scss';
 import './Casting.scss';
@@ -16,10 +17,7 @@ interface CastingItem {
   images: string | string[] | null;
 }
 
-interface CastingGroup {
-  sort: string;
-  castingList: CastingItem[];
-}
+const CASTING_SORT_TABS = ['설교자', '찬양사역자', '특강강사', '기타'] as const;
 
 const isVisible = (value: CastingItem['isView']) => value === true || value === 1 || value === '1' || value === 'true';
 
@@ -35,22 +33,12 @@ const getImages = (images: CastingItem['images']) => {
   }
 };
 
-const sortCastingGroups = (a: CastingGroup, b: CastingGroup) => {
-  const firstKeyword = '설교자';
-  const secondKeyword = '찬양사역자';
-
-  if (a.sort === firstKeyword) return -1;
-  if (b.sort === firstKeyword) return 1;
-  if (a.sort === secondKeyword) return -1;
-  if (b.sort === secondKeyword) return 1;
-  return a.sort.localeCompare(b.sort);
-};
-
 export default function CastingList() {
   const navigate = useNavigate();
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
   const [list, setList] = useState<CastingItem[]>([]);
+  const [selectSort, setSelectSort] = useState<string>('all');
   const [searchWord, setSearchWord] = useState('');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,25 +68,21 @@ export default function CastingList() {
     fetchPosts();
   }, []);
 
-  const castingData = useMemo(() => {
-    return list
-      .reduce((acc: CastingGroup[], curr) => {
-        if (!isVisible(curr.isView)) return acc;
+  const visibleCastings = useMemo(
+    () => list.filter((item) => isVisible(item.isView)),
+    [list]
+  );
 
-        const existingGroup = acc.find((group) => group.sort === curr.sort);
-        if (existingGroup) {
-          existingGroup.castingList.push(curr);
-        } else {
-          acc.push({
-            sort: curr.sort,
-            castingList: [curr],
-          });
-        }
+  const displayCastings = useMemo(() => {
+    const base =
+      selectSort === 'all'
+        ? visibleCastings
+        : visibleCastings.filter((item) => item.sort === selectSort);
+    return [...base].sort((a, b) => b.id - a.id);
+  }, [visibleCastings, selectSort]);
 
-        return acc;
-      }, [])
-      .sort(sortCastingGroups);
-  }, [list]);
+  const listTitle = selectSort === 'all' ? '전체' : selectSort;
+  const hasResults = displayCastings.length > 0;
 
   const handleWordSearching = async () => {
     if (searchWord.trim().length < 2) {
@@ -152,6 +136,34 @@ export default function CastingList() {
     navigate('/retreat/casting/request');
   };
 
+  const renderCastingCard = (subItem: CastingItem) => {
+    const firstImage = getImages(subItem.images)[0];
+
+    return (
+      <div
+        key={subItem.id}
+        className="place__item casting__item"
+        onClick={() => openCastingDetail(subItem.id)}
+      >
+        <div className="place__img--cover">
+          <div className="imageBox">
+            {firstImage ? (
+              <img src={`${MainURL}/images/retreat/castingimage/${firstImage}`} alt={subItem.name} />
+            ) : (
+              <p style={{ fontSize: '14px' }}>등록된 사진이 없습니다.</p>
+            )}
+          </div>
+        </div>
+        <div className="place__coname">
+          <p>{subItem.name}</p>
+        </div>
+        <div className="place__name">
+          <p>구분: {subItem.sort}</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="retreat casting">
       <div className="inner">
@@ -163,6 +175,26 @@ export default function CastingList() {
                 강사등록요청
               </button>
             </div>
+          </div>
+
+          <div className="place__region-tabs">
+            <button
+              type="button"
+              className={selectSort === 'all' ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
+              onClick={() => setSelectSort('all')}
+            >
+              전체
+            </button>
+            {CASTING_SORT_TABS.map((sort) => (
+              <button
+                type="button"
+                key={sort}
+                className={selectSort === sort ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
+                onClick={() => setSelectSort(sort)}
+              >
+                {sort}
+              </button>
+            ))}
           </div>
 
           <div className="subpage__main__search">
@@ -198,40 +230,14 @@ export default function CastingList() {
                 <div className="list-loading">
                   <Loading />
                 </div>
-              ) : castingData.length > 0 && !isResdataFalse ? (
-                castingData.map((item) => (
-                  <div key={item.sort} className="place__wrap--category" data-aos="fade-up">
-                    <div className="place__title__row">
-                      <div className="place__title">{item.sort}</div>
-                      <div className="place__link">총{item.castingList.length}명</div>
-                    </div>
-                    <div className="place__wrap--item">
-                      {item.castingList.map((subItem) => {
-                        const firstImage = getImages(subItem.images)[0];
-
-                        return (
-                          <div key={subItem.id} className="place__item casting__item" onClick={() => openCastingDetail(subItem.id)}>
-                            <div className="place__img--cover">
-                              <div className="imageBox">
-                                {firstImage ? (
-                                  <img src={`${MainURL}/images/retreat/castingimage/${firstImage}`} alt={subItem.name} />
-                                ) : (
-                                  <p style={{ fontSize: '14px' }}>등록된 사진이 없습니다.</p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="place__coname">
-                              <p>{subItem.name}</p>
-                            </div>
-                            <div className="place__name">
-                              <p>구분: {subItem.sort}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+              ) : hasResults && !isResdataFalse ? (
+                <div className="place__wrap--category" data-aos="fade-up">
+                  <div className="place__title__row">
+                    <div className="place__title">{listTitle}</div>
+                    <div className="place__link">총{displayCastings.length}명</div>
                   </div>
-                ))
+                  <div className="place__wrap--item">{displayCastings.map(renderCastingCard)}</div>
+                </div>
               ) : (
                 <div className="place__wrap--category" data-aos="fade-up">
                   <div className="place__title">검색 결과가 없습니다.</div>
@@ -241,6 +247,7 @@ export default function CastingList() {
           </div>
         </main>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 }

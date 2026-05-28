@@ -8,7 +8,12 @@ const bodyParser = require('body-parser');
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({extended:true}));
 const multer  = require('multer')
+const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
+
+/** express.static(server/build) 과 동일 기준 — cwd 무관 */
+const PLACE_IMAGE_DIR = path.join(__dirname, '../../build/images/retreat/placeimage');
 
 // 네이버 지오코딩 API 설정
 const NAVER_CLIENT_ID = 'lk228kw5ry';
@@ -178,7 +183,12 @@ router.post('/getdataplacepart', async (req, res) => {
 // 장소 사진 파일 저장 미들웨어
 const storageplace = multer.diskStorage({
   destination(req, file, done) {
-    done(null, 'build/images/retreat/placeimage');
+    try {
+      fs.mkdirSync(PLACE_IMAGE_DIR, { recursive: true });
+      done(null, PLACE_IMAGE_DIR);
+    } catch (err) {
+      done(err);
+    }
   },
   filename(req, file, done) {
     done(null, file.originalname);
@@ -187,40 +197,217 @@ const storageplace = multer.diskStorage({
 
 const upload_default_place = multer({ storage: storageplace });
 
-// 이미지 업로드 미들웨어를 조건부로 실행
-const conditionalUpload_place = (req, res, next) => {
-  if (req.query.postImage) {
-    upload_default_place.array('img')(req, res, next);
-  } else {
-    next();
+const pickField = (body, query, key) => {
+  if (body && body[key] != null && body[key] !== '') return body[key];
+  if (query && query[key] != null && query[key] !== '') return query[key];
+  return '';
+};
+
+const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+
+const isRecentDuplicateRow = (rowDate) => {
+  if (!rowDate) return false;
+  const t = new Date(rowDate).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < DUPLICATE_WINDOW_MS;
+};
+
+// 장소 생성하기 (multipart: 필드는 body, 파일은 img)
+router.post('/postsplace', (req, res) => {
+  upload_default_place.array('img')(req, res, (uploadErr) => {
+    if (uploadErr) {
+      console.error('postsplace image upload error:', uploadErr);
+      res.status(500).send(false);
+      return;
+    }
+
+    const placeName = pickField(req.body, req.query, 'placeName');
+    const sort = pickField(req.body, req.query, 'sort');
+    const region = pickField(req.body, req.query, 'region');
+    const location = pickField(req.body, req.query, 'location');
+    const size = pickField(req.body, req.query, 'size');
+    const address = pickField(req.body, req.query, 'address');
+    const phone = pickField(req.body, req.query, 'phone');
+    const date = pickField(req.body, req.query, 'date');
+    const homepage = pickField(req.body, req.query, 'homepage');
+    const postImage = pickField(req.body, req.query, 'postImage');
+    const userContact = pickField(req.body, req.query, 'userContact');
+
+    retreatdb.query(
+      `SELECT id, date FROM dataplace WHERE placeName = ? AND address = ? AND userContact = ? ORDER BY id DESC LIMIT 1`,
+      [placeName, address, userContact],
+      (dupErr, dupRows) => {
+        if (dupErr) {
+          console.error(dupErr);
+          res.send(false);
+          return;
+        }
+        if (dupRows && dupRows.length > 0 && isRecentDuplicateRow(dupRows[0].date)) {
+          res.send(true);
+          return;
+        }
+
+        retreatdb.query(
+          `INSERT INTO dataplace (isView, placeName, sort, region, location, size, address, phone, images, homepage, date, userContact) VALUES
+           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          ['false', placeName, sort, region, location, size, address, phone, postImage, homepage, date, userContact],
+          function (error, result) {
+            if (error) {
+              console.error(error);
+              res.send(false);
+              return;
+            }
+            res.send(result.affectedRows > 0);
+          }
+        );
+      }
+    );
+  });
+});
+
+const parseImageList = (images) => {
+  if (!images) return [];
+  if (Array.isArray(images)) return images;
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [String(images)];
   }
 };
 
-// 장소 생성하기
-router.post('/postsplace', conditionalUpload_place, (req, res) => {
-  const { placeName, sort, region, location, size, address, phone, date, homepage, postImage, userContact } = req.query;
+const unlinkImageFiles = (dir, fileNames) => {
+  fileNames.forEach((fileName) => {
+    const filePath = path.join(dir, fileName);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (unlinkErr) {
+        console.error(unlinkErr);
+      }
+    }
+  });
+};
 
-  retreatdb.query(`
-    INSERT IGNORE INTO dataplace (isView, placeName, sort, region, location, size, address, phone, images, homepage, date, userContact) VALUES
-     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    `,
-    ['false', placeName, sort, region, location, size, address, phone, postImage, homepage, date, userContact],
-    function(error, result){
-      if (error) {
-        console.error(error);
+// 관리자 — 장소 전체 목록
+router.post('/admingetall', (req, res) => {
+  retreatdb.query('SELECT * FROM dataplace ORDER BY id DESC', (error, result) => {
+    if (error) {
+      console.error(error);
+      res.status(500).json({ ok: false, data: [] });
+      return;
+    }
+    res.json({ ok: true, data: result || [] });
+  });
+});
+
+// 관리자 — 노출 여부 변경
+router.post('/adminupdateisview', (req, res) => {
+  const { id, isView } = req.body;
+  if (!id) {
+    res.status(400).send(false);
+    return;
+  }
+  const viewValue = isView === true || isView === 'true' || isView === 1 || isView === '1' ? 'true' : 'false';
+  retreatdb.query('UPDATE dataplace SET isView = ? WHERE id = ?', [viewValue, id], (error, result) => {
+    if (error) {
+      console.error(error);
+      res.send(false);
+      return;
+    }
+    res.send(result.affectedRows > 0);
+  });
+});
+
+// 관리자 — 장소 정보 수정
+router.post('/adminupdate', (req, res) => {
+  const {
+    id,
+    placeName,
+    sort,
+    region,
+    location,
+    size,
+    address,
+    phone,
+    homepage,
+    userContact,
+    images,
+  } = req.body;
+  if (!id) {
+    res.status(400).send(false);
+    return;
+  }
+
+  const imagesJson = images ?? '[]';
+  retreatdb.query('SELECT images FROM dataplace WHERE id = ?', [id], (selectErr, rows) => {
+    if (selectErr) {
+      console.error(selectErr);
+      res.send(false);
+      return;
+    }
+
+    const previousNames = rows.length > 0 ? parseImageList(rows[0].images) : [];
+    const nextNames = parseImageList(imagesJson);
+    const removedNames = previousNames.filter((name) => !nextNames.includes(name));
+
+    retreatdb.query(
+      `UPDATE dataplace SET
+        placeName = ?, sort = ?, region = ?, location = ?, size = ?,
+        address = ?, phone = ?, homepage = ?, userContact = ?, images = ?
+       WHERE id = ?`,
+      [placeName, sort, region, location, size, address, phone, homepage, userContact, imagesJson, id],
+      (error, result) => {
+        if (error) {
+          console.error(error);
+          res.send(false);
+          return;
+        }
+        if (result.affectedRows > 0 && removedNames.length > 0) {
+          unlinkImageFiles(PLACE_IMAGE_DIR, removedNames);
+        }
+        res.send(result.affectedRows > 0);
+      }
+    );
+  });
+});
+
+// 관리자 — 장소 삭제
+router.post('/admindelete', (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    res.status(400).send(false);
+    return;
+  }
+
+  retreatdb.query('SELECT images FROM dataplace WHERE id = ?', [id], (selectErr, rows) => {
+    if (selectErr) {
+      console.error(selectErr);
+      res.send(false);
+      return;
+    }
+
+    const imageNames = rows.length > 0 ? parseImageList(rows[0].images) : [];
+    imageNames.forEach((fileName) => {
+      const filePath = path.join(PLACE_IMAGE_DIR, fileName);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (unlinkErr) {
+          console.error(unlinkErr);
+        }
+      }
+    });
+
+    retreatdb.query('DELETE FROM dataplace WHERE id = ?', [id], (deleteErr, result) => {
+      if (deleteErr) {
+        console.error(deleteErr);
         res.send(false);
         return;
       }
-
-      if (result.affectedRows > 0) {
-        res.send(true);
-      } else {
-        res.send(false);
-      }
-    })
+      res.send(result.affectedRows > 0);
+    });
+  });
 });
-
-
-
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import imageCompression from 'browser-image-compression';
 import { CiCircleMinus } from 'react-icons/ci';
 import MainURL from '../../../MainURL';
 import { DropdownBox } from '../../../components/DropdownBox';
+import { moveListItem } from '../retreatRequestImageUtils';
 import './Place.scss';
 
 const sortOptions = [
@@ -50,6 +51,8 @@ const PlaceRequest = () => {
   const [inputImages, setInputImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageLoading, setImageLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const onCompletePost = (data: any) => {
     setLocation(`${data.sido} ${data.sigungu}`);
@@ -98,44 +101,58 @@ const PlaceRequest = () => {
     setInputImages((prev) => prev.filter((_, index) => index !== idx));
   };
 
+  const moveInputImage = (idx: number, direction: 'up' | 'down') => {
+    setImageFiles((prev) => moveListItem(prev, idx, direction));
+    setInputImages((prev) => moveListItem(prev, idx, direction));
+  };
+
   const registerPost = async () => {
+    if (submittingRef.current) return;
+
     if (!placeName || sort === '선택' || region === '선택' || size === '선택' || !address || !userContact) {
       alert('필수 항목을 입력해주세요.');
       return;
     }
 
+    submittingRef.current = true;
+    setSubmitting(true);
+
     const formData = new FormData();
     imageFiles.forEach((file) => {
       formData.append('img', file);
     });
+    formData.append('placeName', placeName);
+    formData.append('sort', sort);
+    formData.append('region', region);
+    formData.append('location', location);
+    formData.append('size', size);
+    formData.append('address', address);
+    formData.append('phone', phone);
+    formData.append('date', format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"));
+    formData.append('homepage', homepage);
+    formData.append('userContact', userContact);
+    formData.append('postImage', JSON.stringify(inputImages));
 
-    const params = {
-      placeName,
-      sort,
-      region,
-      location,
-      size,
-      address,
-      phone,
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-      homepage,
-      userContact,
-      postImage: JSON.stringify(inputImages),
-    };
+    try {
+      const res = await axios.post(`${MainURL}/retreat/postsplace`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    const res = await axios.post(`${MainURL}/retreat/postsplace`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      params,
-    });
-
-    if (res.data) {
-      alert('요청되었습니다. 운영진이 검토후에 업로드 됩니다.');
-      window.scrollTo(0, 0);
-      navigate('/retreat/place');
-    } else {
-      alert('요청에 실패했습니다.');
+      if (res.data) {
+        alert('요청되었습니다. 운영진이 검토후에 업로드 됩니다.');
+        window.scrollTo(0, 0);
+        navigate('/retreat/place');
+      } else {
+        alert('요청에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('요청 중 오류가 발생했습니다. 사진 용량·개수를 확인해 주세요.');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -206,8 +223,36 @@ const PlaceRequest = () => {
                 <input {...getInputProps()} />
                 <p>{imageLoading ? '이미지 처리 중...' : imageFiles.length > 0 ? '+ 다시첨부하기' : '+ 사진첨부하기'}</p>
               </div>
+              {imageFiles.length > 1 && (
+                <p className="imageInputBox__hint">▲▼ 버튼으로 사진 순서를 변경할 수 있습니다. 첫 번째 사진이 대표 이미지입니다.</p>
+              )}
               {imageFiles.map((item, index) => (
-                <div key={item.name} className="imagebox">
+                <div key={`${item.name}-${index}`} className="imagebox">
+                  {imageFiles.length > 1 ? (
+                    <div className="imagebox__order">
+                      <button
+                        type="button"
+                        className="imagebox__order-btn"
+                        aria-label="위로 이동"
+                        disabled={index === 0}
+                        onClick={() => moveInputImage(index, 'up')}
+                      >
+                        ▲
+                      </button>
+                      <span className="imagebox__order-num">{index + 1}</span>
+                      <button
+                        type="button"
+                        className="imagebox__order-btn"
+                        aria-label="아래로 이동"
+                        disabled={index === imageFiles.length - 1}
+                        onClick={() => moveInputImage(index, 'down')}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="imagebox__order-placeholder" />
+                  )}
                   <img src={URL.createObjectURL(item)} alt={item.name} />
                   <p>{item.name}</p>
                   <button type="button" onClick={() => deleteInputImage(index)}>
@@ -218,8 +263,8 @@ const PlaceRequest = () => {
             </div>
 
             <div className="buttonbox">
-              <button type="button" className="button" onClick={registerPost}>
-                등록 요청 하기
+              <button type="button" className="button" disabled={submitting} onClick={registerPost}>
+                {submitting ? '등록 중...' : '등록 요청 하기'}
               </button>
             </div>
           </div>

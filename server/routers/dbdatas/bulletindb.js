@@ -1,16 +1,6 @@
-var mysql = require('mysql');
+const { createDbPool } = require('./createDbPool');
 
-const poolOptions = {
-  host: 'localhost',
-  port: '3306',
-  user: 'root',
-  password: 'gksksla6985!',
-};
-
-var bulletindb = mysql.createPool({
-  ...poolOptions,
-  database: 'bulletin',
-});
+const bulletindb = createDbPool('bulletin');
 
 module.exports = {
   bulletindb,
