@@ -17,6 +17,7 @@ const escapeQuotes = (str) => {
 
 const { handleBoardPostSearch } = require('./boardSearchHelpers');
 const { handleAdminNoticeSort } = require('./boardAdminHelpers');
+const { handleAdminMovePost } = require('./boardMoveHelpers');
 const { handleBoardGetPosts } = require('./boardListHelpers');
 
 // 게시글 검색 API (구분 칩 클릭 시 즉시 필터)
@@ -371,6 +372,7 @@ router.post('/checkfreeisposting', (req, res) => {
 
 // 관리자 — 공지 등록/해제 (sort 변경)
 router.post('/freeadminsetnotice', handleAdminNoticeSort({ db: boarddb, postsTable: 'freePosts' }));
+router.post('/freeadminmovepost', handleAdminMovePost({ db: boarddb }));
 
 module.exports = router;
 

@@ -9,6 +9,7 @@ import Loading from '../../components/Loading';
 import type { CommunityBoardConfig, CommunityPost } from '../../screens/board/BoardTypes';
 import { BOARD_NOTICE_SORT } from '../../screens/board/boardConfigs';
 import CommunityBoardEditModal from './CommunityBoardEditModal';
+import CommunityBoardMoveModal from './CommunityBoardMoveModal';
 
 type Props = {
   config: CommunityBoardConfig;
@@ -49,6 +50,7 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
   const [searchWord, setSearchWord] = useState('');
   const [activeSearchWord, setActiveSearchWord] = useState('');
   const [editPost, setEditPost] = useState<CommunityPost | null>(null);
+  const [movePost, setMovePost] = useState<CommunityPost | null>(null);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -147,7 +149,7 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
   return (
     <div className="admin-board-manage">
       <p className="admin-board-manage__desc">
-        {manageTitle} 글 목록을 조회·수정·삭제할 수 있습니다.{' '}
+        {manageTitle} 글 목록을 조회·수정·삭제·다른 게시판으로 이동할 수 있습니다.{' '}
         <a href={config.listPath} target="_blank" rel="noreferrer">
           사이트 게시판 보기
         </a>
@@ -227,6 +229,14 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
                         <button type="button" className="admin-btn delete-btn" onClick={() => void deletePost(post)}>
                           삭제
                         </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-board-manage__move-btn"
+                          title="다른 게시판으로 이동"
+                          onClick={() => setMovePost(post)}
+                        >
+                          이동
+                        </button>
                         <span className="admin-board-manage__actions-divider" aria-hidden />
                         {post.sort === BOARD_NOTICE_SORT ? (
                           <button
@@ -274,6 +284,13 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
         post={editPost}
         onClose={() => setEditPost(null)}
         onSaved={() => void fetchPosts()}
+      />
+
+      <CommunityBoardMoveModal
+        sourceConfig={config}
+        post={movePost}
+        onClose={() => setMovePost(null)}
+        onMoved={() => void fetchPosts()}
       />
     </div>
   );
