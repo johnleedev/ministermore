@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
 import { hiddenHeaderStackScreenOptions } from '../../../navigation/stackScreenOptions';
 import { useRetreatSession } from '../useRetreatSession';
 import { loadSessionUser } from '../../../login/sessionStorage';
@@ -18,8 +19,16 @@ export type PlaceStackParamList = {
 
 const Stack = createNativeStackNavigator<PlaceStackParamList>();
 
-function PlaceListScreen({ navigation }: NativeStackScreenProps<PlaceStackParamList, 'List'>) {
+function PlaceListScreen({
+  navigation,
+  initialDetailId,
+}: NativeStackScreenProps<PlaceStackParamList, 'List'> & { initialDetailId?: number }) {
   const session = useRetreatSession();
+  useEffect(() => {
+    if (initialDetailId) {
+      navigation.navigate('Detail', { id: initialDetailId });
+    }
+  }, [initialDetailId, navigation]);
 
   return (
     <PlaceListView
@@ -37,10 +46,12 @@ function PlaceListScreen({ navigation }: NativeStackScreenProps<PlaceStackParamL
   );
 }
 
-export function PlaceStack() {
+export function PlaceStack({ initialDetailId }: { initialDetailId?: number }) {
   return (
     <Stack.Navigator screenOptions={hiddenHeaderStackScreenOptions}>
-      <Stack.Screen name="List" component={PlaceListScreen} />
+      <Stack.Screen name="List">
+        {props => <PlaceListScreen {...props} initialDetailId={initialDetailId} />}
+      </Stack.Screen>
       <Stack.Screen name="Detail">
         {({ route, navigation }) => (
           <PlaceDetailView id={route.params.id} onBack={() => navigation.goBack()} />

@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MypageMainScreen } from './MypageMainScreen';
 import { ProfileScreen } from './ProfileScreen';
+import { ScrapListScreen } from './ScrapListScreen';
 import { SettingsScreen } from '../notifi/SettingsScreen';
 import { MainAppTopBar } from '../navigation/appTopBarHelpers';
 import { stackScreenOptions } from '../navigation/stackScreenOptions';
@@ -9,6 +10,7 @@ export type MypageStackParamList = {
   MypageMain: undefined;
   Profile: undefined;
   NotificationSettings: undefined;
+  ScrapList: undefined;
 };
 
 const Stack = createNativeStackNavigator<MypageStackParamList>();
@@ -31,6 +33,11 @@ export function MypageStack() {
         }}
       />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="ScrapList"
+        component={ScrapListScreen}
+        options={{ title: '스크랩 관리', headerBackTitle: '뒤로' }}
+      />
       <Stack.Screen
         name="NotificationSettings"
         component={SettingsScreen}

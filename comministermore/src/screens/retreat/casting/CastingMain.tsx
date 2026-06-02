@@ -33,6 +33,8 @@ import {
 import { CastingStack } from './CastingStack';
 import { DetailPressableImage } from '../../shared/ImagePreviewModal';
 import { FormKeyboardScreen, useFormInputFocusScroll } from '../../shared/FormKeyboardScreen';
+import { loadSessionUser } from '../../../login/sessionStorage';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 import { RetreatRequestImageSection } from '../RetreatRequestImageSection';
 import {
   appendRetreatImagesToFormData,
@@ -56,8 +58,8 @@ type CastingDetailItem = CastingItem & {
 
 const PAGE_SIZE = 10;
 
-export function CastingMain() {
-  return <CastingStack />;
+export function CastingMain({ initialDetailId }: { initialDetailId?: number }) {
+  return <CastingStack initialDetailId={initialDetailId} />;
 }
 
 export function CastingListView({
@@ -77,6 +79,19 @@ export function CastingListView({
   const [totalCount, setTotalCount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [empty, setEmpty] = useState(false);
+  const [userAccount, setUserAccount] = useState('');
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await loadSessionUser();
+      if (!cancelled) setUserAccount(user?.userAccount || '');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchPosts = useCallback(async (page: number, append = false) => {
     if (append) {
@@ -185,6 +200,58 @@ export function CastingListView({
   const hasResults = list.length > 0;
   const { listRef, showTopBtn, onScroll, scrollToTop } = useListScrollToTop<CastingItem>();
 
+  useEffect(() => {
+    if (!userAccount || list.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = list.map(item => ({
+          targetType: 'retreat_casting' as const,
+          targetId: String(item.id),
+          tableType: '',
+        }));
+        const map = await fetchScrapStatusMap(userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userAccount, list]);
+
+  const onToggleScrap = async (item: CastingItem) => {
+    if (!userAccount) {
+      Alert.alert('', '로그인이 필요합니다.');
+      return;
+    }
+    const first = parseImageList(item.images)[0] || '';
+    const payload = {
+      targetType: 'retreat_casting' as const,
+      targetId: String(item.id),
+      tableType: '',
+      title: item.name,
+      subtitle: item.sort,
+      meta: '',
+      thumb: first,
+      linkPath: `/retreat/casting/detail?id=${item.id}`,
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      Alert.alert('', '스크랩 처리에 실패했습니다.');
+    }
+  };
+
   const renderCastingCard = ({ item }: { item: CastingItem }) => {
     const first = parseImageList(item.images)[0];
     return (
@@ -194,6 +261,8 @@ export function CastingListView({
         sort={item.sort}
         imageUri={first ? `${API_BASE}/images/retreat/castingimage/${first}` : undefined}
         imageAlignTop
+        onToggleScrap={() => void onToggleScrap(item)}
+        scrapped={Boolean(scrapMap[scrapKeyOf({ targetType: 'retreat_casting', targetId: String(item.id), tableType: '' })])}
         onPress={() => onOpenDetail(item.id)}
       />
     );

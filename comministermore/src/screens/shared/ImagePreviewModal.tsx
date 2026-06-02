@@ -4,6 +4,7 @@ import {
   Image,
   Modal,
   Pressable,
+  StatusBar,
   StyleSheet,
   View,
   type ImageResizeMode,
@@ -17,7 +18,7 @@ import {
   type PanGestureHandlerGestureEvent,
   type PinchGestureHandlerGestureEvent,
 } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const MIN_SCALE = 1;
@@ -117,21 +118,29 @@ type ImagePreviewModalProps = {
 };
 
 export function ImagePreviewModal({ visible, uri, onClose }: ImagePreviewModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}>
+      {visible ? <StatusBar barStyle="light-content" translucent backgroundColor="transparent" /> : null}
       <View style={styles.backdrop}>
-        <SafeAreaView style={styles.safe} edges={['top', 'right']}>
-          <View style={styles.toolbar}>
-            <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={12} accessibilityLabel="닫기">
-              <MaterialIcons name="close" size={28} color="#fff" />
-            </Pressable>
+        {/* 노치·상태바 영역: 어두운 배경 유지 → 시간·배터리 아이콘 표시 */}
+        <View style={{ height: insets.top }} />
+        <View style={styles.headerBar}>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={12} accessibilityLabel="닫기">
+            <MaterialIcons name="close" size={28} color="#111827" />
+          </Pressable>
+        </View>
+        {uri ? (
+          <View style={styles.imageWrap}>
+            <ZoomablePreviewImage uri={uri} />
           </View>
-          {uri ? (
-            <View style={styles.imageWrap}>
-              <ZoomablePreviewImage uri={uri} />
-            </View>
-          ) : null}
-        </SafeAreaView>
+        ) : null}
       </View>
     </Modal>
   );
@@ -169,15 +178,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.92)',
   },
-  safe: {
-    flex: 1,
-  },
-  toolbar: {
+  headerBar: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: 12,
-    paddingTop: 4,
+    alignItems: 'center',
+    paddingHorizontal: 8,
     paddingBottom: 8,
+    backgroundColor: '#fff',
     zIndex: 2,
   },
   closeBtn: {

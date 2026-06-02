@@ -5,7 +5,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import MainURL from '../../../MainURL';
 import { useRecoilValue } from 'recoil';
-import { recoilLoginState } from '../../../RecoilStore';
+import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
 import { sortList, citydata } from '../../../DefaultData';
 import Pagination from '../../../components/Pagination';
 import Loading from '../../../components/Loading';
@@ -44,6 +45,8 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
   const [restoredFromRouterState, setRestoredFromRouterState] = useState(false);
 
   const isLogin = useRecoilValue(recoilLoginState);
+  const userData = useRecoilValue(recoilUserData);
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
 
   const hasSortTab = config.filterTabs.includes('직무');
   const hasLocationTab = config.filterTabs.includes('지역');
@@ -254,6 +257,67 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
   const pagedList = searchResult
     ? searchResult.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
     : listView;
+
+  useEffect(() => {
+    if (!userData.userAccount || pagedList.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = pagedList.map(item => ({
+          targetType: 'recruit' as const,
+          targetId: String(item.id),
+          tableType:
+            config.simplePostType === 'church'
+              ? 'church'
+              : config.simplePostType === 'institute'
+                ? 'institute'
+                : 'minister',
+        }));
+        const map = await fetchScrapStatusMap(userData.userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userData.userAccount, pagedList, config.simplePostType]);
+
+  const handleToggleScrap = async (item: RecruitListItem) => {
+    if (!isLogin || !userData.userAccount) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    const tableType =
+      config.simplePostType === 'church'
+        ? 'church'
+        : config.simplePostType === 'institute'
+          ? 'institute'
+          : 'minister';
+    const payload = {
+      targetType: 'recruit' as const,
+      targetId: String(item.id),
+      tableType,
+      title: String(item.title || ''),
+      subtitle: String(item.church || ''),
+      meta: `${item.location || ''} ${item.locationDetail || ''}`.trim(),
+      linkPath: config.detailPath ? `${config.detailPath}?id=${item.id}` : '',
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userData.userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      alert('스크랩 처리에 실패했습니다.');
+    }
+  };
 
   const handleRemoveSelected = (item: string) => {
     if (hasSortTab && selectedSort.includes(item)) {
@@ -482,6 +546,16 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
                           endDay: '',
                           daySort: '',
                         });
+                        const scrapActive = scrapMap[scrapKeyOf({
+                          targetType: 'recruit',
+                          targetId: String(item.id),
+                          tableType:
+                            config.simplePostType === 'church'
+                              ? 'church'
+                              : config.simplePostType === 'institute'
+                                ? 'institute'
+                                : 'minister',
+                        })];
 
                         return (
                           <div
@@ -490,12 +564,33 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
                             onClick={() => handleItemClick(item.id)}
                             style={{ cursor: 'pointer' }}
                           >
-                            <div className="recruit__name">
+                            <div
+                              className="recruit__name"
+                              style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <p
                                 dangerouslySetInnerHTML={{
                                   __html: renderHighlighted(item.church),
                                 }}
                               />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleToggleScrap(item);
+                                }}
+                                style={{
+                                  border: 'none',
+                                  background: 'transparent',
+                                  padding: 0,
+                                  margin: 0,
+                                  fontSize: 20,
+                                  lineHeight: 1,
+                                  cursor: 'pointer',
+                                  color: scrapActive ? '#ef4444' : '#9ca3af',
+                                }}
+                                aria-label="스크랩">
+                                {scrapActive ? '♥' : '♡'}
+                              </button>
                             </div>
                             <div className="recruit__content">
                               <div className="recruit__title_box" style={{ lineHeight: '1.5' }}>

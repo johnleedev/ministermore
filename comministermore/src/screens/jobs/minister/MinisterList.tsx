@@ -22,6 +22,8 @@ import {
 import { StickySearchBar } from '../../shared/StickySearchBar';
 import { JobsCategoryTabs } from '../jobsCategoryContext';
 import type { MinisterStackParamList } from './MinisterStack';
+import { loadSessionUser } from '../../../login/sessionStorage';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 
 const API_BASE = MAIN_API_BASE.replace(/\/$/, '');
 const MINISTER_SORTS = ['담임', '전임', '준전임', '파트'];
@@ -83,6 +85,19 @@ export function MinisterList() {
   const [selectedReligiousbody, setSelectedReligiousbody] = useState<string[]>(
     [],
   );
+  const [userAccount, setUserAccount] = useState('');
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await loadSessionUser();
+      if (!cancelled) setUserAccount(user?.userAccount || '');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (searchResult != null) return;
@@ -318,6 +333,56 @@ export function MinisterList() {
 
   const { listRef, showTopBtn, onScroll, scrollToTop } = useListScrollToTop<RecruitRow>();
 
+  useEffect(() => {
+    if (!userAccount || displayList.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = displayList.map(item => ({
+          targetType: 'recruit' as const,
+          targetId: String(item.id),
+          tableType: 'minister',
+        }));
+        const map = await fetchScrapStatusMap(userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userAccount, displayList]);
+
+  const onToggleScrap = async (item: RecruitRow) => {
+    if (!userAccount) {
+      Alert.alert('', '로그인이 필요합니다.');
+      return;
+    }
+    const payload = {
+      targetType: 'recruit' as const,
+      targetId: String(item.id),
+      tableType: 'minister',
+      title: String(item.title || ''),
+      subtitle: String(item.church || ''),
+      meta: `${String(item.location || '')} ${String(item.locationDetail || '')}`.trim(),
+      linkPath: `/recruit/recruitministerdetail?id=${item.id}`,
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      Alert.alert('', '스크랩 처리에 실패했습니다.');
+    }
+  };
+
   const renderRecruitItem = ({ item }: { item: RecruitRow }) => {
     const highlight = !!searchResult;
     return (
@@ -329,6 +394,7 @@ export function MinisterList() {
             church: String(item.church || ''),
             churchLogo: item.churchLogo ? String(item.churchLogo) : undefined,
             religiousbody: String(item.religiousbody || ''),
+            source: String(item.source || ''),
             location: String(item.location || ''),
             locationDetail: String(item.locationDetail || ''),
             sort: String(item.sort || ''),
@@ -336,6 +402,8 @@ export function MinisterList() {
             date: String(item.date || ''),
           }}
           onPress={() => openDetail(item)}
+          onToggleScrap={() => void onToggleScrap(item)}
+          scrapped={Boolean(scrapMap[scrapKeyOf({ targetType: 'recruit', targetId: String(item.id), tableType: 'minister' })])}
           highlight={highlight}
           highlightTerms={currentSearchTerms}
           churchLogoBasePath={RECRUIT_CHURCH_LOGO_PATH_MINISTER}

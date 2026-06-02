@@ -3,6 +3,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
   Alert,
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -29,10 +30,14 @@ import {
   saveUserWantsPush,
   syncUserActiveToServer,
 } from '../notifi/notificationSettings';
+import { fetchScrapList } from '../shared/scrapApi';
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type Nav = NativeStackNavigationProp<MypageStackParamList, 'MypageMain'>;
+
+const KAKAO_CHANNEL_URL = 'http://pf.kakao.com/_Xzwrn';
+const KAKAO_ICON = require('../images/login/kakao.png');
 
 const MENU_ITEMS = [
   {
@@ -81,6 +86,7 @@ export function MypageMainScreen() {
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [nightOff, setNightOff] = useState(false);
+  const [scrapCount, setScrapCount] = useState(0);
 
   const loadProfile = useCallback(async () => {
     const savedUser = await loadSessionUser();
@@ -89,6 +95,12 @@ export function MypageMainScreen() {
     setPushEnabled(effective);
     const wants = await loadUserWantsPush();
     if (!wants) setPushEnabled(false);
+    if (savedUser?.userAccount) {
+      const list = await fetchScrapList(savedUser.userAccount).catch(() => []);
+      setScrapCount(list.length);
+    } else {
+      setScrapCount(0);
+    }
   }, []);
 
   useFocusEffect(
@@ -106,6 +118,9 @@ export function MypageMainScreen() {
       case 'notifications':
         navigation.navigate('NotificationSettings');
         break;
+      case 'scrap':
+        navigation.navigate('ScrapList');
+        break;
       case 'settings':
         Alert.alert('', '준비 중인 기능입니다.');
         break;
@@ -117,6 +132,12 @@ export function MypageMainScreen() {
       default:
         Alert.alert('', '준비 중인 기능입니다.');
     }
+  };
+
+  const openKakaoChannel = () => {
+    Linking.openURL(KAKAO_CHANNEL_URL).catch(() => {
+      Alert.alert('', '카카오 채널을 열 수 없습니다.');
+    });
   };
 
   const onTogglePush = async (next: boolean) => {
@@ -159,7 +180,7 @@ export function MypageMainScreen() {
         </View>
         <View style={styles.stats}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{scrapCount}</Text>
             <Text style={styles.statLabel}>스크랩 공고</Text>
           </View>
           <View style={styles.stat}>
@@ -203,6 +224,18 @@ export function MypageMainScreen() {
           <Switch value={nightOff} onValueChange={setNightOff} trackColor={{ true: mpColors.primary }} />
         </View>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.kakaoChannelBtn, pressed && styles.kakaoChannelBtnPressed]}
+        onPress={openKakaoChannel}
+        accessibilityRole="link"
+        accessibilityLabel="카카오 채널 문의하기">
+        <Image source={KAKAO_ICON} style={styles.kakaoChannelIcon} resizeMode="contain" />
+        <View style={styles.kakaoChannelTextWrap}>
+          <Text style={styles.kakaoChannelTitle}>카카오채널로 문의하기</Text>
+        </View>
+        <MaterialIcons name="open-in-new" size={20} color="#3c1e1e" style={styles.kakaoChannelArrow} />
+      </Pressable>
 
       <Pressable
         style={styles.logoutBtn}
@@ -329,8 +362,25 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   toggleLabel: { fontSize: 14, color: mpColors.textSecondary },
-  logoutBtn: {
+  kakaoChannelBtn: {
     marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: '#fee500',
+    borderWidth: 1,
+    borderColor: '#f0d800',
+  },
+  kakaoChannelBtnPressed: { opacity: 0.88 },
+  kakaoChannelIcon: { width: 40, height: 30 },
+  kakaoChannelTextWrap: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  kakaoChannelTitle: { fontSize: 15, fontWeight: '800', color: '#3c1e1e' },
+  kakaoChannelArrow: { opacity: 0.7 },
+  logoutBtn: {
+    marginTop: 10,
     paddingVertical: 16,
     borderRadius: 16,
     borderWidth: 1.5,

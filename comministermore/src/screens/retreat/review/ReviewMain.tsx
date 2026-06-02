@@ -24,6 +24,8 @@ import {
   useListScrollToTop,
   useScrollViewScrollToTop,
 } from '../../shared/listScrollUi';
+import { FormKeyboardScreen } from '../../shared/FormKeyboardScreen';
+import { LinkableText } from '../../shared/LinkableText';
 import { RetreatCategoryTabs } from '../retreatCategoryContext';
 import {
   API_BASE,
@@ -312,7 +314,7 @@ export function ReviewDetailView({ id, onBack }: { id: number; onBack: () => voi
       ) : null}
 
       <View style={{ paddingVertical: 20 }}>
-        <Text style={{ fontSize: 16, lineHeight: 26, color: '#333' }}>{post.content}</Text>
+        <LinkableText text={post.content} style={{ fontSize: 16, lineHeight: 26, color: '#333' }} />
 
         <Pressable
           style={{
@@ -371,12 +373,14 @@ export function ReviewPostView({ onBack }: { onBack: () => void }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState(REVIEW_PLACEHOLDER);
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: retreatColors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+    <FormKeyboardScreen backgroundColor={retreatColors.bg}>
       <PageHeader title="후기 작성" onBack={onBack} />
 
       <View style={retreatStyles.noticeBox}>
         <Text style={retreatStyles.noticeText}>후기 작성 시 사진 3장 이상이 필요합니다.</Text>
-        <Text style={[retreatStyles.noticeText, { marginTop: 8, color: '#0f386e' }]}>앱에서는 텍스트만 미리보기 가능하며, 사진 포함 작성은 웹을 이용해 주세요.</Text>
+        <Text style={[retreatStyles.noticeText, { marginTop: 8, color: '#0f386e' }]}>
+          앱에서는 텍스트만 미리보기 가능하며, 사진 포함 작성은 웹을 이용해 주세요.
+        </Text>
       </View>
 
       <View style={retreatStyles.formField}>
@@ -385,7 +389,13 @@ export function ReviewPostView({ onBack }: { onBack: () => void }) {
       </View>
       <View style={retreatStyles.formField}>
         <Text style={retreatStyles.formLabel}>본문</Text>
-        <TextInput style={[retreatStyles.formTextarea, { minHeight: 200 }]} value={content} onChangeText={setContent} maxLength={2000} multiline />
+        <TextInput
+          style={[retreatStyles.formTextarea, { minHeight: 200 }]}
+          value={content}
+          onChangeText={setContent}
+          maxLength={2000}
+          multiline
+        />
       </View>
 
       <Pressable
@@ -393,7 +403,7 @@ export function ReviewPostView({ onBack }: { onBack: () => void }) {
         onPress={() => openRetreatOnWeb('/retreat/review/post')}>
         <Text style={retreatStyles.primaryBtnText}>웹에서 후기 작성하기</Text>
       </Pressable>
-    </ScrollView>
+    </FormKeyboardScreen>
   );
 }
 

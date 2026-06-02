@@ -13,6 +13,14 @@ router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({extended:true}));
 
 
+const normalizeScrapType = (targetType='') => {
+  if (targetType === 'recruit' || targetType === 'retreat_place' || targetType === 'retreat_casting') {
+    return targetType;
+  }
+  return 'recruit';
+};
+
+
 // 프로필 데이터 가져오기 ////
 router.get('/getprofile/:user', (req, res) => {
   var userAccount = req.params.user;
@@ -203,6 +211,140 @@ router.post('/deletepost', (req, res) => {
       res.end();
     }
   })
+});
+
+// 스크랩 추가/해제 토글
+router.post('/scraptoggle', (req, res) => {
+  const {
+    userAccount,
+    targetType,
+    targetId,
+    tableType = '',
+    title = '',
+    subtitle = '',
+    meta = '',
+    thumb = '',
+    linkPath = '',
+  } = req.body || {};
+
+  if (!userAccount || !targetId) {
+    return res.status(400).send({ success: false, message: 'userAccount/targetId required' });
+  }
+
+  const normalizedType = normalizeScrapType(targetType);
+  const keyValues = [String(userAccount), normalizedType, String(targetId), String(tableType)];
+
+  commondb.query(
+    `SELECT id FROM userScrap WHERE userAccount=? AND targetType=? AND targetId=? AND tableType=? LIMIT 1`,
+    keyValues,
+    function(error, result){
+      if (error) {
+        console.error('scraptoggle select error:', error);
+        return res.status(500).send({ success: false });
+      }
+
+      if (result.length > 0) {
+        commondb.query(
+          `DELETE FROM userScrap WHERE id=?`,
+          [result[0].id],
+          function(delError){
+            if (delError) {
+              console.error('scraptoggle delete error:', delError);
+              return res.status(500).send({ success: false });
+            }
+            return res.send({ success: true, scrapped: false });
+          }
+        );
+      } else {
+        commondb.query(
+          `INSERT INTO userScrap
+          (userAccount, targetType, targetId, tableType, title, subtitle, meta, thumb, linkPath)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            String(userAccount),
+            normalizedType,
+            String(targetId),
+            String(tableType),
+            String(title || ''),
+            String(subtitle || ''),
+            String(meta || ''),
+            String(thumb || ''),
+            String(linkPath || ''),
+          ],
+          function(insertError){
+            if (insertError) {
+              console.error('scraptoggle insert error:', insertError);
+              return res.status(500).send({ success: false });
+            }
+            return res.send({ success: true, scrapped: true });
+          }
+        );
+      }
+    }
+  );
+});
+
+// 특정 항목들 스크랩 여부 조회 (리스트 일괄 체크용)
+router.post('/getscrapstatus', (req, res) => {
+  const { userAccount, targets } = req.body || {};
+  if (!userAccount || !Array.isArray(targets) || targets.length === 0) {
+    return res.send({ success: true, result: {} });
+  }
+
+  const normalizedTargets = targets.map(item => ({
+    targetType: normalizeScrapType(item?.targetType || ''),
+    targetId: String(item?.targetId || ''),
+    tableType: String(item?.tableType || ''),
+  })).filter(item => item.targetId !== '');
+
+  if (normalizedTargets.length === 0) {
+    return res.send({ success: true, result: {} });
+  }
+
+  const where = normalizedTargets.map(() => '(targetType=? AND targetId=? AND tableType=?)').join(' OR ');
+  const params = [String(userAccount)];
+  normalizedTargets.forEach(item => {
+    params.push(item.targetType, item.targetId, item.tableType);
+  });
+
+  commondb.query(
+    `SELECT targetType, targetId, tableType FROM userScrap WHERE userAccount=? AND (${where})`,
+    params,
+    function(error, result){
+      if (error) {
+        console.error('getscrapstatus error:', error);
+        return res.status(500).send({ success: false, result: {} });
+      }
+      const map = {};
+      result.forEach(row => {
+        map[`${row.targetType}:${row.tableType}:${row.targetId}`] = true;
+      });
+      return res.send({ success: true, result: map });
+    }
+  );
+});
+
+// 사용자 스크랩 목록
+router.get('/getscraplist/:userAccount', (req, res) => {
+  const userAccount = req.params.userAccount;
+  if (!userAccount) {
+    return res.send([]);
+  }
+
+  commondb.query(
+    `SELECT id, userAccount, targetType, targetId, tableType, title, subtitle, meta, thumb, linkPath, createdAt
+     FROM userScrap
+     WHERE userAccount=?
+     ORDER BY id DESC`,
+    [String(userAccount)],
+    function(error, result){
+      if (error) {
+        console.error('getscraplist error:', error);
+        return res.status(500).send([]);
+      }
+      return res.send(result || []);
+    }
+  );
 });
 
 module.exports = router;

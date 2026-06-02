@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Profile from './Profile';
 import PostingManage from './PostingManage';
+import ScrapManage from './ScrapManage';
 import PostingEdit from './PostingEdit';
 import ResumeManage from './ResumeManage';
 import ResumeEdit from './ResumeEdit';
@@ -17,6 +18,7 @@ export default function MypageRouter() {
       <Header />
       <Routes>
         <Route path="/" element={<Profile/>}/>
+        <Route path="/scrapmanage" element={<ScrapManage/>}/>
         <Route path="/postingmanage" element={<PostingManage/>}/>
         <Route path="/postingedit" element={<PostingEdit/>}/>
         <Route path="/resumemanage" element={<ResumeManage/>}/>

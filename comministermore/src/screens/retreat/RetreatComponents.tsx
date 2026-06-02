@@ -145,6 +145,8 @@ type VenueCardProps = {
   imageUri?: string;
   imageAlignTop?: boolean;
   onPress: () => void;
+  onToggleScrap?: () => void;
+  scrapped?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -186,6 +188,8 @@ export function VenueCard({
   imageUri,
   imageAlignTop = false,
   onPress,
+  onToggleScrap,
+  scrapped = false,
   style,
 }: VenueCardProps) {
   const showSize = !!size?.trim();
@@ -220,9 +224,13 @@ export function VenueCard({
             </Text>
           </View>
         ) : null}
-        <View style={venueCardStyles.heartBtn} pointerEvents="none">
-          <MaterialIcons name="favorite-border" size={13} color={retreatColors.textMuted2} />
-        </View>
+        <Pressable style={venueCardStyles.heartBtn} onPress={() => onToggleScrap?.()} disabled={!onToggleScrap}>
+          <MaterialIcons
+            name={scrapped ? 'favorite' : 'favorite-border'}
+            size={13}
+            color={scrapped ? '#ef4444' : retreatColors.textMuted2}
+          />
+        </Pressable>
       </View>
       <View style={venueCardStyles.body}>
         <Text style={venueCardStyles.name} numberOfLines={2}>

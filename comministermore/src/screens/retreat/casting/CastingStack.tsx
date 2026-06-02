@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
 import { hiddenHeaderStackScreenOptions } from '../../../navigation/stackScreenOptions';
 import { useRetreatSession } from '../useRetreatSession';
 import { loadSessionUser } from '../../../login/sessionStorage';
@@ -18,8 +19,16 @@ export type CastingStackParamList = {
 
 const Stack = createNativeStackNavigator<CastingStackParamList>();
 
-function CastingListScreen({ navigation }: NativeStackScreenProps<CastingStackParamList, 'List'>) {
+function CastingListScreen({
+  navigation,
+  initialDetailId,
+}: NativeStackScreenProps<CastingStackParamList, 'List'> & { initialDetailId?: number }) {
   const session = useRetreatSession();
+  useEffect(() => {
+    if (initialDetailId) {
+      navigation.navigate('Detail', { id: initialDetailId });
+    }
+  }, [initialDetailId, navigation]);
 
   return (
     <CastingListView
@@ -37,10 +46,12 @@ function CastingListScreen({ navigation }: NativeStackScreenProps<CastingStackPa
   );
 }
 
-export function CastingStack() {
+export function CastingStack({ initialDetailId }: { initialDetailId?: number }) {
   return (
     <Stack.Navigator screenOptions={hiddenHeaderStackScreenOptions}>
-      <Stack.Screen name="List" component={CastingListScreen} />
+      <Stack.Screen name="List">
+        {props => <CastingListScreen {...props} initialDetailId={initialDetailId} />}
+      </Stack.Screen>
       <Stack.Screen name="Detail">
         {({ route, navigation }) => (
           <CastingDetailView id={route.params.id} onBack={() => navigation.goBack()} />

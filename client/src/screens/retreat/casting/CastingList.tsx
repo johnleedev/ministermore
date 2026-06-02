@@ -7,6 +7,7 @@ import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
 import '../place/Place.scss';
 import './Casting.scss';
 
@@ -48,6 +49,7 @@ export default function CastingList() {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
 
   const fetchPosts = async (page: number, append = false) => {
     if (append) {
@@ -103,6 +105,57 @@ export default function CastingList() {
     resetListState();
     fetchPosts(1);
   }, [selectSort]);
+
+  useEffect(() => {
+    if (!userData.userAccount || list.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = list.map(item => ({
+          targetType: 'retreat_casting' as const,
+          targetId: String(item.id),
+          tableType: '',
+        }));
+        const map = await fetchScrapStatusMap(userData.userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userData.userAccount, list]);
+
+  const toggleCastingScrap = async (item: CastingItem, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!isLogin || !userData.userAccount) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    const payload = {
+      targetType: 'retreat_casting' as const,
+      targetId: String(item.id),
+      tableType: '',
+      title: item.name,
+      subtitle: item.sort,
+      meta: '',
+      linkPath: `/retreat/casting/detail?id=${item.id}`,
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userData.userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      alert('스크랩 처리에 실패했습니다.');
+    }
+  };
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1;
@@ -180,6 +233,8 @@ export default function CastingList() {
   const renderCastingCard = (subItem: CastingItem) => {
     const firstImage = getImages(subItem.images)[0];
 
+    const scrapActive = scrapMap[scrapKeyOf({ targetType: 'retreat_casting', targetId: String(subItem.id), tableType: '' })];
+
     return (
       <div
         key={subItem.id}
@@ -187,6 +242,29 @@ export default function CastingList() {
         onClick={() => openCastingDetail(subItem.id)}
       >
         <div className="place__img--cover">
+          <button
+            type="button"
+            onClick={(e) => void toggleCastingScrap(subItem, e)}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: 10,
+              zIndex: 3,
+              border: 'none',
+              background: 'rgba(255,255,255,0.55)',
+              borderRadius: '50%',
+              width: 24,
+              height: 24,
+              padding: 0,
+              margin: 0,
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: 'pointer',
+              color: scrapActive ? '#ef4444' : '#9ca3af',
+            }}
+            aria-label="스크랩">
+            {scrapActive ? '♥' : '♡'}
+          </button>
           <div className="imageBox">
             {firstImage ? (
               <img src={`${MainURL}/images/retreat/castingimage/${firstImage}`} alt={subItem.name} />

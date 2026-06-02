@@ -45,6 +45,7 @@ import {
   LIST_FAB_SCROLL_PADDING,
 } from '../shared/listScrollUi';
 import { DetailPressableImage } from '../shared/ImagePreviewModal';
+import { LinkableText } from '../shared/LinkableText';
 
 const getListRoute = (c: CommunityBoardConfig) => c.listRoute ?? `${c.routePrefix}getposts`;
 const getSearchRoute = (c: CommunityBoardConfig) => c.searchRoute ?? `${c.routePrefix}getpostssearch`;
@@ -477,7 +478,7 @@ export function BoardDetailView({
       ) : null}
 
       <View style={listStyles.detailBody}>
-        <Text style={{ fontSize: 16, lineHeight: 26, color: '#333' }}>{post.content}</Text>
+        <LinkableText text={post.content} style={{ fontSize: 16, lineHeight: 26, color: '#333' }} />
 
         <Pressable
           style={{
@@ -528,7 +529,9 @@ export function BoardDetailView({
               <Text style={{ fontWeight: '700', color: '#33383f' }}>{item.userNickName}님</Text>
               <Text style={{ color: '#888', fontSize: 13 }}>{formatRelativeDate(item.date)}</Text>
             </View>
-            <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 22, color: '#333' }}>{item.content}</Text>
+            <View style={{ marginTop: 8 }}>
+              <LinkableText text={item.content} style={{ fontSize: 15, lineHeight: 22, color: '#333' }} />
+            </View>
           </View>
         ))
       ) : (

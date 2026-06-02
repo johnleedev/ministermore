@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const MENU_ITEMS = [
   { path: '/mypage', label: '프로필' },
+  { path: '/mypage/scrapmanage', label: '스크랩 관리' },
   { path: '/mypage/postingmanage', label: '공고글 관리' },
   { path: '/mypage/resumemanage', label: '이력서 관리' },
   { path: '/mypage/servicemanage', label: '서비스 관리' },

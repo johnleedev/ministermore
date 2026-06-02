@@ -46,6 +46,8 @@ import {
 import { PlaceStack } from './PlaceStack';
 import { DetailPressableImage } from '../../shared/ImagePreviewModal';
 import { FormKeyboardScreen, useFormInputFocusScroll } from '../../shared/FormKeyboardScreen';
+import { loadSessionUser } from '../../../login/sessionStorage';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 import { RetreatRequestImageSection } from '../RetreatRequestImageSection';
 import {
   appendRetreatImagesToFormData,
@@ -72,8 +74,8 @@ type PlaceDetailData = PlaceItem & {
 
 const PAGE_SIZE = 10;
 
-export function PlaceMain() {
-  return <PlaceStack />;
+export function PlaceMain({ initialDetailId }: { initialDetailId?: number }) {
+  return <PlaceStack initialDetailId={initialDetailId} />;
 }
 
 export function PlaceListView({
@@ -93,6 +95,19 @@ export function PlaceListView({
   const [totalCount, setTotalCount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [empty, setEmpty] = useState(false);
+  const [userAccount, setUserAccount] = useState('');
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await loadSessionUser();
+      if (!cancelled) setUserAccount(user?.userAccount || '');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchPosts = useCallback(async (page: number, append = false) => {
     if (append) {
@@ -201,6 +216,58 @@ export function PlaceListView({
   const hasResults = list.length > 0;
   const { listRef, showTopBtn, onScroll, scrollToTop } = useListScrollToTop<PlaceItem>();
 
+  useEffect(() => {
+    if (!userAccount || list.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = list.map(item => ({
+          targetType: 'retreat_place' as const,
+          targetId: String(item.id),
+          tableType: '',
+        }));
+        const map = await fetchScrapStatusMap(userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userAccount, list]);
+
+  const onToggleScrap = async (item: PlaceItem) => {
+    if (!userAccount) {
+      Alert.alert('', '로그인이 필요합니다.');
+      return;
+    }
+    const first = parseImageList(item.images)[0] || '';
+    const payload = {
+      targetType: 'retreat_place' as const,
+      targetId: String(item.id),
+      tableType: '',
+      title: item.placeName,
+      subtitle: item.sort,
+      meta: item.location,
+      thumb: first,
+      linkPath: `/retreat/place/detail?id=${item.id}`,
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      Alert.alert('', '스크랩 처리에 실패했습니다.');
+    }
+  };
+
   const renderPlaceCard = ({ item }: { item: PlaceItem }) => {
     const first = parseImageList(item.images)[0];
     return (
@@ -210,6 +277,8 @@ export function PlaceListView({
         sort={item.sort}
         size={item.size}
         imageUri={first ? `${API_BASE}/images/retreat/placeimage/${first}` : undefined}
+        onToggleScrap={() => void onToggleScrap(item)}
+        scrapped={Boolean(scrapMap[scrapKeyOf({ targetType: 'retreat_place', targetId: String(item.id), tableType: '' })])}
         onPress={() => onOpenDetail(item.id)}
       />
     );

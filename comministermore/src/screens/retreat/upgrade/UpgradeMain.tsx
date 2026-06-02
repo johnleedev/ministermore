@@ -9,6 +9,7 @@ import {
   LIST_FAB_SCROLL_PADDING_WITH_WRITE,
   useScrollViewScrollToTop,
 } from '../../shared/listScrollUi';
+import { FormKeyboardScreen } from '../../shared/FormKeyboardScreen';
 import { RetreatCategoryTabs } from '../retreatCategoryContext';
 import {
   API_BASE,
@@ -172,10 +173,7 @@ export function UpgradeWriteScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: retreatColors.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      keyboardShouldPersistTaps="handled">
+    <FormKeyboardScreen backgroundColor={retreatColors.bg}>
       <PageHeader title="등업신청 작성" onBack={() => navigation.goBack()} />
       <Text style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
         간단한 가입인사와 등업신청 사유를 남겨주세요.
@@ -208,6 +206,6 @@ export function UpgradeWriteScreen() {
           <Text style={retreatStyles.primaryBtnText}>등록</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </FormKeyboardScreen>
   );
 }

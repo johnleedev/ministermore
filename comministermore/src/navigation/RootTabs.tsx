@@ -15,8 +15,22 @@ import { rootTabPressScrollToTopListeners, TabScrollProvider } from './tabScroll
 
 export type RootTabParamList = {
   Home: undefined;
-  Jobs: undefined;
-  Retreat: undefined;
+  Jobs:
+    | undefined
+    | {
+        open?: {
+          category: 'minister' | 'church' | 'institute';
+          id: string;
+        };
+      };
+  Retreat:
+    | undefined
+    | {
+        open?: {
+          category: 'place' | 'casting';
+          id: number;
+        };
+      };
   Worship: undefined;
   Board: undefined;
   Notifi: undefined;

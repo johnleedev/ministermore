@@ -12,6 +12,8 @@ export const RECRUIT_CHURCH_LOGO_PATH_MINISTER = 'images/recruit/churchlogo';
 export const RECRUIT_CHURCH_LOGO_PATH_SITE = 'siteimages/churchlogos';
 /** @see client RecruitList — 목록 교단 아이콘 */
 export const RECRUIT_RELIGIOUSBODY_IMAGE_PATH = 'siteimages/religiousbody';
+/** @see client RecruitList — 출처(학교 등) 아이콘 */
+export const RECRUIT_SOURCE_IMAGE_PATH = 'siteimages/schoolround';
 
 export type RecruitListItem = {
   id: string;
@@ -19,6 +21,7 @@ export type RecruitListItem = {
   church: string;
   churchLogo?: string;
   religiousbody: string;
+  source?: string;
   location: string;
   locationDetail?: string;
   sort: string;
@@ -155,6 +158,8 @@ function CardChurchLogo({
 type RecruitJobCardProps = {
   item: RecruitListItem;
   onPress: () => void;
+  onToggleScrap?: () => void;
+  scrapped?: boolean;
   highlight?: boolean;
   highlightTerms?: string[];
   /** 교회 로고 이미지 경로 (apiBase 하위) */
@@ -164,6 +169,8 @@ type RecruitJobCardProps = {
 export function RecruitJobCard({
   item,
   onPress,
+  onToggleScrap,
+  scrapped = false,
   highlight = false,
   highlightTerms = [],
   churchLogoBasePath,
@@ -208,8 +215,16 @@ export function RecruitJobCard({
         <View style={styles.cardTopRow}>
           {churchName}
           <PayBadge label={payLabel} />
-          <Pressable hitSlop={8} style={styles.bookmarkBtn}>
-            <MaterialIcons name="bookmark-border" size={20} color="#b0b8c1" />
+          <Pressable
+            hitSlop={8}
+            style={styles.bookmarkBtn}
+            onPress={() => onToggleScrap?.()}
+            disabled={!onToggleScrap}>
+            <MaterialIcons
+              name={scrapped ? 'bookmark' : 'bookmark-border'}
+              size={20}
+              color={scrapped ? c.primary : '#b0b8c1'}
+            />
           </Pressable>
         </View>
         {title}
@@ -222,17 +237,57 @@ export function RecruitJobCard({
               </Text>
             </View>
           ) : null}
-          {item.religiousbody ? (
-            <View style={styles.metaRow}>
-              <Image
-                source={{
-                  uri: `${API_BASE}/${RECRUIT_RELIGIOUSBODY_IMAGE_PATH}/${encodeURIComponent(item.religiousbody)}.jpg`,
-                }}
-                style={styles.religiousIcon}
-              />
-              <Text style={styles.metaText} numberOfLines={1}>
-                {item.religiousbody}
-              </Text>
+          {item.religiousbody || item.source ? (
+            <View style={[styles.metaRow, styles.metaRowWrap]}>
+              {item.religiousbody ? (
+                <View style={styles.metaInline}>
+                  <Image
+                    source={{
+                      uri: `${API_BASE}/${RECRUIT_RELIGIOUSBODY_IMAGE_PATH}/${encodeURIComponent(item.religiousbody)}.jpg`,
+                    }}
+                    style={styles.religiousIcon}
+                  />
+                  {highlight ? (
+                    <HighlightedText
+                      text={item.religiousbody}
+                      terms={highlightTerms}
+                      style={styles.metaText}
+                      highlightStyle={styles.highlightText}
+                    />
+                  ) : (
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {item.religiousbody}
+                    </Text>
+                  )}
+                </View>
+              ) : null}
+              {item.religiousbody && item.source ? (
+                <Text style={styles.metaDivider}>|</Text>
+              ) : null}
+              {item.source ? (
+                <View style={styles.metaInline}>
+                  {item.source !== '사역자모아' ? (
+                    <Image
+                      source={{
+                        uri: `${API_BASE}/${RECRUIT_SOURCE_IMAGE_PATH}/${encodeURIComponent(item.source)}.jpg`,
+                      }}
+                      style={styles.religiousIcon}
+                    />
+                  ) : null}
+                  {highlight ? (
+                    <HighlightedText
+                      text={item.source}
+                      terms={highlightTerms}
+                      style={styles.metaText}
+                      highlightStyle={styles.highlightText}
+                    />
+                  ) : (
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {item.source}
+                    </Text>
+                  )}
+                </View>
+              ) : null}
             </View>
           ) : null}
           {item.sort ? (
@@ -534,7 +589,10 @@ const styles = StyleSheet.create({
   },
   cardMeta: { gap: 4, marginBottom: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { fontSize: 14, color: c.textMuted, flex: 1, lineHeight: 19 },
+  metaRowWrap: { flexWrap: 'wrap' },
+  metaInline: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, maxWidth: '100%' },
+  metaDivider: { fontSize: 14, color: '#ccc', marginHorizontal: 2 },
+  metaText: { fontSize: 14, color: c.textMuted, flexShrink: 1, lineHeight: 19 },
   cardTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cardTime: { fontSize: 13, color: c.textTime },
   highlightText: { color: 'rgb(30, 0, 199)', fontWeight: '700' },

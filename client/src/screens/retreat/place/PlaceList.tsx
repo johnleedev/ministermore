@@ -7,6 +7,7 @@ import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
+import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
 import './Place.scss';
 
 interface PlaceItem {
@@ -57,6 +58,7 @@ export default function PlaceList() {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
 
   const fetchPosts = async (page: number, append = false) => {
     if (append) {
@@ -113,6 +115,57 @@ export default function PlaceList() {
     resetListState();
     fetchPosts(1);
   }, [selectRegion]);
+
+  useEffect(() => {
+    if (!userData.userAccount || list.length === 0) {
+      setScrapMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const targets = list.map(item => ({
+          targetType: 'retreat_place' as const,
+          targetId: String(item.id),
+          tableType: '',
+        }));
+        const map = await fetchScrapStatusMap(userData.userAccount, targets);
+        if (!cancelled) setScrapMap(map);
+      } catch {
+        if (!cancelled) setScrapMap({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userData.userAccount, list]);
+
+  const togglePlaceScrap = async (item: PlaceItem, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!isLogin || !userData.userAccount) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    const payload = {
+      targetType: 'retreat_place' as const,
+      targetId: String(item.id),
+      tableType: '',
+      title: item.placeName,
+      subtitle: item.sort,
+      meta: item.location,
+      linkPath: `/retreat/place/detail?id=${item.id}`,
+    };
+    const key = scrapKeyOf(payload);
+    const before = Boolean(scrapMap[key]);
+    setScrapMap(prev => ({ ...prev, [key]: !before }));
+    try {
+      const res = await toggleScrap(userData.userAccount, payload);
+      setScrapMap(prev => ({ ...prev, [key]: res.scrapped }));
+    } catch {
+      setScrapMap(prev => ({ ...prev, [key]: before }));
+      alert('스크랩 처리에 실패했습니다.');
+    }
+  };
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1;
@@ -194,9 +247,34 @@ export default function PlaceList() {
   const renderPlaceCard = (subItem: PlaceItem) => {
     const firstImage = getFirstImage(subItem.images);
 
+    const scrapActive = scrapMap[scrapKeyOf({ targetType: 'retreat_place', targetId: String(subItem.id), tableType: '' })];
+
     return (
       <div key={subItem.id} className="place__item" onClick={() => openPlaceDetail(subItem.id)}>
         <div className="place__img--cover">
+          <button
+            type="button"
+            onClick={(e) => void togglePlaceScrap(subItem, e)}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: 10,
+              zIndex: 3,
+              border: 'none',
+              background: 'rgba(255,255,255,0.55)',
+              borderRadius: '50%',
+              width: 24,
+              height: 24,
+              padding: 0,
+              margin: 0,
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: 'pointer',
+              color: scrapActive ? '#ef4444' : '#9ca3af',
+            }}
+            aria-label="스크랩">
+            {scrapActive ? '♥' : '♡'}
+          </button>
           <div className="namecard">
             <p>{subItem.location}</p>
           </div>
