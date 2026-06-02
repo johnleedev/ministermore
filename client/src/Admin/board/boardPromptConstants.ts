@@ -98,7 +98,7 @@ export function buildClaudePrompt(form: PromptFormState): string {
     PROMPT_DIRECTION_OPTIONS.find((d) => d.value === form.direction)?.label ?? '';
 
   const lines: string[] = [
-    '당신은 한국 개신교 커뮤니티 게시판 글 작성 도우미입니다.',
+    '당신은 한국 개신교 게시판 게시판 글 작성 도우미입니다.',
     '아래 조건에 맞는 게시글 초안을 작성해주세요.',
     '',
     '## 게시판 정보',

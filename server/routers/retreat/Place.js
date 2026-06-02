@@ -76,10 +76,16 @@ router.post('/geocode', async (req, res) => {
   }
 });
 
-// 장소 데이터 리스트 보내기
+const VISIBLE_WHERE = `(isView = 'true' OR isView = '1' OR isView = 1)`;
+
+// 장소 데이터 리스트 보내기 (페이지네이션)
 router.post('/getdataplace', async (req, res) => {
-  const { sort = 'all', region = 'all' } = req.body;
-  const where = [];
+  const { sort = 'all', region = 'all', page = 1, pageSize = 9 } = req.body;
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limit = Math.max(1, Math.min(50, parseInt(pageSize, 10) || 9));
+  const offset = (pageNum - 1) * limit;
+
+  const where = [VISIBLE_WHERE];
   const values = [];
 
   if (sort !== 'all') {
@@ -92,31 +98,48 @@ router.post('/getdataplace', async (req, res) => {
     values.push(region);
   }
 
-  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-  const query = `
+  const whereClause = `WHERE ${where.join(' AND ')}`;
+  const countQuery = `SELECT COUNT(*) AS totalCount FROM dataplace ${whereClause};`;
+  const dataQuery = `
     SELECT id, isView, placeName, sort, size, region, location, images
-    FROM dataplace ${whereClause};
+    FROM dataplace ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?;
   `;
 
-  retreatdb.query(query, values, function (error, result) {
-    if (error) {
-      console.error(error);
-      res.status(500).json({ count: 0, data: false });
-      return;
-    }
+  try {
+    const [countResult, dataResult] = await Promise.all([
+      new Promise((resolve, reject) => {
+        retreatdb.query(countQuery, values, (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        retreatdb.query(dataQuery, [...values, limit, offset], (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
+      }),
+    ]);
 
-    if (result.length > 0) {
+    const totalCount = countResult[0]?.totalCount ?? 0;
+
+    if (dataResult.length > 0) {
       res.json({
-        count: result.length,
-        data: result
+        count: totalCount,
+        data: dataResult,
       });
     } else {
       res.json({
-        count: 0,
-        data: false
+        count: totalCount,
+        data: false,
       });
     }
-  });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ count: 0, data: false });
+  }
 });
 
 // 장소 데이터 검색하기

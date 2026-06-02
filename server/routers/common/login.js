@@ -78,7 +78,6 @@ router.post('/loginsnstoken', async (req, res) => {
 // 카카오 & 네이버 로그인 로직
 router.post('/login', async (req, res) => {
   var { url, AccessToken, token } = req.body;
-  console.log(url, AccessToken, token);
 
   if (process.env.DEBUG_SNS_LOGIN === '1') {
     console.log('[login/sns]', new Date().toISOString(), {
@@ -548,7 +547,7 @@ router.post('/changepassword', async function(req, res){
         })
         const hashedtext = await argon2.hash(resultramdom);
         commondb.query(`
-          UPDATE user SET password = '${hashedtext}' WHERE userAccount = '${email}' AND userName = '${userName}';
+          UPDATE user SET password = '${hashedtext}' WHERE userAccount = '${email}' AND userNickname = '${userNickname}';
           `,function(error, result){
           if (error) {throw error}
           if (result.affectedRows > 0) {            

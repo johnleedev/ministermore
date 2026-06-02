@@ -16,6 +16,8 @@ const escapeQuotes = (str) => {
 };
 
 const { handleBoardPostSearch } = require('./boardSearchHelpers');
+const { handleAdminNoticeSort } = require('./boardAdminHelpers');
+const { handleBoardGetPosts } = require('./boardListHelpers');
 
 // 게시글 검색 API (구분/지역 칩 클릭 시 즉시 필터)
 router.post('/getusedpostssearch', async (req, res) => {
@@ -26,54 +28,14 @@ router.post('/getusedpostssearch', async (req, res) => {
   });
 });
 
-// 게시글 전체 목록 조회 API
-router.get('/getusedposts/:page', async (req, res) => {
-  var page = parseInt(req.params.page) || 1;
-  var pageSize = 10;
-  var offset = (page - 1) * pageSize;
-
-  const dataQuery = `ORDER BY p.id DESC LIMIT ? OFFSET ?`;
-
-  const query = `
-    SELECT p.*, COUNT(c.id) AS commentCount FROM usedPosts p
-    LEFT JOIN usedComments c ON p.id = c.post_id
-    GROUP BY p.id
-    ${dataQuery}
-  `;
-
-  const countQuery = `
-    SELECT COUNT(*) AS totalCount FROM usedPosts p
-  `;
-
-  const queryParams = [pageSize, offset];
-  const countParams = [];
-
-  try {
-    const [dataResult, countResult] = await Promise.all([
-      new Promise((resolve, reject) => {
-        boarddb.query(query, queryParams, (error, result) => {
-          if (error) reject(error);
-          resolve(result);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        boarddb.query(countQuery, countParams, (error, result) => {
-          if (error) reject(error);
-          resolve(result);
-        });
-      })
-    ]);
-
-    const totalCount = countResult[0].totalCount;
-    res.send({
-      resultData: dataResult,
-      totalCount: totalCount
-    });
-    res.end();
-  } catch (error) {
-    res.status(500).send({ error: 'Database query failed' });
-  }
-});
+// 게시글 전체 목록 조회 API (공지 상단 고정)
+router.get('/getusedposts/:page', (req, res) =>
+  handleBoardGetPosts(req, res, boarddb, {
+    postsTable: 'usedPosts',
+    commentsTable: 'usedComments',
+    withRegions: true,
+  }),
+);
 
 
 
@@ -410,6 +372,8 @@ router.post('/checkusedisposting', (req, res) => {
   }})
 });
 
+// 관리자 — 공지 등록/해제 (sort 변경)
+router.post('/usedadminsetnotice', handleAdminNoticeSort({ db: boarddb, postsTable: 'usedPosts' }));
 
 module.exports = router;
 

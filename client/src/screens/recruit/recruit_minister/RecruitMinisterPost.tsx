@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import '../Recruit.scss'
-import '../RecruitList.scss'
+import '../common/Recruit.scss'
+import '../common/RecruitList.scss'
 import MainURL from '../../../MainURL';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';

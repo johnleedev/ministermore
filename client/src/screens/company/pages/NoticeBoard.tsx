@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import '../../board/Board.scss';
+import '../Company.scss';
 import MainURL from '../../../MainURL';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -83,15 +83,13 @@ export default function NoticeBoard () {
   };
 
   return (
-    <div className='community'>
+    <div className="company">
 
       <div className="inner">
         
         <div className="subpage__main">
           <div className="subpage__main__title">
-            <div className="subpage__main__title">
-              <h3>공지사항</h3>
-            </div>
+            <h3>공지사항</h3>
           </div>
 
           <div className="subpage__main__content">

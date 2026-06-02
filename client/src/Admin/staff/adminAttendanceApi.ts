@@ -7,7 +7,6 @@ export type AttendanceRecord = {
   workDate: string;
   clockIn: string | null;
   clockOut: string | null;
-  status: string;
   name?: string;
   department?: string | null;
   position?: string | null;

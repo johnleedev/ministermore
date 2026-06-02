@@ -220,14 +220,17 @@
                 width: 10%;
               }
               li.th_title {
-                width: 60%;
+                width: 40%;
                 overflow: hidden;
+              }
+              li.th_name {
+                width: 15%;
               }
               li.th_date {
                 width: 15%;
               }
               li.th_views {
-                width: 15%;
+                width: 10%;
               }
             }
   
@@ -250,13 +253,16 @@
                 width: 10%;
               }
               li.td_title {
-                width: 60%;
+                width: 40%;
+              }
+              li.td_name {
+                width: 15%;
               }
               li.td_date {
                 width: 15%;
               }
               li.td_views {
-                width: 15%;
+                width: 10%;
               }
               li.td_title:hover {
                 cursor: pointer;

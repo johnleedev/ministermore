@@ -36,63 +36,7 @@ function validateSearchRequest({ word, categories, regions, withRegions }) {
   return null;
 }
 
-function buildFilterClause({ word, categories, regions, withRegions }) {
-  const conditions = [];
-  const filterParams = [];
-
-  if (word.length >= 2) {
-    const likeWord = `%${word}%`;
-    conditions.push('(p.title LIKE ? OR p.content LIKE ? OR p.userNickName LIKE ?)');
-    filterParams.push(likeWord, likeWord, likeWord);
-  }
-
-  if (categories.length > 0) {
-    conditions.push(`p.sort IN (${categories.map(() => '?').join(',')})`);
-    filterParams.push(...categories);
-  }
-
-  if (withRegions && regions.length > 0) {
-    conditions.push(`p.region IN (${regions.map(() => '?').join(',')})`);
-    filterParams.push(...regions);
-  }
-
-  return { conditions, filterParams };
-}
-
-function runBoardSearch(boarddb, { postsTable, commentsTable, conditions, filterParams, pageSize, offset }) {
-  const whereClause = `WHERE ${conditions.join(' AND ')}`;
-  const query = `
-    SELECT p.*, COUNT(c.id) AS commentCount FROM ${postsTable} p
-    LEFT JOIN ${commentsTable} c ON p.id = c.post_id
-    ${whereClause}
-    GROUP BY p.id
-    ORDER BY p.id DESC LIMIT ? OFFSET ?
-  `;
-  const countQuery = `
-    SELECT COUNT(*) AS totalCount FROM ${postsTable} p
-    ${whereClause}
-  `;
-  const queryParams = [...filterParams, pageSize, offset];
-  const countParams = [...filterParams];
-
-  return Promise.all([
-    new Promise((resolve, reject) => {
-      boarddb.query(query, queryParams, (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      });
-    }),
-    new Promise((resolve, reject) => {
-      boarddb.query(countQuery, countParams, (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      });
-    }),
-  ]).then(([dataResult, countResult]) => ({
-    resultData: dataResult,
-    totalCount: countResult[0]?.totalCount ?? 0,
-  }));
-}
+const { fetchBoardListPayload } = require('./boardListHelpers');
 
 async function handleBoardPostSearch(req, res, boarddb, options) {
   const { postsTable, commentsTable, withRegions = false } = options;
@@ -103,20 +47,20 @@ async function handleBoardPostSearch(req, res, boarddb, options) {
     return res.status(validationError.status).send({ error: validationError.error });
   }
 
-  const { conditions, filterParams } = buildFilterClause({ ...parsed, withRegions });
+  const { word, categories, regions, page } = parsed;
+  const chipFilters = hasChipFilters({ categories, regions, withRegions });
 
-  if (conditions.length === 0) {
+  if (!chipFilters && word.length < 2) {
     return res.status(400).send({ error: 'Search conditions required' });
   }
 
   try {
-    const payload = await runBoardSearch(boarddb, {
+    const payload = await fetchBoardListPayload(boarddb, {
       postsTable,
       commentsTable,
-      conditions,
-      filterParams,
-      pageSize: parsed.pageSize,
-      offset: parsed.offset,
+      withRegions,
+      page,
+      filters: { word, categories, regions },
     });
     return res.send(payload);
   } catch (error) {
@@ -128,6 +72,5 @@ async function handleBoardPostSearch(req, res, boarddb, options) {
 module.exports = {
   parseSearchRequest,
   validateSearchRequest,
-  buildFilterClause,
   handleBoardPostSearch,
 };

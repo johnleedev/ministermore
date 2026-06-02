@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { recoilLoginPath, recoilLoginState, recoilUserData } from '../RecoilStore';
 import MainURL from '../MainURL';
+import logoPng from '../images/logopng.png';
 
 const Header: React.FC = () => {
   
@@ -211,6 +212,7 @@ const Header: React.FC = () => {
               <div className="header-logo" 
                 onClick={()=>{navigate('/')}}
               >
+                <img src={logoPng} alt="" className="header-logo__mark" />
                 <h1>사역자모아</h1>
               </div>
               <div className="header-menu">

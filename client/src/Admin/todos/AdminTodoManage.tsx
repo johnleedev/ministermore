@@ -85,9 +85,32 @@ function todayDateString(): string {
 }
 
 function parseDateOnly(value: string | null): Date | null {
-  if (!value) return null;
-  const d = new Date(`${value}T00:00:00`);
+  const normalized = normalizeDateText(value);
+  if (!normalized) return null;
+  const d = new Date(`${normalized}T00:00:00`);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function normalizeDateText(value: string | null): string | null {
+  if (!value) return null;
+  const text = String(value).trim();
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+function formatDateOnly(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, amount: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
 /** 마감일이 오늘 이전이거나 오늘인 경우 */
@@ -104,10 +127,11 @@ function isOverdue(todo: AdminTodo): boolean {
 }
 
 function formatDueDisplay(dueDate: string | null): string {
-  if (!dueDate) return '마감일 없음';
-  const [y, m, d] = dueDate.split('-');
+  const normalized = normalizeDateText(dueDate);
+  if (!normalized) return '마감일 없음';
+  const [y, m, d] = normalized.split('-');
   if (y && m && d) return `${y}.${m}.${d}`;
-  return dueDate;
+  return normalized;
 }
 
 function assigneeInitial(name: string): string {
@@ -150,6 +174,8 @@ export default function AdminTodoManage() {
   const [sidebarView, setSidebarView] = useState<SidebarView>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editOpen, setEditOpen] = useState(false);
@@ -234,6 +260,24 @@ export default function AdminTodoManage() {
 
   const isTemplatesView = sidebarView === 'templates';
   const todoViewFilter: ViewFilter = isTemplatesView ? 'all' : sidebarView;
+  const today = todayDateString();
+
+  const calendarCells = useMemo(() => {
+    const firstDay = startOfMonth(calendarMonth);
+    const firstWeekday = firstDay.getDay();
+    const daysInMonth = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0).getDate();
+    const cells: Array<{ key: string; date: Date | null }> = [];
+    for (let i = 0; i < firstWeekday; i += 1) {
+      cells.push({ key: `empty-${i}`, date: null });
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({
+        key: `day-${day}`,
+        date: new Date(firstDay.getFullYear(), firstDay.getMonth(), day),
+      });
+    }
+    return cells;
+  }, [calendarMonth]);
 
   const filteredTodos = useMemo(() => {
     if (isTemplatesView) return [];
@@ -241,11 +285,14 @@ export default function AdminTodoManage() {
       if (superAdmin && assigneeFilter !== 'all' && String(todo.assignee_id) !== assigneeFilter) {
         return false;
       }
+      if (selectedDateFilter && normalizeDateText(todo.due_date) !== selectedDateFilter) {
+        return false;
+      }
       if (!matchesViewFilter(todo, todoViewFilter)) return false;
       if (!matchesQuickFilter(todo, quickFilter)) return false;
       return true;
     });
-  }, [todos, assigneeFilter, todoViewFilter, quickFilter, superAdmin, isTemplatesView]);
+  }, [todos, assigneeFilter, selectedDateFilter, todoViewFilter, quickFilter, superAdmin, isTemplatesView]);
 
   const handleSidebarSelect = (value: ViewFilter) => {
     setSidebarView(value);
@@ -460,6 +507,69 @@ export default function AdminTodoManage() {
             <FaRedo className="admin-todo-manage__nav-icon" />
             <span>오늘의 반복 업무 (내 업무)</span>
           </button>
+          <div className="admin-todo-manage__calendar-wrap">
+            <div className="admin-todo-manage__calendar-header">
+              <strong className="admin-todo-manage__calendar-title">
+                {calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월
+              </strong>
+              <div className="admin-todo-manage__calendar-nav">
+                <button
+                  type="button"
+                  className="admin-todo-manage__calendar-nav-btn"
+                  onClick={() => setCalendarMonth((prev) => addMonths(prev, -1))}
+                  aria-label="이전 달"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="admin-todo-manage__calendar-nav-btn"
+                  onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                  aria-label="다음 달"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+            <div className="admin-todo-manage__calendar-weekdays">
+              {['일', '월', '화', '수', '목', '금', '토'].map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            <div className="admin-todo-manage__calendar-grid">
+              {calendarCells.map((cell) => {
+                if (!cell.date) {
+                  return <span key={cell.key} className="admin-todo-manage__calendar-cell admin-todo-manage__calendar-cell--empty" />;
+                }
+                const dateText = formatDateOnly(cell.date);
+                const isSelected = selectedDateFilter === dateText;
+                const isToday = dateText === today;
+                return (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    className={`admin-todo-manage__calendar-cell${
+                      isSelected ? ' admin-todo-manage__calendar-cell--selected' : ''
+                    }${isToday ? ' admin-todo-manage__calendar-cell--today' : ''}`}
+                    onClick={() =>
+                      setSelectedDateFilter((prev) => (prev === dateText ? null : dateText))
+                    }
+                    title={`${dateText} 작업 보기`}
+                  >
+                    {cell.date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="admin-todo-manage__calendar-clear"
+              onClick={() => setSelectedDateFilter(null)}
+              disabled={selectedDateFilter == null}
+            >
+              날짜 필터 해제
+            </button>
+          </div>
           {superAdmin && (
             <div className="admin-todo-manage__assignee-wrap">
               <label className="admin-todo-manage__assignee-label" htmlFor="todo-assignee-filter">
@@ -552,7 +662,11 @@ export default function AdminTodoManage() {
               {loading ? (
                 <p className="admin-todo-manage__loading">불러오는 중…</p>
               ) : filteredTodos.length === 0 ? (
-                <p className="admin-todo-manage__empty">표시할 작업이 없습니다.</p>
+                <p className="admin-todo-manage__empty">
+                  {selectedDateFilter
+                    ? `${selectedDateFilter}에 해당하는 작업이 없습니다.`
+                    : '표시할 작업이 없습니다.'}
+                </p>
               ) : (
                 <ul className="admin-todo-manage__todo-list">
               {filteredTodos.map((todo) => {

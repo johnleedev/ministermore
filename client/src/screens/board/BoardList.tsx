@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import './Board.scss';
-import '../recruit/RecruitList.scss';
+import '../recruit/common/RecruitList.scss';
 import MainURL from '../../MainURL';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DateFormmating from '../../components/DateFormmating';
 import Pagination from '../../components/Pagination';
 import Loading from '../../components/Loading';
@@ -12,6 +12,7 @@ import { useRecoilValue } from 'recoil';
 import { recoilLoginState } from '../../RecoilStore';
 import '../ForListPage.scss';
 import type { CommunityBoardConfig, CommunityPost } from './BoardTypes';
+import { isBoardNoticePost, parseBoardListPayload } from './boardListUtils';
 import {
   MdOutlineCalendarToday,
   MdOutlineCategory,
@@ -31,10 +32,12 @@ const getViewsRoute = (config: CommunityBoardConfig) => config.viewsRoute ?? `${
 
 export default function BoardList({ config }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
   const isLogin = useRecoilValue(recoilLoginState);
   const hasRegion = Boolean(config.regionOptions?.length);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [noticeList, setNoticeList] = useState<CommunityPost[]>([]);
   const [list, setList] = useState<CommunityPost[]>([]);
   const [listAllLength, setListAllLength] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,14 +71,21 @@ export default function BoardList({ config }: Props) {
           : await axios.get(`${MainURL}/${config.apiBase}/${listRoute}/${page}`);
 
         if (res.data) {
-          setList(res.data.resultData || []);
+          const { notices, regular } = parseBoardListPayload(
+            res.data.resultData as CommunityPost[],
+            res.data.noticePosts as CommunityPost[],
+          );
+          setNoticeList(notices);
+          setList(regular);
           setListAllLength(res.data.totalCount || 0);
         } else {
+          setNoticeList([]);
           setList([]);
           setListAllLength(0);
         }
       } catch (error) {
         console.error(error);
+        setNoticeList([]);
         setList([]);
         setListAllLength(0);
       } finally {
@@ -92,8 +102,8 @@ export default function BoardList({ config }: Props) {
   }, [currentPage, activeCategory, activeRegion, fetchDatas]);
 
   const renderPreview = (value: string) => {
-    if (value?.length > 40) {
-      return `${value.substring(0, 40)}...`;
+    if (value?.length > 45) {
+      return `${value.substring(0, 45)}...`;
     }
     return value;
   };
@@ -139,6 +149,8 @@ export default function BoardList({ config }: Props) {
     }
     setCurrentPage(1);
   };
+
+  const displayList = [...noticeList, ...list];
 
   const handleRegionSelect = (item: string) => {
     if (item === '전체') {
@@ -258,12 +270,17 @@ export default function BoardList({ config }: Props) {
                     </div>
                   </div>
                   <div className="community-board__list">
-                    {list.length > 0 ? (
-                      list.map((item) => {
+                    {displayList.length > 0 ? (
+                      displayList.map((item) => {
                         const contentPreview = renderContentPreview(item.content);
+                        const isNotice = isBoardNoticePost(item);
                         return (
                           <div
-                            className="community-board__item"
+                            className={
+                              isNotice
+                                ? 'community-board__item community-board__item--notice'
+                                : 'community-board__item'
+                            }
                             key={item.id}
                             onClick={() => openPostDetails(item)}
                             onKeyDown={(e) => {

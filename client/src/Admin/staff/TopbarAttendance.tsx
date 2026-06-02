@@ -76,12 +76,8 @@ export default function TopbarAttendance() {
     if (!ok) return;
     setActing('in');
     try {
-      const record = await postClockIn(session.id);
+      await postClockIn(session.id);
       await loadStatus();
-      if (record?.status) {
-        const label = record.status === '지각' ? '지각' : '정상 출근';
-        alert(`출근이 기록되었습니다. (${label})`);
-      }
     } catch (err) {
       alert(getAttendanceErrorMessage(err, '출근 처리에 실패했습니다.'));
     } finally {
@@ -113,7 +109,7 @@ export default function TopbarAttendance() {
   const canClockOut = Boolean(status?.canClockOut) && acting == null && !loading;
 
   const clockInTitle = status?.hasClockIn && record?.clockIn
-    ? `출근 완료 ${formatShortTime(record.clockIn)}${record.status ? ` (${record.status})` : ''}`
+    ? `출근 완료 ${formatShortTime(record.clockIn)}`
     : '출근하기';
   const clockOutTitle = status?.hasClockOut && record?.clockOut
     ? `퇴근 완료 ${formatShortTime(record.clockOut)}`

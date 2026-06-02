@@ -64,11 +64,9 @@ function rollbackAsync(connection) {
 }
 
 function todayDateString() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  // 서버 타임존/Intl 설정과 무관하게 KST(UTC+9) 날짜를 강제 계산
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return kstNow.toISOString().slice(0, 10);
 }
 router.use(cors());
 router.use(express.json());
@@ -83,7 +81,7 @@ const TODO_SELECT_FIELDS = `
     t.description,
     t.status,
     t.priority,
-    t.due_date,
+    DATE_FORMAT(t.due_date, '%Y-%m-%d') AS due_date,
     u.name AS assignee_name,
     u.position AS assignee_position,
     u.department AS assignee_department`;

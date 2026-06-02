@@ -1,0 +1,342 @@
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useAtomValue, useSetAtom } from 'jotai';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  clearSession,
+  loadSessionUser,
+  type StoredUserData,
+} from '../login/sessionStorage';
+import { isLoggedInAtom, notificationListAtom } from '../state/atoms';
+import type { MypageStackParamList } from './MypageStack';
+import { mpScreenContentStyle } from '../screens/shared/mypageUi';
+import { mpColors } from '../screens/shared/mypageTheme';
+import {
+  getEffectivePushEnabled,
+  getOsNotificationsAllowed,
+  loadUserWantsPush,
+  saveUserWantsPush,
+  syncUserActiveToServer,
+} from '../notifi/notificationSettings';
+
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type Nav = NativeStackNavigationProp<MypageStackParamList, 'MypageMain'>;
+
+const MENU_ITEMS = [
+  {
+    icon: 'history',
+    title: '내 활동',
+    desc: '내가 작성한 글, 댓글, 신청 내역 확인',
+    action: 'activity' as const,
+  },
+  {
+    icon: 'bookmark',
+    title: '스크랩',
+    desc: '저장한 공고, 장소, 콘텐츠 모아보기',
+    action: 'scrap' as const,
+  },
+  {
+    icon: 'notifications-none',
+    title: '알림 설정',
+    desc: '맞춤 공고, 게시판, 추천 알림 관리',
+    action: 'notifications' as const,
+  },
+  {
+    icon: 'settings',
+    title: '앱 설정',
+    desc: '화면, 계정, 개인정보 및 이용 설정',
+    action: 'settings' as const,
+  },
+  {
+    icon: 'mail-outline',
+    title: '문의하기',
+    desc: '오류 신고, 제안, 운영팀 문의 접수',
+    action: 'contact' as const,
+  },
+] as const;
+
+function avatarInitials(user: StoredUserData | null): string {
+  const name = user?.userNickName?.trim() || user?.userAccount?.trim() || 'MM';
+  if (name.length <= 2) return name.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+export function MypageMainScreen() {
+  const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
+  const setIsLoggedIn = useSetAtom(isLoggedInAtom);
+  const notifications = useAtomValue(notificationListAtom);
+  const [user, setUser] = useState<StoredUserData | null>(null);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [nightOff, setNightOff] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    const savedUser = await loadSessionUser();
+    setUser(savedUser);
+    const effective = await getEffectivePushEnabled();
+    setPushEnabled(effective);
+    const wants = await loadUserWantsPush();
+    if (!wants) setPushEnabled(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfile();
+    }, [loadProfile]),
+  );
+
+  const regionText = user?.userChurch
+    ? `${user.userChurch} · ${user.grade || '일반 회원'}`
+    : user?.grade || '일반 회원';
+
+  const onMenuPress = (action: (typeof MENU_ITEMS)[number]['action']) => {
+    switch (action) {
+      case 'notifications':
+        navigation.navigate('NotificationSettings');
+        break;
+      case 'settings':
+        Alert.alert('', '준비 중인 기능입니다.');
+        break;
+      case 'contact':
+        Linking.openURL('mailto:support@ministermore.co.kr').catch(() => {
+          Alert.alert('', '문의 메일을 열 수 없습니다.');
+        });
+        break;
+      default:
+        Alert.alert('', '준비 중인 기능입니다.');
+    }
+  };
+
+  const onTogglePush = async (next: boolean) => {
+    if (next) {
+      const os = await getOsNotificationsAllowed();
+      if (!os) {
+        Alert.alert('알림 권한', '기기 설정에서 알림 권한을 허용해주세요.', [
+          { text: '취소', style: 'cancel' },
+          { text: '설정 열기', onPress: () => Linking.openSettings() },
+        ]);
+        return;
+      }
+    }
+    await saveUserWantsPush(next);
+    setPushEnabled(next);
+    await syncUserActiveToServer().catch(() => {});
+  };
+
+  return (
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.content, mpScreenContentStyle(24 + insets.bottom)]}>
+
+      <View style={styles.profileCard}>
+        <View style={styles.profileTop}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{avatarInitials(user)}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.name}>{user?.userNickName || '회원'}</Text>
+            <Text style={styles.role}>
+              {user?.userAccount || '-'}
+              {'\n'}
+              {regionText}
+            </Text>
+          </View>
+          <Pressable style={styles.editBtn} onPress={() => navigation.navigate('Profile')}>
+            <Text style={styles.editBtnText}>프로필 수정</Text>
+          </Pressable>
+        </View>
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statLabel}>스크랩 공고</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statLabel}>내 게시글</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{notifications.length}</Text>
+            <Text style={styles.statLabel}>최근 알림</Text>
+          </View>
+        </View>
+      </View>
+
+      <Text style={styles.sectionLabel}>바로가기</Text>
+      <View style={styles.menuCard}>
+        {MENU_ITEMS.map((item, idx) => (
+          <Pressable
+            key={item.title}
+            style={[styles.menuItem, idx < MENU_ITEMS.length - 1 && styles.menuItemBorder]}
+            onPress={() => onMenuPress(item.action)}>
+            <View style={styles.menuIcon}>
+              <MaterialIcons name={item.icon} size={22} color={mpColors.primary} />
+            </View>
+            <View style={styles.menuText}>
+              <Text style={styles.menuTitle}>{item.title}</Text>
+              <Text style={styles.menuDesc}>{item.desc}</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.settingPanel}>
+        <Text style={styles.settingPanelTitle}>빠른 설정</Text>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>푸시 알림 받기</Text>
+          <Switch value={pushEnabled} onValueChange={onTogglePush} trackColor={{ true: mpColors.primary }} />
+        </View>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>야간 알림 끄기</Text>
+          <Switch value={nightOff} onValueChange={setNightOff} trackColor={{ true: mpColors.primary }} />
+        </View>
+      </View>
+
+      <Pressable
+        style={styles.logoutBtn}
+        onPress={() =>
+          Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
+            { text: '취소', style: 'cancel' },
+            {
+              text: '로그아웃',
+              style: 'destructive',
+              onPress: async () => {
+                await clearSession();
+                setIsLoggedIn(false);
+              },
+            },
+          ])
+        }>
+        <Text style={styles.logoutBtnText}>로그아웃</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: mpColors.bg },
+  content: {},
+  profileCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e6edf9',
+    borderRadius: 28,
+    padding: 20,
+    shadowColor: mpColors.shadow,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 1,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  profileTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: {
+    width: 68,
+    height: 68,
+    borderRadius: 24,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 24, fontWeight: '900', color: '#1d4ed8' },
+  profileInfo: { flex: 1 },
+  name: { fontSize: 24, fontWeight: '800', color: mpColors.text, letterSpacing: -0.8 },
+  role: { fontSize: 13, color: mpColors.textMuted, lineHeight: 20, marginTop: 4 },
+  editBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: mpColors.chipBorder,
+    backgroundColor: '#fff',
+  },
+  editBtnText: { fontSize: 13, fontWeight: '800', color: mpColors.primary },
+  stats: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  stat: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e6edf9',
+    borderRadius: 20,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  statValue: { fontSize: 20, fontWeight: '800', color: mpColors.primary, marginBottom: 6 },
+  statLabel: { fontSize: 12, color: mpColors.textMuted },
+  sectionLabel: {
+    marginTop: 22,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    color: mpColors.textMuted,
+  },
+  menuCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: mpColors.border,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: mpColors.shadow,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 17,
+  },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: '#eef3fb' },
+  menuIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    backgroundColor: mpColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuText: { flex: 1 },
+  menuTitle: { fontSize: 15, fontWeight: '700', color: mpColors.text, marginBottom: 4 },
+  menuDesc: { fontSize: 12, color: mpColors.textMuted, lineHeight: 18 },
+  settingPanel: {
+    marginTop: 14,
+    backgroundColor: '#f8fbff',
+    borderWidth: 1,
+    borderColor: '#e4ecfb',
+    borderRadius: 20,
+    padding: 16,
+  },
+  settingPanelTitle: { fontSize: 15, fontWeight: '700', color: mpColors.text, marginBottom: 10 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  toggleLabel: { fontSize: 14, color: mpColors.textSecondary },
+  logoutBtn: {
+    marginTop: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#d1d9e6',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  logoutBtnText: { fontSize: 16, fontWeight: '800', color: mpColors.textSecondary },
+});

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
+import { MdOutlineKeyboardDoubleArrowDown } from 'react-icons/md';
 import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
@@ -19,11 +20,6 @@ interface PlaceItem {
   images: string | string[] | null;
 }
 
-interface PlaceGroup {
-  region: string;
-  placeList: PlaceItem[];
-}
-
 const regionRoutes: Record<string, string> = {
   '서울/경기도': '/retreat/place?region=서울/경기도',
   강원도: '/retreat/place?region=강원도',
@@ -33,7 +29,7 @@ const regionRoutes: Record<string, string> = {
   제주도: '/retreat/place?region=제주도',
 };
 
-const isVisible = (value: PlaceItem['isView']) => value === true || value === 1 || value === '1' || value === 'true';
+const PAGE_SIZE = 9;
 
 const getFirstImage = (images: PlaceItem['images']) => {
   if (!images) return '';
@@ -56,67 +52,76 @@ export default function PlaceList() {
   const [searchWord, setSearchWord] = useState('');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const fetchPosts = async () => {
-    setIsLoading(true);
+  const fetchPosts = async (page: number, append = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
       const res = await axios.post(`${MainURL}/retreat/getdataplace`, {
         region: selectRegion,
         sort: 'all',
+        page,
+        pageSize: PAGE_SIZE,
       });
 
       if (res.data.data) {
-        const copy = [...res.data.data].reverse();
-        setList(copy);
+        const newItems = [...res.data.data] as PlaceItem[];
+        setList((prev) => (append ? [...prev, ...newItems] : newItems));
+        setTotalCount(res.data.count ?? 0);
         setIsResdataFalse(false);
+        setHasMore(newItems.length >= PAGE_SIZE);
       } else {
-        setList([]);
-        setIsResdataFalse(true);
+        if (!append) {
+          setList([]);
+          setTotalCount(res.data.count ?? 0);
+          setIsResdataFalse(true);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error(error);
-      setList([]);
-      setIsResdataFalse(true);
+      if (!append) {
+        setList([]);
+        setIsResdataFalse(true);
+      }
+      setHasMore(false);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
+  const resetListState = () => {
+    setList([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    setIsSearching(false);
+    setIsResdataFalse(false);
+    setTotalCount(0);
+  };
+
   useEffect(() => {
-    fetchPosts();
+    resetListState();
+    fetchPosts(1);
   }, [selectRegion]);
 
-  const visiblePlaces = useMemo(
-    () => list.filter((item) => isVisible(item.isView)),
-    [list]
-  );
+  const handleLoadMore = () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchPosts(nextPage, true);
+  };
 
-  /** 전체 탭: 지역 구분 없이 최신순(id 내림차순) */
-  const allPlacesNewest = useMemo(
-    () => [...visiblePlaces].sort((a, b) => b.id - a.id),
-    [visiblePlaces]
-  );
-
-  /** 지역 탭: 지역별 그룹 */
-  const placeDataByRegion = useMemo(() => {
-    return visiblePlaces
-      .reduce((acc: PlaceGroup[], curr) => {
-        const existingGroup = acc.find((group) => group.region === curr.region);
-        if (existingGroup) {
-          existingGroup.placeList.push(curr);
-        } else {
-          acc.push({
-            region: curr.region,
-            placeList: [curr],
-          });
-        }
-        return acc;
-      }, [])
-      .sort((a, b) => a.region.localeCompare(b.region));
-  }, [visiblePlaces]);
-
-  const hasResults =
-    selectRegion === 'all' ? allPlacesNewest.length > 0 : placeDataByRegion.length > 0;
+  const listTitle = selectRegion === 'all' ? '전체' : selectRegion;
+  const hasResults = list.length > 0;
 
   const handleWordSearching = async () => {
     if (searchWord.trim().length < 2) {
@@ -124,7 +129,11 @@ export default function PlaceList() {
       return;
     }
 
+    setIsSearching(true);
     setIsLoading(true);
+    setHasMore(false);
+    setCurrentPage(1);
+
     try {
       const res = await axios.post(`${MainURL}/retreat/getdataplacesearch`, {
         region: selectRegion,
@@ -132,10 +141,15 @@ export default function PlaceList() {
       });
 
       if (res.data.data) {
-        setList(res.data.data);
+        const visible = (res.data.data as PlaceItem[]).filter(
+          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true'
+        );
+        setList(visible);
+        setTotalCount(visible.length);
         setIsResdataFalse(false);
       } else {
         setList([]);
+        setTotalCount(0);
         setIsResdataFalse(true);
       }
     } catch (error) {
@@ -149,7 +163,8 @@ export default function PlaceList() {
 
   const resetSearch = () => {
     setSearchWord('');
-    fetchPosts();
+    resetListState();
+    fetchPosts(1);
   };
 
   const openPlaceDetail = (id: number) => {
@@ -203,6 +218,18 @@ export default function PlaceList() {
       </div>
     );
   };
+
+  const renderLoadMoreButton = () =>
+    !isSearching && hasMore && list.length > 0 ? (
+      <div
+        className="addFetchBtn"
+        onClick={isLoadingMore ? undefined : handleLoadMore}
+        style={isLoadingMore ? { opacity: 0.6, cursor: 'wait' } : undefined}
+      >
+        <p>{isLoadingMore ? '불러오는 중...' : '더보기'}</p>
+        {!isLoadingMore && <MdOutlineKeyboardDoubleArrowDown color="#9c9c9c" />}
+      </div>
+    ) : null;
 
   return (
     <div className="retreat">
@@ -271,27 +298,14 @@ export default function PlaceList() {
                   <Loading />
                 </div>
               ) : hasResults && !isResdataFalse ? (
-                selectRegion === 'all' ? (
-                  <div className="place__wrap--category" data-aos="fade-up">
-                    <div className="place__title__row">
-                      <div className="place__title">전체</div>
-                      <div className="place__link">총{allPlacesNewest.length}개</div>
-                    </div>
-                    <div className="place__wrap--item">{allPlacesNewest.map(renderPlaceCard)}</div>
+                <div className="place__wrap--category" data-aos="fade-up">
+                  <div className="place__title__row">
+                    <div className="place__title">{listTitle}</div>
+                    <div className="place__link">총{totalCount}개</div>
                   </div>
-                ) : (
-                  placeDataByRegion.map((item) => (
-                  <div key={item.region} className="place__wrap--category" data-aos="fade-up">
-                    <div className="place__title__row">
-                      <div className="place__title">{item.region}</div>
-                      <div className="place__link">
-                        총{item.placeList.length}개
-                      </div>
-                    </div>
-                    <div className="place__wrap--item">{item.placeList.map(renderPlaceCard)}</div>
-                  </div>
-                  ))
-                )
+                  <div className="place__wrap--item">{list.map(renderPlaceCard)}</div>
+                  {renderLoadMoreButton()}
+                </div>
               ) : (
                 <div className="place__wrap--category" data-aos="fade-up">
                   <div className="place__title">검색 결과가 없습니다.</div>

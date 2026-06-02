@@ -11,14 +11,11 @@ const express = require('express');
 const cors = require('cors');
 const { admindb } = require('../dbdatas/admindb');
 const { isActiveAdminStatus } = require('./adminUserStatus');
-const { getContractClockInSql } = require('./adminContractTime');
 
 const employeeRouter = express.Router();
 const adminRouter = express.Router();
 
 const ROLE_SUPER = 'admin';
-const STATUS_NORMAL = '정상';
-const STATUS_LATE = '지각';
 
 let ensuredAttendanceTable = false;
 
@@ -69,7 +66,6 @@ function formatAttendanceRow(row) {
     workDate: row.work_date,
     clockIn: row.clock_in,
     clockOut: row.clock_out,
-    status: row.status,
     name: row.name ?? undefined,
     department: row.department ?? undefined,
     position: row.position ?? undefined,
@@ -85,7 +81,6 @@ async function ensureAdminAttendanceTable() {
       work_date DATE NOT NULL,
       clock_in DATETIME NOT NULL,
       clock_out DATETIME NULL,
-      status VARCHAR(20) NOT NULL DEFAULT '정상',
       UNIQUE KEY uk_user_work_date (user_id, work_date),
       KEY idx_work_date (work_date),
       CONSTRAINT fk_admin_attendance_user
@@ -127,7 +122,7 @@ async function resolveRequester(req, res) {
 
 async function getTodayAttendance(userId) {
   const [rows] = await admindb.query(
-    `SELECT id, user_id, work_date, clock_in, clock_out, status
+    `SELECT id, user_id, work_date, clock_in, clock_out
        FROM admin_attendance
       WHERE user_id = ? AND work_date = CURDATE()
       LIMIT 1`,
@@ -148,16 +143,14 @@ employeeRouter.post('/clock-in', async (req, res) => {
       return sendError(res, 409, 'ALREADY_CLOCKED_IN', '오늘은 이미 출근 처리되었습니다.');
     }
 
-    const contractClockIn = await getContractClockInSql(ctx.requesterId);
-
     const [result] = await admindb.query(
-      `INSERT INTO admin_attendance (user_id, work_date, clock_in, status)
-       VALUES (?, CURDATE(), NOW(), IF(TIME(NOW()) > ?, ?, ?))`,
-      [ctx.requesterId, contractClockIn, STATUS_LATE, STATUS_NORMAL],
+      `INSERT INTO admin_attendance (user_id, work_date, clock_in)
+       VALUES (?, CURDATE(), NOW())`,
+      [ctx.requesterId],
     );
 
     const [rows] = await admindb.query(
-      `SELECT id, user_id, work_date, clock_in, clock_out, status
+      `SELECT id, user_id, work_date, clock_in, clock_out
          FROM admin_attendance WHERE id = ? LIMIT 1`,
       [result.insertId],
     );
@@ -195,7 +188,7 @@ employeeRouter.post('/clock-out', async (req, res) => {
     );
 
     const [rows] = await admindb.query(
-      `SELECT id, user_id, work_date, clock_in, clock_out, status
+      `SELECT id, user_id, work_date, clock_in, clock_out
          FROM admin_attendance WHERE id = ? LIMIT 1`,
       [today.id],
     );
@@ -266,7 +259,6 @@ adminRouter.get('/attendance', async (req, res) => {
           a.work_date,
           a.clock_in,
           a.clock_out,
-          a.status,
           u.name,
           u.department,
           u.position
@@ -308,7 +300,7 @@ adminRouter.post('/attendance/revert-clock-out', async (req, res) => {
     }
 
     const [existingRows] = await admindb.query(
-      `SELECT id, user_id, work_date, clock_in, clock_out, status
+      `SELECT id, user_id, work_date, clock_in, clock_out
          FROM admin_attendance WHERE id = ? LIMIT 1`,
       [attendanceId],
     );
@@ -332,7 +324,6 @@ adminRouter.post('/attendance/revert-clock-out', async (req, res) => {
           a.work_date,
           a.clock_in,
           a.clock_out,
-          a.status,
           u.name,
           u.department,
           u.position

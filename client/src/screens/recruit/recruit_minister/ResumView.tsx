@@ -1,4 +1,4 @@
-import './Recruit.scss'
+import '../common/Recruit.scss'
 
 export default function ResumView() {
     return (

@@ -87,8 +87,8 @@ export default function Main(props:any) {
   // REMOVE: const [uniqueVisitors, setUniqueVisitors] = useState<number>(0);
 
   // 메인 페이지에서 표시할 언론사 (9개)
-  const mainSources = ['크리스천투데이', '기독신문', '뉴스앤조이', '기독교헤럴드', 'GPNews', '더미션', 
-    '기독일보', '선교신문', '기독교포털뉴스', '한국성결신문', '침례신문', '나사렛신문', '개혁신보', '한국기독공보'];
+  // const mainSources = ['크리스천투데이', '기독신문', '뉴스앤조이', '기독교헤럴드', 'GPNews', '더미션', 
+  //   '기독일보', '선교신문', '기독교포털뉴스', '한국성결신문', '침례신문', '나사렛신문', '개혁신보', '한국기독공보'];
   const religiousbodyList = [
     {name: "구세군대한본영", home: "https://www.thesalvationarmy.or.kr/"},
     {name: "기독교대한감리회", home: "https://kmc.or.kr/"},

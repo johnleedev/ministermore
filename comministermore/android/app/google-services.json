@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "904986870542",
+    "project_id": "ministermore",
+    "storage_bucket": "ministermore.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:904986870542:android:61a9013e96e24444470d5f",
+        "android_client_info": {
+          "package_name": "com.ministermore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0FlQHacKQFphLimOckmlFOMxDYYIQU9o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

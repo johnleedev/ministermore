@@ -1,5 +1,8 @@
 import type { CommunityBoardConfig } from './BoardTypes';
 
+/** 관리자·게시판 공지 글 구분(sort) 값 */
+export const BOARD_NOTICE_SORT = '공지';
+
 const defaultSearchFields = {
   searchLabel: '게시글 검색',
   searchHint: '제목, 내용, 작성자 닉네임으로 검색할 수 있습니다.',

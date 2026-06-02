@@ -153,7 +153,7 @@ export default function NoticeDetail () {
   };
 
   return (
-    <div className='community'>
+    <div className="Board">
 
       <div className="inner">
 

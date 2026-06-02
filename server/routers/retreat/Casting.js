@@ -26,32 +26,65 @@ const isRecentDuplicateRow = (rowDate) => {
   if (Number.isNaN(t)) return false;
   return Date.now() - t < DUPLICATE_WINDOW_MS;
 };
-// 강사 데이터 리스트 보내기
+const VISIBLE_WHERE = `(isView = 'true' OR isView = '1' OR isView = 1)`;
+
+// 강사 데이터 리스트 보내기 (페이지네이션)
 router.post('/getdatacasting', async (req, res) => {
-  const query = `
+  const { sort = 'all', page = 1, pageSize = 9 } = req.body;
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limit = Math.max(1, Math.min(50, parseInt(pageSize, 10) || 9));
+  const offset = (pageNum - 1) * limit;
+
+  const where = [VISIBLE_WHERE];
+  const values = [];
+
+  if (sort !== 'all') {
+    where.push('sort = ?');
+    values.push(sort);
+  }
+
+  const whereClause = `WHERE ${where.join(' AND ')}`;
+  const countQuery = `SELECT COUNT(*) AS totalCount FROM datacasting ${whereClause};`;
+  const dataQuery = `
     SELECT id, isView, sort, name, images
-    FROM datacasting;
+    FROM datacasting ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?;
   `;
 
-  retreatdb.query(query, function (error, result) {
-    if (error) {
-      console.error(error);
-      res.status(500).json({ count: 0, data: false });
-      return;
-    }
+  try {
+    const [countResult, dataResult] = await Promise.all([
+      new Promise((resolve, reject) => {
+        retreatdb.query(countQuery, values, (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        retreatdb.query(dataQuery, [...values, limit, offset], (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
+      }),
+    ]);
 
-    if (result.length > 0) {
+    const totalCount = countResult[0]?.totalCount ?? 0;
+
+    if (dataResult.length > 0) {
       res.json({
-        count: result.length,
-        data: result
+        count: totalCount,
+        data: dataResult,
       });
     } else {
       res.json({
-        count: 0,
-        data: false
+        count: totalCount,
+        data: false,
       });
     }
-  });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ count: 0, data: false });
+  }
 });
 
 // 강사 데이터 검색하기

@@ -45,6 +45,7 @@ export interface CommunityBoardConfig {
   getIsLikedRoute?: string;
   deletePostRoute?: string;
   editPostRoute?: string;
+  adminSetNoticeRoute?: string;
   commentsInputRoute?: string;
   commentDeleteRoute?: string;
   isLikedToggleRoute?: string;

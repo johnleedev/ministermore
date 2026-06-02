@@ -213,7 +213,7 @@ export default function BoardDetail({ config }: Props) {
           <div className="subpage__main__content">
             <div className="top_box">
               <div className="left">
-                <h1>{renderPreview(propsData.title)}</h1>
+                <h1>{propsData.title}</h1>
                 <p>구분: {propsData.sort}</p>
                 {propsData.region ? <p>지역: {propsData.region}</p> : null}
                 <p>글쓴이: {propsData.userNickName}님</p>

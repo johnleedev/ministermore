@@ -6,15 +6,6 @@ const argon2 = require('argon2');
 const { admindb } = require('../dbdatas/admindb');
 const { commondb } = require('../dbdatas/commondb');
 const { canonicalAdminStatusFromDb } = require('./adminUserStatus');
-const {
-  ensureAdminContractTimeColumns,
-  normalizeContractTimeInput,
-  attachContractTimesToPublic,
-  parseContractWeekdaysInput,
-  saveContractWeekdaysForUser,
-  DEFAULT_CONTRACT_CLOCK_IN,
-  DEFAULT_CONTRACT_CLOCK_OUT,
-} = require('./adminContractTime');
 
 const router = express.Router();
 router.use(cors());
@@ -195,7 +186,7 @@ async function verifyAdminPassword(storedPassword, inputPassword) {
 function toPublicAdmin(row, enums) {
   if (!row) return null;
   const statusDb = row.status != null ? String(row.status).trim() : '';
-  return attachContractTimesToPublic({
+  return {
     id: row.id,
     email: row.email,
     name: row.name,
@@ -204,9 +195,7 @@ function toPublicAdmin(row, enums) {
     role: row.role,
     statusDb,
     status: canonicalAdminStatusFromDb(statusDb),
-    contract_clock_in: row.contract_clock_in,
-    contract_clock_out: row.contract_clock_out,
-  });
+  };
 }
 
 async function getAdminById(id) {
@@ -448,16 +437,8 @@ router.get('/admins', async (req, res) => {
     }
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    await ensureAdminContractTimeColumns();
-
     const rows = await queryAdmin(
-      `SELECT id, email, name, department, position, role, status,
-              contract_clock_in, contract_clock_out,
-              contract_mon_in, contract_mon_out,
-              contract_tue_in, contract_tue_out,
-              contract_wed_in, contract_wed_out,
-              contract_thu_in, contract_thu_out,
-              contract_fri_in, contract_fri_out
+      `SELECT id, email, name, department, position, role, status
          FROM adminusers
          ${whereSql}
          ORDER BY id DESC`,
@@ -471,66 +452,6 @@ router.get('/admins', async (req, res) => {
   } catch (error) {
     console.error('adminuser /admins error:', error);
     return res.status(500).json({ ok: false, message: 'failed to fetch admin users' });
-  }
-});
-
-/** POST /adminuser/contract-hours — 출·퇴근 시간 (최종관리자) */
-router.post('/contract-hours', async (req, res) => {
-  try {
-    const requesterId = parsePositiveInt(req.body?.requesterId);
-    const targetId = parsePositiveInt(req.body?.targetId);
-
-    if (!requesterId || !targetId) {
-      return res.status(400).json({ ok: false, message: 'requesterId and targetId are required' });
-    }
-
-    const auth = await requireSuperAdmin(requesterId);
-    if (!auth.ok) {
-      return res.status(403).json({ ok: false, message: '최종관리자만 수정할 수 있습니다.' });
-    }
-
-    await ensureAdminContractTimeColumns();
-
-    let weekdaysParsed = parseContractWeekdaysInput(req.body?.contractWeekdays);
-    if (weekdaysParsed == null) {
-      const clockInNorm = normalizeContractTimeInput(req.body?.contractClockIn);
-      const clockOutNorm = normalizeContractTimeInput(req.body?.contractClockOut);
-      if (clockInNorm === undefined || clockOutNorm === undefined) {
-        return res.status(400).json({
-          ok: false,
-          message: '시간은 HH:mm 형식이어야 합니다. (예: 09:00, 18:00)',
-        });
-      }
-      const clockInSql = clockInNorm || DEFAULT_CONTRACT_CLOCK_IN;
-      const clockOutSql = clockOutNorm || DEFAULT_CONTRACT_CLOCK_OUT;
-      weekdaysParsed = {};
-      for (const key of ['mon', 'tue', 'wed', 'thu', 'fri']) {
-        weekdaysParsed[key] = { clockInSql, clockOutSql };
-      }
-    }
-
-    await saveContractWeekdaysForUser(targetId, weekdaysParsed);
-
-    const rows = await queryAdmin(
-      `SELECT id, email, name, department, position, role, status,
-              contract_clock_in, contract_clock_out,
-              contract_mon_in, contract_mon_out,
-              contract_tue_in, contract_tue_out,
-              contract_wed_in, contract_wed_out,
-              contract_thu_in, contract_thu_out,
-              contract_fri_in, contract_fri_out
-         FROM adminusers WHERE id = ? LIMIT 1`,
-      [targetId],
-    );
-
-    return res.status(200).json({
-      ok: true,
-      message: '월~금 출퇴근 시간이 저장되었습니다.',
-      data: toPublicAdmin(rows[0], auth.enums),
-    });
-  } catch (error) {
-    console.error('adminuser /contract-hours error:', error);
-    return res.status(500).json({ ok: false, message: ' 시간 저장 중 오류가 발생했습니다.' });
   }
 });
 

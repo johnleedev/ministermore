@@ -26,30 +26,58 @@ export default function PraiseMain (props:any) {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [sortFilter, setSortFilter] = useState<string>('');
   const [keyFilter, setKeyFilter] = useState<string>('');
   const [tempoFilter, setTempoFilter] = useState<string>('');
 
   const PAGE_SIZE = 15;
 
+  const normalizeTempo = (t: string) => {
+    if (t === '느린') return '느림';
+    if (t === '빠른') return '빠름';
+    return t;
+  };
+
   // 게시글 가져오기
-  const fetchPosts = async (currentPageCopy:any) => {
-    setIsLoading(true);
-    const res = await axios.get(`${MainURL}/worshipsongs/getsongs/${currentPageCopy}`);
-    if (res.data) {
-      const newItems = [...res.data.resultData];
-      setListView(prev => [...prev, ...newItems]);
-      if (newItems.length < PAGE_SIZE) {
+  const fetchPosts = async (page: number, append = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    try {
+      const res = await axios.get(`${MainURL}/worshipsongs/getsongs/${page}`);
+      const resultData = res.data?.resultData;
+
+      if (resultData && Array.isArray(resultData)) {
+        const newItems = [...resultData];
+        setListView((prev) => (append ? [...prev, ...newItems] : newItems));
+        setHasMore(newItems.length >= PAGE_SIZE);
+      } else {
+        if (!append) {
+          setListView([]);
+        }
         setHasMore(false);
       }
+    } catch (error) {
+      console.error(error);
+      if (!append) {
+        setListView([]);
+      }
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
     }
-    setIsLoading(false);
   };
 
   const handleLoadMore = () => {
-    const currentPageCopy = currentPage + 1;
-    setCurrentPage(currentPageCopy);
-    fetchPosts(currentPageCopy);
+    if (isLoadingMore) return;
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchPosts(nextPage, true);
   };
 
   // URL 파라미터에서 검색 조건 복원
@@ -74,7 +102,7 @@ export default function PraiseMain (props:any) {
           word: savedSearchWord || '',
           stateSort: savedSort || '',
           keySort: savedKey || '',
-          tempoSort: savedTempo || ''
+          tempoSort: normalizeTempo(savedTempo || ''),
         });
         if (res.data.resultData) {
           setListView([...res.data.resultData]);
@@ -88,10 +116,12 @@ export default function PraiseMain (props:any) {
     } else if (savedThemes) {
       const themesArray = savedThemes.split(',');
       setSelectedThemes(themesArray);
-      // 주제가 있으면 검색 실행
       handleThemeSearching(themesArray);
     } else {
-      fetchPosts(1); // 검색 조건이 없으면 기본 로딩
+      setIsSearching(false);
+      setCurrentPage(1);
+      setHasMore(true);
+      fetchPosts(1);
     }
   }, [location.search]);
 
@@ -99,11 +129,6 @@ export default function PraiseMain (props:any) {
 
   // 통합 검색 ------------------------------------------------------
 	const handleUnifiedSearching = async () => {
-    const normalizeTempo = (t: string) => {
-      if (t === '느린') return '느림';
-      if (t === '빠른') return '빠름';
-      return t;
-    };
     if (!searchWord && !sortFilter && !keyFilter && !tempoFilter) {
       alert('검색 조건을 입력/선택해주세요')
     } else {
@@ -148,10 +173,11 @@ export default function PraiseMain (props:any) {
       theme: selectedThemesCopy
     })
     if (res.data.resultData) {
-      let copy: any = [...res.data.resultData];
-      setListView(copy);
+      setListView([...res.data.resultData]);
+      setHasMore(false);
     } else {
       setListView([]);
+      setHasMore(false);
     }
     setIsLoading(false);
 	};
@@ -212,11 +238,10 @@ export default function PraiseMain (props:any) {
                   setListView([]);
                   setSelectedThemes([]);
                   setCurrentPage(1);
+                  setHasMore(true);
                   setIsSearching(false);
                   setSortFilter(''); setKeyFilter(''); setTempoFilter('');
-                  // URL 클리어
                   navigate('', { replace: true });
-                  fetchPosts(1);
                 }}
                 >
                 <p>초기화</p>
@@ -247,13 +272,11 @@ export default function PraiseMain (props:any) {
                           const isRemoving = prevTheme.includes(item);
                           
                           if (isRemoving) {
-                            // 선택 해제하는 경우
                             setIsSearching(false);
                             setListView([]);
                             setCurrentPage(1);
-                            // URL 클리어
+                            setHasMore(true);
                             navigate('', { replace: true });
-                            fetchPosts(1);
                             return [];
                           } else {
                             // 새로운 항목을 선택하는 경우 (하나만 선택)
@@ -296,7 +319,7 @@ export default function PraiseMain (props:any) {
                 </div>
 
                 <div className="praise__wrap--item">
-                  {isLoading ? (
+                  {isLoading && !isLoadingMore ? (
                     <div style={{
                       width: '100%',
                       textAlign: 'center',
@@ -329,7 +352,7 @@ export default function PraiseMain (props:any) {
 
                       return (
                         <div 
-                          key={index} 
+                          key={item.id} 
                           className="praise__item"
                           onClick={() => {
                             navigate(`/worship/detail?id=${item.id}`);
@@ -437,9 +460,13 @@ export default function PraiseMain (props:any) {
                   )}
                 </div>
                 { !isSearching && hasMore && listView.length > 0 && (
-                  <div className='addFetchBtn' onClick={handleLoadMore}>
-                    <p>더보기</p>
-                    <MdOutlineKeyboardDoubleArrowDown color='#9c9c9c'/>
+                  <div
+                    className='addFetchBtn'
+                    onClick={isLoadingMore ? undefined : handleLoadMore}
+                    style={isLoadingMore ? { opacity: 0.6, cursor: 'wait' } : undefined}
+                  >
+                    <p>{isLoadingMore ? '불러오는 중...' : '더보기'}</p>
+                    {!isLoadingMore && <MdOutlineKeyboardDoubleArrowDown color='#9c9c9c'/>}
                   </div>
                 )}
               </div>

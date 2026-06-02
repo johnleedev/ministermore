@@ -28,12 +28,6 @@ function formatTableTime(value: string | null | undefined) {
   });
 }
 
-function statusBadgeClass(status: string) {
-  if (status === '지각') return 'admin-attendance__badge--late';
-  if (status === '정상') return 'admin-attendance__badge--ok';
-  return 'admin-attendance__badge--default';
-}
-
 export default function AdminAttendance() {
   const session = getAdminSession();
   const superAdmin = isSuperAdmin(session);
@@ -129,21 +123,20 @@ export default function AdminAttendance() {
               <th scope="col">직급</th>
               <th scope="col">출근 시각</th>
               <th scope="col">퇴근 시각</th>
-              <th scope="col">근태</th>
               <th scope="col">관리</th>
             </tr>
           </thead>
           <tbody>
             {loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="admin-attendance__empty">
+                <td colSpan={6} className="admin-attendance__empty">
                   불러오는 중…
                 </td>
               </tr>
             ) : null}
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="admin-attendance__empty">
+                <td colSpan={6} className="admin-attendance__empty">
                   해당 날짜에 출근 기록이 없습니다.
                 </td>
               </tr>
@@ -155,11 +148,6 @@ export default function AdminAttendance() {
                 <td>{row.position ?? '—'}</td>
                 <td className="admin-attendance__mono">{formatTableTime(row.clockIn)}</td>
                 <td className="admin-attendance__mono">{formatTableTime(row.clockOut)}</td>
-                <td>
-                  <span className={`admin-attendance__badge ${statusBadgeClass(row.status)}`}>
-                    {row.status || '—'}
-                  </span>
-                </td>
                 <td>
                   {row.clockOut ? (
                     <button

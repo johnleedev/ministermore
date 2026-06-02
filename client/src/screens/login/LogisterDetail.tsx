@@ -175,7 +175,7 @@ export default function LogisterDetail (props:any) {
                   <FaCircleCheck size={20} color={checkUsingPolicy ? "#33383f" : "EAEAEA"}/>
                   <label htmlFor="reg_use">[필수] 서비스 이용약관 동의</label>
                 </span>
-                <a href="http://www.churchbooklet.com/usingpolicy.html" target="_blank" className="agree_link">이용약관 보기</a>
+                <a href="http://www.ministermore.co.kr/usingpolicy.html" target="_blank" className="agree_link">이용약관 보기</a>
               </li>
               <li>
                 <span className="checks"
@@ -186,7 +186,7 @@ export default function LogisterDetail (props:any) {
                   <FaCircleCheck  size={20} color={checkPersonalInfo ? "#33383f" : "EAEAEA"}/>
                   <label htmlFor="reg_personal">[필수] 개인정보 수집/이용 동의</label>
                 </span>
-                <a href="http://www.churchbooklet.com/personalinfo.html" target="_blank" className="agree_link">개인정보 수집/이용 보기</a>
+                <a href="http://www.ministermore.co.kr/personalinfo.html" target="_blank" className="agree_link">개인정보 수집/이용 보기</a>
               </li>
               <li>
                 <span className="checks"

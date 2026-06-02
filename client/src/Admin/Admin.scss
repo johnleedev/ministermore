@@ -20,12 +20,17 @@
 
 .AdminContainer {
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .admin-main-shell {
-  background: #fff
+  background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .admin-main-shell__topbar {
@@ -33,6 +38,7 @@
   top: 0;
   z-index: 100;
   height: 62px;
+  flex-shrink: 0;
   background: #fff;
   border-bottom: 1px solid #dce3ee;
   display: flex;
@@ -92,17 +98,19 @@
 .admin-main-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  min-height: calc(100vh - 62px);
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .admin-main-layout__sidebar {
   position: sticky;
-  top: 62px;
-  height: calc(100vh - 62px);
+  top: 0;
+  height: 100%;
   background: #18224d;
   padding: 18px 12px;
   border-right: 1px solid #0f1a40;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .admin-main-layout__sidebar-title {
@@ -117,6 +125,18 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.admin-main-layout__menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-main-layout__menu-group--bottom {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .admin-main-layout__menu-btn {
@@ -135,13 +155,17 @@
   gap: 8px;
 }
 
+.admin-main-layout__menu-parent {
+  justify-content: space-between;
+}
+
 .admin-main-layout__menu-btn:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
 .admin-main-layout__menu-btn.is-active {
-  background: #0f1a40;
-  color: #fff;
+  background: #cfd9ff;
+  color: #000000;
 }
 
 .admin-main-layout__menu-icon {
@@ -149,9 +173,37 @@
   margin-right: 5px;
 }
 
+.admin-main-layout__menu-caret {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.admin-main-layout__menu-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.admin-main-layout__submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 8px;
+}
+
+.admin-main-layout__submenu-btn {
+  min-height: 36px;
+  font-size: 13px;
+  color: #c8d3f4;
+}
+
 .admin-main-layout__content {
   min-width: 0;
   padding: 24px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .admin-main-layout__content-head {
@@ -1384,7 +1436,7 @@
   }
 }
 
-// 커뮤니티 게시판 관리 스타일 (전역)
+// 게시판 게시판 관리 스타일 (전역)
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -2405,10 +2457,56 @@
     text-align: left;
   }
 
+  &__table-wrap .admin-table {
+    .admin-board-manage__col-actions {
+      width: auto;
+      min-width: 200px;
+      max-width: 300px;
+      white-space: nowrap;
+      padding-left: 6px !important;
+      padding-right: 6px !important;
+    }
+
+    .admin-board-manage__actions .admin-btn {
+      padding: 5px 10px;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.25;
+      border-radius: 4px;
+    }
+  }
+
   &__actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  &__actions-divider {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    margin: 0 1px;
+    background: #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  &__notice-btn {
+    white-space: nowrap;
+
+    &--on {
+      background: #1e40af;
+      color: #fff;
+      border-color: #1e40af;
+    }
+
+    &--off {
+      background: #fff;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
   }
 
   &__empty {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import './Mypage.scss';
 import '../ForListPage.scss';
-import '../recruit/RecruitList.scss';
+import '../recruit/common/RecruitList.scss';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import MainURL from '../../MainURL';
@@ -13,7 +13,7 @@ import imageCompression from "browser-image-compression";
 import { DaumPostcodeEmbed } from 'react-daum-postcode';
 import { CiCircleMinus } from 'react-icons/ci';
 import { citydata } from '../../DefaultData';
-import '../recruit/Recruit.scss';
+import '../recruit/common/Recruit.scss';
 
 interface EducationItem {
   schoolName: string;

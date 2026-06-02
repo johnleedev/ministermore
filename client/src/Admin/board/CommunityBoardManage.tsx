@@ -7,6 +7,7 @@ import DateFormmating from '../../components/DateFormmating';
 import Pagination from '../../components/Pagination';
 import Loading from '../../components/Loading';
 import type { CommunityBoardConfig, CommunityPost } from '../../screens/board/BoardTypes';
+import { BOARD_NOTICE_SORT } from '../../screens/board/boardConfigs';
 import CommunityBoardEditModal from './CommunityBoardEditModal';
 
 type Props = {
@@ -17,6 +18,11 @@ type Props = {
 const getListRoute = (config: CommunityBoardConfig) => config.listRoute ?? `${config.routePrefix}getposts`;
 const getDeletePostRoute = (config: CommunityBoardConfig) =>
   config.deletePostRoute ?? `${config.routePrefix}deletepost`;
+const getAdminSetNoticeRoute = (config: CommunityBoardConfig) =>
+  config.adminSetNoticeRoute ?? `${config.routePrefix}adminsetnotice`;
+
+const getDefaultSortAfterNotice = (config: CommunityBoardConfig) =>
+  config.categoryOptions.find((c) => c !== BOARD_NOTICE_SORT) ?? config.categoryOptions[0] ?? '일반';
 
 const parseImages = (images: string): string[] => {
   if (!images) return [];
@@ -48,7 +54,9 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const listRoute = getListRoute(config);
   const deletePostRoute = getDeletePostRoute(config);
+  const adminSetNoticeRoute = getAdminSetNoticeRoute(config);
   const searchRoute = config.searchRoute ?? `${config.routePrefix}getpostssearch`;
+  const defaultSortAfterNotice = getDefaultSortAfterNotice(config);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -111,6 +119,31 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
     setCurrentPage(1);
   };
 
+  const setNoticeSort = async (post: CommunityPost, register: boolean) => {
+    const message = register
+      ? `「${renderPreview(post.title, 30)}」 글의 종류를 '${BOARD_NOTICE_SORT}'(으)로 변경하시겠습니까?`
+      : `「${renderPreview(post.title, 30)}」 글의 공지를 해제하고 종류를 '${defaultSortAfterNotice}'(으)로 변경하시겠습니까?`;
+
+    if (!window.confirm(message)) return;
+
+    try {
+      const res = await axios.post(`${MainURL}/${config.apiBase}/${adminSetNoticeRoute}`, {
+        postId: post.id,
+        action: register ? 'register' : 'unregister',
+        revertSort: register ? undefined : defaultSortAfterNotice,
+      });
+
+      if (res.data?.ok) {
+        alert(register ? '공지로 등록되었습니다.' : '공지가 해제되었습니다.');
+        void fetchPosts();
+      } else {
+        alert(res.data?.message || '처리에 실패했습니다.');
+      }
+    } catch {
+      alert('처리 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="admin-board-manage">
       <p className="admin-board-manage__desc">
@@ -156,7 +189,7 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
                   <th>작성일</th>
                   <th>조회</th>
                   <th>댓글</th>
-                  <th>관리</th>
+                  <th className="admin-board-manage__col-actions">관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,7 +208,7 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
                     <td>{DateFormmating(post.date)}</td>
                     <td>{post.views}</td>
                     <td>{post.commentCount ?? 0}</td>
-                    <td>
+                    <td className="admin-board-manage__col-actions">
                       <div className="admin-board-manage__actions">
                         <button
                           type="button"
@@ -194,6 +227,26 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
                         <button type="button" className="admin-btn delete-btn" onClick={() => void deletePost(post)}>
                           삭제
                         </button>
+                        <span className="admin-board-manage__actions-divider" aria-hidden />
+                        {post.sort === BOARD_NOTICE_SORT ? (
+                          <button
+                            type="button"
+                            className="admin-btn admin-board-manage__notice-btn admin-board-manage__notice-btn--off"
+                            title="공지해제"
+                            onClick={() => void setNoticeSort(post, false)}
+                          >
+                            해제
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="admin-btn admin-board-manage__notice-btn admin-board-manage__notice-btn--on"
+                            title="공지등록"
+                            onClick={() => void setNoticeSort(post, true)}
+                          >
+                            공지
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

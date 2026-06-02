@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
+import { MdOutlineKeyboardDoubleArrowDown } from 'react-icons/md';
 import MainURL from '../../../MainURL';
 import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
@@ -19,7 +20,7 @@ interface CastingItem {
 
 const CASTING_SORT_TABS = ['설교자', '찬양사역자', '특강강사', '기타'] as const;
 
-const isVisible = (value: CastingItem['isView']) => value === true || value === 1 || value === '1' || value === 'true';
+const PAGE_SIZE = 9;
 
 const getImages = (images: CastingItem['images']) => {
   if (!images) return [];
@@ -42,47 +43,75 @@ export default function CastingList() {
   const [searchWord, setSearchWord] = useState('');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const fetchPosts = async () => {
-    setIsLoading(true);
+  const fetchPosts = async (page: number, append = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
-      const res = await axios.post(`${MainURL}/retreatcasting/getdatacasting`);
+      const res = await axios.post(`${MainURL}/retreatcasting/getdatacasting`, {
+        sort: selectSort,
+        page,
+        pageSize: PAGE_SIZE,
+      });
 
       if (res.data.data) {
-        setList([...res.data.data].reverse());
+        const newItems = [...res.data.data] as CastingItem[];
+        setList((prev) => (append ? [...prev, ...newItems] : newItems));
+        setTotalCount(res.data.count ?? 0);
         setIsResdataFalse(false);
+        setHasMore(newItems.length >= PAGE_SIZE);
       } else {
-        setList([]);
-        setIsResdataFalse(true);
+        if (!append) {
+          setList([]);
+          setTotalCount(res.data.count ?? 0);
+          setIsResdataFalse(true);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error(error);
-      setList([]);
-      setIsResdataFalse(true);
+      if (!append) {
+        setList([]);
+        setIsResdataFalse(true);
+      }
+      setHasMore(false);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
+  const resetListState = () => {
+    setList([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    setIsSearching(false);
+    setIsResdataFalse(false);
+    setTotalCount(0);
+  };
+
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    resetListState();
+    fetchPosts(1);
+  }, [selectSort]);
 
-  const visibleCastings = useMemo(
-    () => list.filter((item) => isVisible(item.isView)),
-    [list]
-  );
-
-  const displayCastings = useMemo(() => {
-    const base =
-      selectSort === 'all'
-        ? visibleCastings
-        : visibleCastings.filter((item) => item.sort === selectSort);
-    return [...base].sort((a, b) => b.id - a.id);
-  }, [visibleCastings, selectSort]);
+  const handleLoadMore = () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchPosts(nextPage, true);
+  };
 
   const listTitle = selectSort === 'all' ? '전체' : selectSort;
-  const hasResults = displayCastings.length > 0;
+  const hasResults = list.length > 0;
 
   const handleWordSearching = async () => {
     if (searchWord.trim().length < 2) {
@@ -90,17 +119,28 @@ export default function CastingList() {
       return;
     }
 
+    setIsSearching(true);
     setIsLoading(true);
+    setHasMore(false);
+    setCurrentPage(1);
+
     try {
       const res = await axios.post(`${MainURL}/retreatcasting/getdatacastingsearch`, {
         word: searchWord.trim(),
       });
 
       if (res.data.data) {
-        setList(res.data.data);
+        const visible = (res.data.data as CastingItem[]).filter(
+          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true'
+        );
+        const filtered =
+          selectSort === 'all' ? visible : visible.filter((item) => item.sort === selectSort);
+        setList(filtered);
+        setTotalCount(filtered.length);
         setIsResdataFalse(false);
       } else {
         setList([]);
+        setTotalCount(0);
         setIsResdataFalse(true);
       }
     } catch (error) {
@@ -114,7 +154,8 @@ export default function CastingList() {
 
   const resetSearch = () => {
     setSearchWord('');
-    fetchPosts();
+    resetListState();
+    fetchPosts(1);
   };
 
   const openCastingDetail = (id: number) => {
@@ -163,6 +204,18 @@ export default function CastingList() {
       </div>
     );
   };
+
+  const renderLoadMoreButton = () =>
+    !isSearching && hasMore && list.length > 0 ? (
+      <div
+        className="addFetchBtn"
+        onClick={isLoadingMore ? undefined : handleLoadMore}
+        style={isLoadingMore ? { opacity: 0.6, cursor: 'wait' } : undefined}
+      >
+        <p>{isLoadingMore ? '불러오는 중...' : '더보기'}</p>
+        {!isLoadingMore && <MdOutlineKeyboardDoubleArrowDown color="#9c9c9c" />}
+      </div>
+    ) : null;
 
   return (
     <div className="retreat casting">
@@ -234,9 +287,10 @@ export default function CastingList() {
                 <div className="place__wrap--category" data-aos="fade-up">
                   <div className="place__title__row">
                     <div className="place__title">{listTitle}</div>
-                    <div className="place__link">총{displayCastings.length}명</div>
+                    <div className="place__link">총{totalCount}명</div>
                   </div>
-                  <div className="place__wrap--item">{displayCastings.map(renderCastingCard)}</div>
+                  <div className="place__wrap--item">{list.map(renderCastingCard)}</div>
+                  {renderLoadMoreButton()}
                 </div>
               ) : (
                 <div className="place__wrap--category" data-aos="fade-up">

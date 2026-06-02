@@ -1,0 +1,21 @@
+/** login_screen_inline.html 토큰 */
+export const loginColors = {
+  bg: '#f8fafd',
+  bgGlow: 'rgba(63, 136, 255, 0.12)',
+  text: '#111827',
+  textMuted: '#6b7280',
+  textMuted2: '#9aa3b2',
+  textLink: '#667085',
+  primary: '#1f6bff',
+  primaryDark: '#2b7cff',
+  badgeBg: '#eaf2ff',
+  badgeText: '#1f6bff',
+  cardBg: 'rgba(255,255,255,0.96)',
+  border: '#e6ecf5',
+  divider: '#e8eef7',
+  kakao: '#fee500',
+  kakaoText: '#191919',
+  apple: '#111111',
+  benefitBg: 'rgba(255,255,255,0.9)',
+  footer: '#98a2b3',
+};

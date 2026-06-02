@@ -5,7 +5,6 @@ import ServiceMain from './ServiceMain';
 
 import NoticeMain from './bookletNotice/NoticeMain';
 import EventMain from './bookletEvent/EventMain';
-import BulletinMain from './bulletin/BulletinMain';
 
 import ChurchDetail from '../../exceptbooklets/bookletNotice/BookletNoticeDetail';
 
@@ -16,8 +15,6 @@ import NoticeApplyPay from './bookletNotice/createNotice/NoticeApplyPay';
 import EventApplyPay from './bookletEvent/createEvent/EventApplyPay';
 import NoticeComplete from './bookletNotice/createNotice/NoticeComplete';
 import EventComplete from './bookletEvent/createEvent/EventComplete';
-import BulletinApplyPay from './bulletin/createBulletin/BulletinApplyPay';
-import BulletinComplete from './bulletin/createBulletin/BulletinComplete';
 import HomepageMain from './homepage/HomepageMain';
 import HomeinappMain from './homeinapp/HomeinappMain';
 import HomeinappPayment from './homeinapp/HomeinappPayment';
@@ -34,7 +31,6 @@ export default function ServiceRouter() {
 
         <Route path="/notice" element={<NoticeMain/>}/>
         <Route path="/event" element={<EventMain/>}/>
-        <Route path="/bulletin" element={<BulletinMain/>}/>
 
         <Route path="/churchdetail" element={<ChurchDetail/>}/>
 
@@ -44,9 +40,6 @@ export default function ServiceRouter() {
         <Route path="/bookleteventcreate" element={<EventCreate/>}/>
         <Route path="/bookleteventcomplete" element={<EventComplete/>}/>
         <Route path="/bookletnoticecomplete" element={<NoticeComplete/>}/>
-
-        <Route path="/bookletbulletintemplates" element={<BulletinApplyPay/>}/>
-        <Route path="/bookletbulletincomplete" element={<BulletinComplete/>}/>
 
         <Route path="/homepage" element={<HomepageMain/>}/>
         <Route path="/homeinapp" element={<HomeinappMain/>}/>

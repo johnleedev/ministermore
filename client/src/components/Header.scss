@@ -64,13 +64,21 @@
 
     .header-logo {
       margin-left: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
 
       h1 {
         font-size: 30px;
         font-weight: bold;
+        margin: 0;
       }
-      img {
+
+      .header-logo__mark {
+        display: block;
         height: 45px;
+        width: auto;
+        flex-shrink: 0;
       }
     }
     .header-logo:hover {
@@ -366,11 +374,11 @@
     .header-content-container {
       
       .header-logo {
-        
         h1 {
           font-size: 18px;
         }
-        img {
+
+        .header-logo__mark {
           height: 37px;
         }
       }

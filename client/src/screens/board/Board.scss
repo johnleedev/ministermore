@@ -311,6 +311,20 @@
             background-color: #f3f3f3;
             border-radius: 5px;
           }
+
+          &--notice {
+            background: #f0f4ff;
+            border-left: 3px solid #1e40af;
+
+            .community-board__col--sort p {
+              color: #1e40af;
+              font-weight: 700;
+            }
+
+            &:hover {
+              background-color: #e8eeff;
+            }
+          }
         }
 
         .community-board__col {
@@ -731,20 +745,15 @@
               height: auto;
               object-fit: contain;
               max-width: 100%;
-              // 넓은 화면: 작게 → 화면이 줄어들수록 점점 커짐 → 모바일: 가로 100%
-              width: min(380px, 40%);
+              // ≥1001px: 70% · ≤1000px: 85% · 모바일(≤600px): 100%
+              width: 70%;
 
-              @media (max-width: 1024px) {
-                width: min(520px, 55%);
-              }
-
-              @media (max-width: 768px) {
-                width: min(100%, 75%);
+              @media (max-width: 1000px) {
+                width: 85%;
               }
 
               @media (max-width: 600px) {
                 width: 100%;
-                max-width: 100%;
               }
             }
           }

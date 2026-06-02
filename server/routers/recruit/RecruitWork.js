@@ -1501,7 +1501,7 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
                     <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">안녕하세요! '사역자모아'입니다. </h2>
                     <h2 style="color: #333; font-size: 20px; margin-bottom: 30px;">저희 구인구직 게시판에 귀하의 교회 채용 공고가 등록되었습니다.</h2>
 
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">저희 '사역자모아'는 사역자들의 처우개선과 사역의 질 향상을 목적으로 만든 커뮤니티 사이트입니다.</h5>
+                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">저희 '사역자모아'는 사역자들의 처우개선과 사역의 질 향상을 목적으로 만든 게시판 사이트입니다.</h5>
                     <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">그 중 첫번째로, 사역자 구인구직에 관하여 도움이 되고자 합니다.</h5>
                     <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">채용 정보는, 각 신대원&총회 홈페이지에 오픈되어 있는 채용 공고를 가져와서 등록하고 있습니다.</h5>
                     <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">사전에 허락을 구하지 않은 점, 사과의 말씀을 드리며,</h5>

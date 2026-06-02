@@ -146,7 +146,7 @@ export default function BoardPost({ config }: Props) {
       .then((res) => {
         if (res.data) {
           alert('등록되었습니다.');
-          navigate(config.listPath);
+          navigate(config.listPath, { state: { listRefresh: Date.now() } });
         }
       })
       .catch((error) => {
