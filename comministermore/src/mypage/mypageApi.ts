@@ -57,3 +57,41 @@ export function formatJoinPath(userURL: string): string {
   if (userURL === 'apple') return 'Apple';
   return userURL || '-';
 }
+
+export type UserPost = {
+  id: number;
+  title: string;
+  writer: string;
+  date: string;
+  church: string;
+  religiousbody: string;
+  location: string;
+  sort: string;
+  recruitNum: string;
+  customInput: string;
+  tableType: 'minister' | 'church' | 'institute';
+};
+
+export async function fetchUserPosts(userAccount: string): Promise<UserPost[]> {
+  if (!userAccount) return [];
+  const res = await axios.get(
+    `${MAIN_API_BASE}/mypage/getuserposts/${encodeURIComponent(userAccount)}`,
+  );
+  return Array.isArray(res.data) ? (res.data as UserPost[]) : [];
+}
+
+export async function submitInquiry(params: {
+  category: string;
+  content: string;
+  contact?: string;
+  userAccount?: string;
+  userNickName?: string;
+  platform: 'app' | 'web';
+}): Promise<{ success: boolean; message?: string; id?: number }> {
+  const res = await axios.post(`${MAIN_API_BASE}/inquiry/submit`, params);
+  return {
+    success: Boolean(res.data?.success),
+    message: res.data?.message,
+    id: res.data?.id,
+  };
+}

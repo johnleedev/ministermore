@@ -20,6 +20,9 @@ export const notificationsScrollToTopRequestAtom = atom(0);
 /** 하단 탭 재탭 시 스크롤 맨 위 — 탭별 카운터 증가 */
 export const rootTabScrollToTopRequestAtom = atom(INITIAL_ROOT_TAB_SCROLL_REQUESTS);
 
+/** 하단 탭 재탭(이미 맨 위) 시 탭 초기 화면으로 — 탭별 카운터 증가 */
+export const rootTabResetRequestAtom = atom(INITIAL_ROOT_TAB_SCROLL_REQUESTS);
+
 /** 앱 시작 시 불러온 알림 목록 전역 상태. */
 export const notificationListAtom = atom<HomeinappNotificationItem[]>([]);
 

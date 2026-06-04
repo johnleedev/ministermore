@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
   Alert,
@@ -20,9 +21,14 @@ import {
   type StoredUserData,
 } from '../login/sessionStorage';
 import { isLoggedInAtom, notificationListAtom } from '../state/atoms';
+import { navigateToAuth } from '../navigation/rootNavigation';
+import { promptLogin } from '../navigation/authPrompt';
+import type { RootTabParamList } from '../navigation/RootTabs';
 import type { MypageStackParamList } from './MypageStack';
+import { fetchUserPosts } from './mypageApi';
 import { mpScreenContentStyle } from '../screens/shared/mypageUi';
 import { mpColors } from '../screens/shared/mypageTheme';
+import { useScrollViewScrollToTop } from '../screens/shared/listScrollUi';
 import {
   getEffectivePushEnabled,
   getOsNotificationsAllowed,
@@ -58,12 +64,12 @@ const MENU_ITEMS = [
     desc: '맞춤 공고, 게시판, 추천 알림 관리',
     action: 'notifications' as const,
   },
-  {
-    icon: 'settings',
-    title: '앱 설정',
-    desc: '화면, 계정, 개인정보 및 이용 설정',
-    action: 'settings' as const,
-  },
+  // {
+  //   icon: 'settings',
+  //   title: '앱 설정',
+  //   desc: '화면, 계정, 개인정보 및 이용 설정',
+  //   action: 'settings' as const,
+  // },
   {
     icon: 'mail-outline',
     title: '문의하기',
@@ -81,12 +87,15 @@ function avatarInitials(user: StoredUserData | null): string {
 export function MypageMainScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { scrollRef, onScroll } = useScrollViewScrollToTop();
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
   const setIsLoggedIn = useSetAtom(isLoggedInAtom);
   const notifications = useAtomValue(notificationListAtom);
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [nightOff, setNightOff] = useState(false);
   const [scrapCount, setScrapCount] = useState(0);
+  const [postCount, setPostCount] = useState(0);
 
   const loadProfile = useCallback(async () => {
     const savedUser = await loadSessionUser();
@@ -96,10 +105,15 @@ export function MypageMainScreen() {
     const wants = await loadUserWantsPush();
     if (!wants) setPushEnabled(false);
     if (savedUser?.userAccount) {
-      const list = await fetchScrapList(savedUser.userAccount).catch(() => []);
-      setScrapCount(list.length);
+      const [scrapList, posts] = await Promise.all([
+        fetchScrapList(savedUser.userAccount).catch(() => []),
+        fetchUserPosts(savedUser.userAccount).catch(() => []),
+      ]);
+      setScrapCount(scrapList.length);
+      setPostCount(posts.length);
     } else {
       setScrapCount(0);
+      setPostCount(0);
     }
   }, []);
 
@@ -114,20 +128,25 @@ export function MypageMainScreen() {
     : user?.grade || '일반 회원';
 
   const onMenuPress = (action: (typeof MENU_ITEMS)[number]['action']) => {
+    if (action !== 'contact' && !isLoggedIn) {
+      promptLogin();
+      return;
+    }
     switch (action) {
+      case 'activity':
+        navigation.navigate('UserPosts');
+        break;
       case 'notifications':
         navigation.navigate('NotificationSettings');
         break;
       case 'scrap':
         navigation.navigate('ScrapList');
         break;
-      case 'settings':
-        Alert.alert('', '준비 중인 기능입니다.');
-        break;
+      // case 'settings':
+      //   Alert.alert('', '준비 중인 기능입니다.');
+      //   break;
       case 'contact':
-        Linking.openURL('mailto:support@ministermore.co.kr').catch(() => {
-          Alert.alert('', '문의 메일을 열 수 없습니다.');
-        });
+        navigation.navigate('Inquiry');
         break;
       default:
         Alert.alert('', '준비 중인 기능입니다.');
@@ -138,6 +157,31 @@ export function MypageMainScreen() {
     Linking.openURL(KAKAO_CHANNEL_URL).catch(() => {
       Alert.alert('', '카카오 채널을 열 수 없습니다.');
     });
+  };
+
+  const openScrapList = () => {
+    if (!isLoggedIn) {
+      promptLogin();
+      return;
+    }
+    navigation.navigate('ScrapList');
+  };
+
+  const openUserPosts = () => {
+    if (!isLoggedIn) {
+      promptLogin();
+      return;
+    }
+    navigation.navigate('UserPosts');
+  };
+
+  const openNotifications = () => {
+    if (!isLoggedIn) {
+      promptLogin();
+      return;
+    }
+    const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    tabNav?.navigate('Notifi');
   };
 
   const onTogglePush = async (next: boolean) => {
@@ -158,40 +202,72 @@ export function MypageMainScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       style={styles.root}
       contentContainerStyle={[styles.content, mpScreenContentStyle(24 + insets.bottom)]}>
 
       <View style={styles.profileCard}>
-        <View style={styles.profileTop}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{avatarInitials(user)}</Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>{user?.userNickName || '회원'}</Text>
-            <Text style={styles.role}>
-              {user?.userAccount || '-'}
-              {'\n'}
-              {regionText}
+        {isLoggedIn ? (
+          <>
+            <View style={styles.profileTop}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{avatarInitials(user)}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {user?.userNickName || '회원'}
+                  </Text>
+                  <Pressable style={styles.editBtn} onPress={() => navigation.navigate('Profile')}>
+                    <Text style={styles.editBtnText}>프로필 수정</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
+                  {user?.userAccount || '-'}
+                </Text>
+                <Text style={styles.role}>{regionText}</Text>
+              </View>
+            </View>
+            <View style={styles.stats}>
+              <Pressable
+                style={({ pressed }) => [styles.stat, pressed && styles.statPressed]}
+                onPress={openScrapList}
+                accessibilityRole="button"
+                accessibilityLabel="스크랩 공고">
+                <Text style={styles.statValue}>{scrapCount}</Text>
+                <Text style={styles.statLabel}>스크랩 공고</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.stat, pressed && styles.statPressed]}
+                onPress={openUserPosts}
+                accessibilityRole="button"
+                accessibilityLabel="내 게시글">
+                <Text style={styles.statValue}>{postCount}</Text>
+                <Text style={styles.statLabel}>내 게시글</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.stat, pressed && styles.statPressed]}
+                onPress={openNotifications}
+                accessibilityRole="button"
+                accessibilityLabel="최근 알림">
+                <Text style={styles.statValue}>{notifications.length}</Text>
+                <Text style={styles.statLabel}>최근 알림</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <View style={styles.guestBlock}>
+            <Text style={styles.guestTitle}>로그인하고 더 많은 기능을 이용하세요</Text>
+            <Text style={styles.guestDesc}>
+              글쓰기·댓글, 수련회 신청, 스크랩, 알림 설정 등은 로그인 후 이용할 수 있습니다.
             </Text>
+            <Pressable style={styles.loginCta} onPress={() => navigateToAuth()}>
+              <Text style={styles.loginCtaText}>로그인 · 회원가입</Text>
+            </Pressable>
           </View>
-          <Pressable style={styles.editBtn} onPress={() => navigation.navigate('Profile')}>
-            <Text style={styles.editBtnText}>프로필 수정</Text>
-          </Pressable>
-        </View>
-        <View style={styles.stats}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{scrapCount}</Text>
-            <Text style={styles.statLabel}>스크랩 공고</Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>내 게시글</Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{notifications.length}</Text>
-            <Text style={styles.statLabel}>최근 알림</Text>
-          </View>
-        </View>
+        )}
       </View>
 
       <Text style={styles.sectionLabel}>바로가기</Text>
@@ -213,17 +289,19 @@ export function MypageMainScreen() {
         ))}
       </View>
 
-      <View style={styles.settingPanel}>
-        <Text style={styles.settingPanelTitle}>빠른 설정</Text>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>푸시 알림 받기</Text>
-          <Switch value={pushEnabled} onValueChange={onTogglePush} trackColor={{ true: mpColors.primary }} />
+      {isLoggedIn ? (
+        <View style={styles.settingPanel}>
+          <Text style={styles.settingPanelTitle}>빠른 설정</Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>푸시 알림 받기</Text>
+            <Switch value={pushEnabled} onValueChange={onTogglePush} trackColor={{ true: mpColors.primary }} />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>야간 알림 끄기</Text>
+            <Switch value={nightOff} onValueChange={setNightOff} trackColor={{ true: mpColors.primary }} />
+          </View>
         </View>
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>야간 알림 끄기</Text>
-          <Switch value={nightOff} onValueChange={setNightOff} trackColor={{ true: mpColors.primary }} />
-        </View>
-      </View>
+      ) : null}
 
       <Pressable
         style={({ pressed }) => [styles.kakaoChannelBtn, pressed && styles.kakaoChannelBtnPressed]}
@@ -237,23 +315,25 @@ export function MypageMainScreen() {
         <MaterialIcons name="open-in-new" size={20} color="#3c1e1e" style={styles.kakaoChannelArrow} />
       </Pressable>
 
-      <Pressable
-        style={styles.logoutBtn}
-        onPress={() =>
-          Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
-            { text: '취소', style: 'cancel' },
-            {
-              text: '로그아웃',
-              style: 'destructive',
-              onPress: async () => {
-                await clearSession();
-                setIsLoggedIn(false);
+      {isLoggedIn ? (
+        <Pressable
+          style={styles.logoutBtn}
+          onPress={() =>
+            Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '로그아웃',
+                style: 'destructive',
+                onPress: async () => {
+                  await clearSession();
+                  setIsLoggedIn(false);
+                },
               },
-            },
-          ])
-        }>
-        <Text style={styles.logoutBtnText}>로그아웃</Text>
-      </Pressable>
+            ])
+          }>
+          <Text style={styles.logoutBtnText}>로그아웃</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -273,7 +353,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 3,
   },
-  profileTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  profileTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
   avatar: {
     width: 68,
     height: 68,
@@ -283,10 +363,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 24, fontWeight: '900', color: '#1d4ed8' },
-  profileInfo: { flex: 1 },
-  name: { fontSize: 24, fontWeight: '800', color: mpColors.text, letterSpacing: -0.8 },
-  role: { fontSize: 13, color: mpColors.textMuted, lineHeight: 20, marginTop: 4 },
+  profileInfo: { flex: 1, minWidth: 0 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  name: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '800',
+    color: mpColors.text,
+    letterSpacing: -0.8,
+  },
+  account: { fontSize: 13, color: mpColors.textMuted, lineHeight: 20, marginTop: 4 },
+  role: { fontSize: 13, color: mpColors.textMuted, lineHeight: 20, marginTop: 2 },
   editBtn: {
+    flexShrink: 0,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
@@ -295,6 +389,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   editBtnText: { fontSize: 13, fontWeight: '800', color: mpColors.primary },
+  guestBlock: { gap: 12 },
+  guestTitle: { fontSize: 18, fontWeight: '800', color: mpColors.text, letterSpacing: -0.5 },
+  guestDesc: { fontSize: 13, color: mpColors.textMuted, lineHeight: 20 },
+  loginCta: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: mpColors.primary,
+  },
+  loginCtaText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   stats: { flexDirection: 'row', gap: 10, marginTop: 18 },
   stat: {
     flex: 1,
@@ -304,6 +410,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
+  },
+  statPressed: {
+    backgroundColor: '#f0f6ff',
+    borderColor: mpColors.primary,
   },
   statValue: { fontSize: 20, fontWeight: '800', color: mpColors.primary, marginBottom: 6 },
   statLabel: { fontSize: 12, color: mpColors.textMuted },

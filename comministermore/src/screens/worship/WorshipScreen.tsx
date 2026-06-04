@@ -4,9 +4,14 @@ import { SongsStack } from './songs/SongsStack';
 import { ContiMain } from './conti/ContiMain';
 import { WorshipCategoryProvider, type WorshipCategory } from './worshipCategoryContext';
 import { worshipColors } from './worshipTheme';
+import { useRootTabResetOnRequest } from '../../navigation/useRootTabResetOnRequest';
 
 export function WorshipScreen() {
   const [tab, setTab] = useState<WorshipCategory>('songs');
+
+  useRootTabResetOnRequest(() => {
+    setTab('songs');
+  });
 
   return (
     <WorshipCategoryProvider category={tab} setCategory={setTab}>

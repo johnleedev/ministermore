@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { MAIN_API_BASE } from './constants';
+import { getFcmTokenSafe } from './pushToken';
 
 export type RegisterUserData = {
   checkUsingPolicy: boolean;
@@ -14,6 +15,7 @@ export type RegisterUserData = {
   userSort: string;
   userDetail: string;
   userURL: string;
+  token?: string;
 };
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -39,7 +41,13 @@ export async function sendEmailAuthCode(email: string): Promise<number | null> {
 }
 
 export async function submitRegister(userData: RegisterUserData): Promise<boolean> {
-  const res = await axios.post(`${MAIN_API_BASE}/login/logisterdo`, { userData });
+  const token = userData.token ?? (await getFcmTokenSafe());
+  const res = await axios.post(`${MAIN_API_BASE}/login/logisterdo`, {
+    userData: {
+      ...userData,
+      token,
+    },
+  });
   return Boolean(res.data);
 }
 

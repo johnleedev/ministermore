@@ -12,6 +12,7 @@ import { NotificationsStack } from '../navigation/NotificationsStack';
 import { MainAppTopBar } from './appTopBarHelpers';
 import type { RootTabKey } from './rootTabKeys';
 import { rootTabPressScrollToTopListeners, TabScrollProvider } from './tabScrollToTop';
+import { trackAppCountup } from '../analytics/adminStats';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -137,7 +138,15 @@ export function RootTabs() {
         name="Retreat"
         component={withTabScroll('Retreat', RetreatScreen)}
         options={{ tabBarLabel: '수련회' }}
-        listeners={rootTabPressScrollToTopListeners('Retreat')}
+        listeners={({ navigation }) => {
+          const base = rootTabPressScrollToTopListeners('Retreat')({ navigation });
+          return {
+            tabPress: (e) => {
+              void trackAppCountup('retreatmenu');
+              base.tabPress?.(e);
+            },
+          };
+        }}
       />
       <Tab.Screen
         name="Worship"

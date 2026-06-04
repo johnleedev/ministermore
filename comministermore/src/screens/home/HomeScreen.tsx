@@ -20,9 +20,12 @@ import {
   RECRUIT_CHURCH_LOGO_PATH_MINISTER,
 } from '../jobs/common/recruitUi';
 import { useScrollViewScrollToTop } from '../shared/listScrollUi';
+import { useRootTabResetOnRequest } from '../../navigation/useRootTabResetOnRequest';
 import { homeColors as c } from './homeTheme';
 
 const API_BASE = MAIN_API_BASE.replace(/\/$/, '');
+const INSTAGRAM_URL = 'https://www.instagram.com/ministermore_';
+const INSTAR_LOGO = require('../../images/instarlogo.jpeg');
 
 type RecruitRow = {
   id: string;
@@ -46,6 +49,10 @@ export function HomeScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { scrollRef, onScroll } = useScrollViewScrollToTop();
   const [activeTab, setActiveTab] = useState<'denomination' | 'school'>('denomination');
+
+  useRootTabResetOnRequest(() => {
+    setActiveTab('denomination');
+  });
   const [recruitList, setRecruitList] = useState<RecruitRow[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
@@ -121,8 +128,8 @@ export function HomeScreen() {
     navigation.navigate('Jobs');
   };
 
-  const openNotifications = () => {
-    navigation.navigate('Notifi');
+  const openInstagram = () => {
+    Linking.openURL(INSTAGRAM_URL).catch(() => {});
   };
 
   return (
@@ -173,18 +180,24 @@ export function HomeScreen() {
             ))
           )}
 
-          <View style={styles.alertBanner}>
-            <View style={styles.alertIconWrap}>
-              <MaterialIcons name="campaign" size={18} color="#fff" />
+          <Pressable
+            style={({ pressed }) => [
+              styles.instaBanner,
+              pressed && styles.instaBannerPressed,
+            ]}
+            onPress={openInstagram}
+            accessibilityRole="link"
+            accessibilityLabel="사역자모아 공식 인스타그램 ministermore_">
+            <View style={styles.instaAdv}>
+              <View style={styles.instaAdvInner}>
+                <Image source={INSTAR_LOGO} style={styles.instaLogo} resizeMode="cover" />
+                <View style={styles.instaTextCol}>
+                  <Text style={styles.instaHandle}>ministermore_</Text>
+                  <Text style={styles.instaTagline}>사역자모아 공식 인스타계정</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.alertTextWrap}>
-              <Text style={styles.alertMain}>새로운 사역의 기회가 매일 업데이트됩니다</Text>
-              <Text style={styles.alertSub}>관심 있는 공고를 놓치지 마세요!</Text>
-            </View>
-            <Pressable style={styles.alertBtn} onPress={openNotifications}>
-              <Text style={styles.alertBtnText}>알림 설정</Text>
-            </Pressable>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.section}>
@@ -316,54 +329,49 @@ const styles = StyleSheet.create({
   homeJobCardWrap: {
     marginBottom: 10,
   },
-  alertBanner: {
+  instaBanner: {
     marginTop: 4,
-    backgroundColor: c.alertGradientStart,
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: '#BDBDBD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instaBannerPressed: {
+    backgroundColor: '#fafafa',
+  },
+  instaAdv: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  instaAdvInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 1,
-    borderColor: '#d6e8ff',
   },
-  alertIconWrap: {
+  instaLogo: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: c.primary,
-    alignItems: 'center',
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  instaTextCol: {
     justifyContent: 'center',
-    flexShrink: 0,
+    gap: 2,
   },
-  alertTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  alertMain: {
-    fontSize: 12.5,
+  instaHandle: {
+    fontSize: 15,
     fontWeight: '700',
-    color: c.text,
-    marginBottom: 2,
+    color: '#111',
+  },
+  instaTagline: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111',
     lineHeight: 18,
-  },
-  alertSub: {
-    fontSize: 11,
-    color: '#4E5968',
-  },
-  alertBtn: {
-    backgroundColor: c.card,
-    borderWidth: 1.5,
-    borderColor: c.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    flexShrink: 0,
-  },
-  alertBtnText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: c.primary,
   },
   tabMenu: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 {
   "name": "ministermore",
-  "version": "1.3",
+  "version": "1.4",
   "private": true,
   "scripts": {
     "all": "cd ios && pod install && cd .. && npm run android",

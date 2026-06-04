@@ -26,6 +26,7 @@ const CANONICAL_STATUS_REJECTED = 'rejected';
 let cachedAdminEnums = null;
 
 const ORDER_COLUMN_CANDIDATES = [
+  'logisterDate',
   'createdAt',
   'created_at',
   'joinDate',
@@ -593,7 +594,7 @@ router.get('/list', async (req, res) => {
 
     const [rows, countRows] = await Promise.all([
       queryCommon(
-        `SELECT userAccount, userNickName, userChurch, userSort, userDetail, userURL, grade, isPosting
+        `SELECT userAccount, userNickName, userChurch, userSort, userDetail, userURL, grade, isPosting, logisterDate
            FROM user
            ${whereSql}
           ORDER BY ${orderBy}

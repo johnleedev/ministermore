@@ -1,5 +1,6 @@
 import { Alert, Linking, StyleSheet } from 'react-native';
 import { MAIN_API_BASE } from '../../config/api';
+import { requireLogin } from '../../navigation/authPrompt';
 import { retreatColors } from './retreatTheme';
 
 export { retreatColors } from './retreatTheme';
@@ -249,11 +250,7 @@ export function isRetreatVisible(value: string | boolean | number | null | undef
 
 /** 상세·회원 전용 — 로그인 확인 (웹 recoilLoginState와 동일) */
 export function checkRetreatLogin(isLoggedIn: boolean): boolean {
-  if (!isLoggedIn) {
-    Alert.alert('', '로그인이 필요합니다.');
-    return false;
-  }
-  return true;
+  return requireLogin(isLoggedIn);
 }
 
 /** 상세·회원 전용 — 정회원 등급 확인 (웹 userData.grade !== '일반회원') */
@@ -267,11 +264,7 @@ export function checkRetreatMember(grade: string | undefined | null): boolean {
 
 /** 장소등록요청 등 — 로그인 확인 (웹 PlaceList.openPlaceRequest) */
 export function checkRetreatLoginForRequest(isLoggedIn: boolean): boolean {
-  if (!isLoggedIn) {
-    Alert.alert('', '권한이 없습니다. 로그인이 필요합니다.');
-    return false;
-  }
-  return true;
+  return requireLogin(isLoggedIn, '권한이 없습니다. 로그인이 필요합니다.');
 }
 
 export function openRetreatOnWeb(path: string) {

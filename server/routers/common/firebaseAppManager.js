@@ -13,7 +13,27 @@ function resolveKeyPath(rawKeyPath) {
   return path.resolve(process.cwd(), keyPath);
 }
 
-function getFirebaseAdmin(appName, keyPath) {
+function parseServiceAccountJson(rawServiceAccountJson) {
+  const jsonText = String(rawServiceAccountJson || '').trim();
+  if (!jsonText) {
+    throw new Error('Firebase service account JSON is required.');
+  }
+  return JSON.parse(jsonText);
+}
+
+function loadServiceAccount(options = {}) {
+  const { keyPath, serviceAccountJson } = options;
+  if (serviceAccountJson != null && String(serviceAccountJson).trim()) {
+    return parseServiceAccountJson(serviceAccountJson);
+  }
+  const resolvedPath = resolveKeyPath(keyPath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`Firebase key file not found: ${resolvedPath}`);
+  }
+  return JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+}
+
+function getFirebaseAdmin(appName, keyPathOrOptions) {
   const normalizedAppName = String(appName || '').trim();
   if (!normalizedAppName) {
     throw new Error('appName is required.');
@@ -22,12 +42,11 @@ function getFirebaseAdmin(appName, keyPath) {
     return firebaseApps[normalizedAppName];
   }
 
-  const resolvedPath = resolveKeyPath(keyPath);
-  if (!fs.existsSync(resolvedPath)) {
-    throw new Error(`Firebase key file not found: ${resolvedPath}`);
-  }
-
-  const serviceAccount = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+  const options =
+    typeof keyPathOrOptions === 'string'
+      ? { keyPath: keyPathOrOptions }
+      : keyPathOrOptions || {};
+  const serviceAccount = loadServiceAccount(options);
   const app = admin.initializeApp(
     {
       credential: admin.credential.cert(serviceAccount),

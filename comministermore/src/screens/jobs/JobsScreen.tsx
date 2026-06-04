@@ -6,6 +6,7 @@ import { ChurchStack } from './church/ChurchStack';
 import { InstituteStack } from './institute/InstituteStack';
 import { JobsCategoryProvider, type JobCategory } from './jobsCategoryContext';
 import { jobColors } from './common/jobsTheme';
+import { useRootTabResetOnRequest } from '../../navigation/useRootTabResetOnRequest';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootTabParamList } from '../../navigation/RootTabs';
 
@@ -15,6 +16,10 @@ export function JobsScreen() {
   const [category, setCategory] = useState<JobCategory>('minister');
   const openTarget = route.params?.open;
   const targetCategory = openTarget?.category ?? category;
+
+  useRootTabResetOnRequest(() => {
+    setCategory('minister');
+  });
 
   useEffect(() => {
     if (openTarget?.category) {

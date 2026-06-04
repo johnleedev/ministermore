@@ -30,6 +30,22 @@ function updateUserFirebaseToken(userAccount, token) {
   );
 }
 
+function formatNowKstText() {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+  const map = {};
+  for (const p of parts) map[p.type] = p.value;
+  return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}:${map.second}`;
+}
+
 
 // 카카오 & 네이버 홈페이지 로그인에서 토큰 요청시 발행 함수
 router.post('/loginsnstoken', async (req, res) => {
@@ -409,11 +425,12 @@ router.post('/logisterdo', async function(req, res, next){
           checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi, token } = req.body.userData;
   
   const hashedtext = await argon2.hash(password);
+  const logisterDate = formatNowKstText();
   commondb.query(`
     INSERT IGNORE INTO user (userAccount, password, userNickName, userChurch, userSort, userDetail, userURL, 
-      checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi, token) VALUES 
+      checkUsingPolicy, checkPersonalInfo, checkContentsRestrict, checkInfoToOthers, checkServiceNotifi, token, logisterDate) VALUES 
     ('${email}', '${hashedtext}', '${userNickname}', '${userChurch}', '${userSort}', '${userDetail}', '${userURL}',
-    '${checkUsingPolicy}', '${checkPersonalInfo}', '${checkContentsRestrict}', '${checkInfoToOthers}', '${checkServiceNotifi}', '${normalizeFirebaseToken(token)}');
+    '${checkUsingPolicy}', '${checkPersonalInfo}', '${checkContentsRestrict}', '${checkInfoToOthers}', '${checkServiceNotifi}', '${normalizeFirebaseToken(token)}', '${logisterDate}');
     `,function(error, result){
     if (error) {throw error}
     if (result.affectedRows > 0) {  

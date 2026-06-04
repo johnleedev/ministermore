@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -100,8 +100,10 @@ export function BoardListView({
   const [selectedRegion, setSelectedRegion] = useState('');
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activeRegions, setActiveRegions] = useState<string[]>([]);
+  const endReachedLockRef = useRef(false);
 
-  const hasMore = list.length < listAllLength;
+  const hasMore =
+    !isLoading && !loadingMore && list.length > 0 && list.length < listAllLength;
   const isFiltering =
     Boolean(activeSearchWord) || activeCategories.length > 0 || activeRegions.length > 0;
 
@@ -138,25 +140,39 @@ export function BoardListView({
           if (isFirstPage) {
             setNoticeList(notices);
             setList(regular);
+            setListAllLength(res.data.totalCount || 0);
+          } else if (regular.length === 0) {
+            setList(prev => {
+              setListAllLength(prev.length);
+              return prev;
+            });
           } else {
             setList(prev => [...prev, ...regular]);
+            setListAllLength(res.data.totalCount || 0);
           }
-          setListAllLength(res.data.totalCount || 0);
         } else if (isFirstPage) {
           setNoticeList([]);
           setList([]);
           setListAllLength(0);
         }
       } catch {
-        if (!cancelled && isFirstPage) {
-          setNoticeList([]);
-          setList([]);
-          setListAllLength(0);
+        if (!cancelled) {
+          if (isFirstPage) {
+            setNoticeList([]);
+            setList([]);
+            setListAllLength(0);
+          } else {
+            setList(prev => {
+              setListAllLength(prev.length);
+              return prev;
+            });
+          }
         }
       } finally {
         if (!cancelled) {
           setIsLoading(false);
           setLoadingMore(false);
+          endReachedLockRef.current = false;
         }
       }
     })();
@@ -174,9 +190,45 @@ export function BoardListView({
   ]);
 
   const loadMore = useCallback(() => {
-    if (isLoading || loadingMore || !hasMore) return;
+    if (isLoading || loadingMore || !hasMore || endReachedLockRef.current) {
+      return;
+    }
+    endReachedLockRef.current = true;
     setCurrentPage(p => p + 1);
   }, [isLoading, loadingMore, hasMore]);
+
+  const applySearchFilters = useCallback(
+    ({
+      word,
+      categories,
+      regions,
+    }: {
+      word: string;
+      categories: string[];
+      regions: string[];
+    }) => {
+      const sameWord = word === activeSearchWord;
+      const sameCategories =
+        categories.length === activeCategories.length &&
+        categories.every((item, index) => item === activeCategories[index]);
+      const sameRegions =
+        regions.length === activeRegions.length &&
+        regions.every((item, index) => item === activeRegions[index]);
+      if (sameWord && sameCategories && sameRegions) {
+        return;
+      }
+
+      endReachedLockRef.current = false;
+      setNoticeList([]);
+      setList([]);
+      setListAllLength(0);
+      setActiveSearchWord(word);
+      setActiveCategories(categories);
+      setActiveRegions(regions);
+      setCurrentPage(1);
+    },
+    [activeCategories, activeRegions, activeSearchWord],
+  );
 
   const openPostDetails = async (post: CommunityPost) => {
     try {
@@ -198,15 +250,33 @@ export function BoardListView({
       Alert.alert('', '2글자이상 입력해주세요');
       return;
     }
-    setNoticeList([]);
-    setList([]);
-    setActiveSearchWord(trimmed);
-    setActiveCategories(selectedCategory ? [selectedCategory] : []);
-    setActiveRegions(selectedRegion ? [selectedRegion] : []);
-    setCurrentPage(1);
+    applySearchFilters({
+      word: trimmed,
+      categories: selectedCategory ? [selectedCategory] : [],
+      regions: selectedRegion ? [selectedRegion] : [],
+    });
+  };
+
+  const handleCategorySelect = (value: string) => {
+    setSelectedCategory(value);
+    applySearchFilters({
+      word: activeSearchWord,
+      categories: value ? [value] : [],
+      regions: selectedRegion ? [selectedRegion] : [],
+    });
+  };
+
+  const handleRegionSelect = (value: string) => {
+    setSelectedRegion(value);
+    applySearchFilters({
+      word: activeSearchWord,
+      categories: selectedCategory ? [selectedCategory] : [],
+      regions: value ? [value] : [],
+    });
   };
 
   const resetSearch = () => {
+    endReachedLockRef.current = false;
     setSearchWord('');
     setActiveSearchWord('');
     setSelectedCategory('');
@@ -215,6 +285,7 @@ export function BoardListView({
     setActiveRegions([]);
     setNoticeList([]);
     setList([]);
+    setListAllLength(0);
     setCurrentPage(1);
   };
 
@@ -260,14 +331,14 @@ export function BoardListView({
       <BoardFilterPills
         items={config.categoryOptions}
         selected={selectedCategory}
-        onSelect={setSelectedCategory}
+        onSelect={handleCategorySelect}
       />
 
       {hasRegion && config.regionOptions ? (
         <BoardFilterPills
           items={config.regionOptions}
           selected={selectedRegion}
-          onSelect={setSelectedRegion}
+          onSelect={handleRegionSelect}
         />
       ) : null}
 
@@ -352,7 +423,7 @@ export function BoardListView({
         onScroll={onScroll}
         scrollEventThrottle={16}
         onEndReached={hasMore ? loadMore : undefined}
-        onEndReachedThreshold={0.35}
+        onEndReachedThreshold={0.2}
       />
       <FloatingScrollActions
         showTop={showTopBtn}

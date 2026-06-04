@@ -47,6 +47,7 @@ import { PlaceStack } from './PlaceStack';
 import { DetailPressableImage } from '../../shared/ImagePreviewModal';
 import { FormKeyboardScreen, useFormInputFocusScroll } from '../../shared/FormKeyboardScreen';
 import { loadSessionUser } from '../../../login/sessionStorage';
+import { promptLogin } from '../../../navigation/authPrompt';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 import { RetreatRequestImageSection } from '../RetreatRequestImageSection';
 import {
@@ -242,7 +243,7 @@ export function PlaceListView({
 
   const onToggleScrap = async (item: PlaceItem) => {
     if (!userAccount) {
-      Alert.alert('', '로그인이 필요합니다.');
+      promptLogin();
       return;
     }
     const first = parseImageList(item.images)[0] || '';

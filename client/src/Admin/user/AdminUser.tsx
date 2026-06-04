@@ -12,7 +12,20 @@ type AdminUserRow = {
   userURL: string | null;
   grade: string | null;
   isPosting: string | null;
+  logisterDate: string | null;
 };
+
+function formatJoinDate(value: string | null | undefined) {
+  if (!value) return '-';
+  const trimmed = String(value).trim();
+  if (!trimmed) return '-';
+  const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+  const date = new Date(normalized);
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleString('ko-KR');
+  }
+  return trimmed;
+}
 
 const GRADE_OPTIONS = ['일반회원', '정회원'] as const;
 
@@ -195,6 +208,7 @@ export default function AdminUser() {
                   <th scope="col">교회</th>
                   <th scope="col">직분</th>
                   <th scope="col">가입경로</th>
+                  <th scope="col">등록일</th>
                   <th scope="col">현재 등급</th>
                   <th scope="col">등급 변경</th>
                   <th scope="col">게시 권한</th>
@@ -214,6 +228,7 @@ export default function AdminUser() {
                       <td>{row.userChurch || '-'}</td>
                       <td>{row.userSort || '-'}</td>
                       <td>{row.userURL || '-'}</td>
+                      <td className="admin-user-manage__date">{formatJoinDate(row.logisterDate)}</td>
                       <td>
                         <span className={gradePillClass(row.grade)}>{row.grade || '(미설정)'}</span>
                       </td>

@@ -5,15 +5,16 @@ import RegisterRecruit from './recruit/RegisterRecruit';
 import RecruitListManagePre from './recruit/RecruitListManagePre';
 import WorshipManage from './worship/WorshipManage';
 import AdminEmail from './email/AdminEmail';
-import PushNotificationAdmin from './pushNotifi/PushNotificationAdmin';
+import AppManage from './appmanage/AppManage';
 import ServiceApplyList from './service/ServiceApplyList';
 import ServiceDetailOverview from './service/ServiceDetailOverview';
-import AdminManege from './manage/AdminManege';
+import AdminStatistics from './statistics/AdminStatistics';
 import Backup from './Backup';
 import BoardPostWrite from './board/BoardPostWrite';
 import BoardPostManage from './board/BoardPostManage';
 import RetreatManage from './retreat/RetreatManage';
 import AdminUser from './user/AdminUser';
+import AdminInquiryManage from './user/AdminInquiryManage';
 import AdminStaffManage from './staff/AdminStaffManage';
 import AdminAttendance from './staff/AdminAttendance';
 import TopbarAttendance from './staff/TopbarAttendance';
@@ -34,6 +35,7 @@ type MenuKey =
   | 'boardpostmanage'
   | 'retreatmanage'
   | 'adminuser'
+  | 'admininquiry'
   | 'adminstaff'
   | 'attendanceadmin'
   | 'finance'
@@ -65,13 +67,14 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'worshipmanage', label: '예배사역 관리', icon: '🎵' },
   { key: 'recruitlistmanagepre', label: '일괄 관리 (사역게시판)', icon: '🗂️' },
   { key: 'emailmanage', label: '메일전송관리', icon: '✉️' },
-  { key: 'pushnotifi', label: '앱 푸쉬알림 관리', icon: '🔔' },
+  { key: 'pushnotifi', label: '앱 관리', icon: '📱', superOnly: true },
   { key: 'serviceapply', label: '서비스 결제/신청 내역', icon: '💳' },
   { key: 'servicedetail', label: '서비스 상세현황', icon: '📋' },
   { key: 'noticepost', label: '게시판 글 작성', icon: '📢' },
   { key: 'boardpostmanage', label: '게시글 관리', icon: '📋' },
   { key: 'retreatmanage', label: '수련회 관리', icon: '🏕️' },
   { key: 'adminuser', label: '회원 관리', icon: '👤' },
+  { key: 'admininquiry', label: '고객문의 관리', icon: '💬' },
   { key: 'adminstaff', label: '직원 관리', icon: '🛡️', superOnly: true },
   { key: 'adminmanage', label: '통계', icon: '📊' },
   { key: 'finance', label: '재무 관리', icon: '💰' },
@@ -95,7 +98,7 @@ const MENU_GROUPS: MenuGroup[] = [
     key: 'owner-only',
     label: '대표자 전용',
     icon: '🔒',
-    childKeys: ['attendanceadmin', 'adminstaff', 'backup'],
+    childKeys: ['attendanceadmin', 'adminstaff', 'pushnotifi', 'backup'],
     bottom: true,
   },
 ];
@@ -113,9 +116,12 @@ function AdminMainContent({
   activeMenu: MenuKey;
   adminSession: ReturnType<typeof getAdminSession>;
 }) {
-  if (activeMenu === 'adminstaff' && !isSuperAdmin(adminSession)) {
+  if (
+    (activeMenu === 'adminstaff' || activeMenu === 'pushnotifi') &&
+    !isSuperAdmin(adminSession)
+  ) {
     return (
-      <p className="admin-main-layout__forbidden">관리자 승인 메뉴는 최종관리자만 이용할 수 있습니다.</p>
+      <p className="admin-main-layout__forbidden">이 메뉴는 최종관리자(대표자)만 이용할 수 있습니다.</p>
     );
   }
 
@@ -135,7 +141,7 @@ function AdminMainContent({
     case 'emailmanage':
       return <AdminEmail />;
     case 'pushnotifi':
-      return <PushNotificationAdmin />;
+      return <AppManage />;
     case 'serviceapply':
       return <ServiceApplyList />;
     case 'servicedetail':
@@ -148,10 +154,12 @@ function AdminMainContent({
       return <RetreatManage />;
     case 'adminuser':
       return <AdminUser />;
+    case 'admininquiry':
+      return <AdminInquiryManage />;
     case 'adminstaff':
       return <AdminStaffManage />;
     case 'adminmanage':
-      return <AdminManege />;
+      return <AdminStatistics />;
     case 'backup':
       return <Backup />;
     default:

@@ -4,6 +4,7 @@ import {
   loadSessionUser,
   type StoredUserData,
 } from '../../login/sessionStorage';
+import { promptLogin, requireLogin } from '../../navigation/authPrompt';
 import { API_BASE } from '../retreat/retreatShared';
 import { BOARD_NOTICE_SORT } from './boardConfigs';
 import type { CommunityPost } from './boardTypes';
@@ -89,11 +90,7 @@ export function isPostNew(dateStr: string) {
 
 /** 글쓰기·댓글 등 — 앱 로그인 여부 확인 */
 export function checkBoardLogin(isLoggedIn: boolean): boolean {
-  if (!isLoggedIn) {
-    Alert.alert('안내', '로그인이 필요합니다.');
-    return false;
-  }
-  return true;
+  return requireLogin(isLoggedIn);
 }
 
 /** 로그인 사용자 (Jotai + AsyncStorage). 글·댓글 API용 */
@@ -119,7 +116,7 @@ export async function ensureBoardLogin(
 ): Promise<StoredUserData | null> {
   const user = await resolveBoardUser(isLoggedIn, cachedUser);
   if (!user) {
-    Alert.alert('안내', '로그인이 필요합니다.');
+    promptLogin();
     return null;
   }
   return user;

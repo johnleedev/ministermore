@@ -65,6 +65,7 @@ const Header: React.FC = () => {
         {title:"소개", subUrl:"/company"}, 
         {title:"공지사항", subUrl:"/company/notice"},
         {title:"자주 묻는 질문", subUrl:"/company/faq"},
+        {title:"문의하기", subUrl:"/company/inquiry"},
         {title:"광고및제휴", subUrl:"/company/advertise"},
       ]
     },

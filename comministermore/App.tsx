@@ -1,5 +1,5 @@
 /**
- * 네비게이션·전역 상태(Jotai)·앱 진입 분기(온보딩/로그인/메인)는 이 파일에서 처리합니다.
+ * 네비게이션·전역 상태(Jotai)·앱 진입 분기(온보딩/메인, 로그인은 필요 시 모달)는 이 파일에서 처리합니다.
  * FCM/Notifee는 로그인 완료 후 `src/push/pushService.ts`에서 초기화합니다.
  * (index.js는 변경하지 않습니다.)
  */
@@ -21,9 +21,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import codePush from '@revopush/react-native-code-push';
-import { RootTabs } from './src/navigation/RootTabs';
 import { OnboardingStack } from './src/navigation/OnboardingStack';
-import { AuthStack } from './src/navigation/AuthStack';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { rootNavigationRef } from './src/navigation/rootNavigation';
 import {
   isFirstLaunchAtom,
   isLoggedInAtom,
@@ -39,10 +39,17 @@ import {
   cleanupPushServices,
   initPushServices,
 } from './src/push/pushService';
+import {
+  fetchForceUpdateInfo,
+  type ForceUpdateInfo,
+} from './src/appControl/checkAppVersion';
+import { ForceUpdateScreen } from './src/appControl/ForceUpdateScreen';
+import { trackAppSession } from './src/analytics/adminStats';
 
 enableScreens();
 
-function LoggedInApp() {
+function MainApp() {
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
   const setLastDeepLink = useSetAtom(lastDeepLinkAtom);
 
   const openDeepLink = useCallback(
@@ -61,6 +68,15 @@ function LoggedInApp() {
   );
 
   useEffect(() => {
+    void trackAppSession();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      cleanupPushServices();
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -75,29 +91,21 @@ function LoggedInApp() {
       cancelled = true;
       cleanupPushServices();
     };
-  }, [openDeepLink]);
+  }, [isLoggedIn, openDeepLink]);
 
-  return <RootTabs />;
+  return <RootNavigator />;
 }
 
 function AppShell() {
   const isDarkMode = useColorScheme() === 'dark';
   const isFirstLaunch = useAtomValue(isFirstLaunchAtom);
-  const isLoggedIn = useAtomValue(isLoggedInAtom);
 
-  let navigator: ReactNode;
-  if (isFirstLaunch) {
-    navigator = <OnboardingStack />;
-  } else if (!isLoggedIn) {
-    navigator = <AuthStack />;
-  } else {
-    navigator = <LoggedInApp />;
-  }
+  const navigator = isFirstLaunch ? <OnboardingStack /> : <MainApp />;
 
   return (
     <>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <NavigationContainer>{navigator}</NavigationContainer>
+      <NavigationContainer ref={rootNavigationRef}>{navigator}</NavigationContainer>
     </>
   );
 }
@@ -130,16 +138,27 @@ function AppSafeAreaLayout({ children }: { children: ReactNode }) {
   );
 }
 
-function AppBootstrap({ onReady }: { onReady: () => void | Promise<void> }) {
+type AppBootstrapProps = {
+  onReady: () => void | Promise<void>;
+  onForceUpdate: (info: ForceUpdateInfo) => void;
+};
+
+function AppBootstrap({ onReady, onForceUpdate }: AppBootstrapProps) {
   const setIsFirstLaunch = useSetAtom(isFirstLaunchAtom);
   const setIsLoggedIn = useSetAtom(isLoggedInAtom);
 
   useEffect(() => {
     const init = async () => {
-      const [onboardingDone, loggedIn] = await Promise.all([
+      const [onboardingDone, loggedIn, forceUpdate] = await Promise.all([
         loadOnboardingCompleted(),
         isLoggedInStorage(),
+        fetchForceUpdateInfo(),
       ]);
+
+      if (forceUpdate) {
+        onForceUpdate(forceUpdate);
+        return;
+      }
 
       if (onboardingDone) {
         setIsFirstLaunch(false);
@@ -156,28 +175,57 @@ function AppBootstrap({ onReady }: { onReady: () => void | Promise<void> }) {
         await onReady();
       }
     })();
-  }, [onReady, setIsFirstLaunch, setIsLoggedIn]);
+  }, [onReady, onForceUpdate, setIsFirstLaunch, setIsLoggedIn]);
 
   return null;
 }
 
 function App() {
   const [bootReady, setBootReady] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState<ForceUpdateInfo | null>(null);
 
   const hideSplash = useCallback(async () => {
     await BootSplash.hide({ fade: true });
     setBootReady(true);
   }, []);
 
+  const setIsFirstLaunch = useSetAtom(isFirstLaunchAtom);
+  const setIsLoggedIn = useSetAtom(isLoggedInAtom);
+
+  const handleForceUpdate = useCallback((info: ForceUpdateInfo) => {
+    setForceUpdate(info);
+  }, []);
+
+  const handleContinueWithoutUpdate = useCallback(async () => {
+    setForceUpdate(null);
+    const [onboardingDone, loggedIn] = await Promise.all([
+      loadOnboardingCompleted(),
+      isLoggedInStorage(),
+    ]);
+    if (onboardingDone) {
+      setIsFirstLaunch(false);
+    }
+    if (loggedIn) {
+      setIsLoggedIn(true);
+    }
+  }, [setIsFirstLaunch, setIsLoggedIn]);
+
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
       <SafeAreaProvider>
-        <AppBootstrap onReady={hideSplash} />
+        <AppBootstrap onReady={hideSplash} onForceUpdate={handleForceUpdate} />
         <AppSafeAreaLayout>
           {!bootReady ? (
             <View style={styles.bootLoading}>
               <ActivityIndicator size="large" color="#33383F" />
             </View>
+          ) : forceUpdate ? (
+            <ForceUpdateScreen
+              info={forceUpdate}
+              onContinueWithoutUpdate={() => {
+                void handleContinueWithoutUpdate();
+              }}
+            />
           ) : (
             <AppShell />
           )}

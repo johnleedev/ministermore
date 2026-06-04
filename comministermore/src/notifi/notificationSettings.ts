@@ -3,11 +3,10 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
 import {
-  HOMEINAPP_API_BASE,
-  HOMEINAPP_CHURCH_ID,
+  MINISTER_PUSH_API_BASE,
 } from '../config/api';
 
-const USER_WANTS_PUSH_KEY = `user_wants_push:${HOMEINAPP_CHURCH_ID}`;
+const USER_WANTS_PUSH_KEY = 'user_wants_push:ministermore';
 
 type UserActiveUpdateResponse = {
   success?: boolean;
@@ -79,14 +78,18 @@ export async function fetchFcmTokenForSync(): Promise<string> {
  */
 export async function syncUserActiveToServer(): Promise<void> {
   const token = await fetchFcmTokenForSync();
+  const userToken = (await AsyncStorage.getItem('ministermore_refreshToken')) ?? '';
+  if (!userToken) {
+    return;
+  }
   const isActive: '0' | '1' = (await getEffectivePushEnabled()) ? '1' : '0';
 
   try {
-    const res = await fetch(`${HOMEINAPP_API_BASE}/updateUserActive`, {
+    const res = await fetch(`${MINISTER_PUSH_API_BASE}/updateuseractive`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        churchId: HOMEINAPP_CHURCH_ID,
+        userToken,
         fcmToken: token,
         isActive,
       }),

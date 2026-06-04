@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAtomValue } from 'jotai';
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import axios from 'axios';
 import { MAIN_API_BASE } from '../../../config/api';
+import { trackAppCountup } from '../../../analytics/adminStats';
 import { RECRUIT_CITY_NAMES } from '../../../data/recruitRegions';
 import { jobColors } from '../common/jobsTheme';
 import {
@@ -23,6 +25,8 @@ import { StickySearchBar } from '../../shared/StickySearchBar';
 import { JobsCategoryTabs } from '../jobsCategoryContext';
 import type { MinisterStackParamList } from './MinisterStack';
 import { loadSessionUser } from '../../../login/sessionStorage';
+import { promptLogin, requireLogin } from '../../../navigation/authPrompt';
+import { isLoggedInAtom } from '../../../state/atoms';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 
 const API_BASE = MAIN_API_BASE.replace(/\/$/, '');
@@ -67,6 +71,7 @@ function pad2(n: number) {
 
 export function MinisterList() {
   const navigation = useNavigation<NativeStackNavigationProp<MinisterStackParamList, 'List'>>();
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
   const [listView, setListView] = useState<RecruitRow[]>([]);
   const [searchResult, setSearchResult] = useState<RecruitRow[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -294,13 +299,12 @@ export function MinisterList() {
   ]);
 
   const openDetail = (item: RecruitRow) => {
-    const today = new Date();
-    const date = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
-    axios.post(`${API_BASE}/admin/countup`, { date, type: 'recruitview' }).catch(() => null);
+    void trackAppCountup('recruitview');
     navigation.navigate('Detail', { id: String(item.id) });
   };
 
   const openPostPage = () => {
+    if (!requireLogin(isLoggedIn)) return;
     navigation.navigate('Write');
   };
 
@@ -359,7 +363,7 @@ export function MinisterList() {
 
   const onToggleScrap = async (item: RecruitRow) => {
     if (!userAccount) {
-      Alert.alert('', '로그인이 필요합니다.');
+      promptLogin();
       return;
     }
     const payload = {

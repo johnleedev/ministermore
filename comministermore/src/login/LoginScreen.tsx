@@ -26,6 +26,8 @@ import {
 } from './mapLoginResponse';
 import { authenticateWithApple, authenticateWithKakao } from './socialAuth';
 import { LoginKeyboardScreen, useLoginInputFocusScroll } from './LoginKeyboardScreen';
+import { completeAuthLogin } from '../navigation/completeAuthLogin';
+import { closeAuth } from '../navigation/rootNavigation';
 
 const LOGO = require('../images/login/mainlogo.png');
 const KAKAO_ICON = require('../images/login/kakao.png');
@@ -68,6 +70,7 @@ export function LoginScreen() {
     if (isLoginSuccess(data)) {
       await persistSuccessfulLogin(data);
       setIsLoggedIn(true);
+      completeAuthLogin();
       return;
     }
     if (isNeedsSignup(data)) {
@@ -109,6 +112,7 @@ export function LoginScreen() {
       if (result.status === 'success') {
         await persistSuccessfulLogin(result.data);
         setIsLoggedIn(true);
+        completeAuthLogin();
         return;
       }
 
@@ -129,12 +133,19 @@ export function LoginScreen() {
   return (
     <LoginKeyboardScreen>
           <View style={styles.screen}>
+            <Pressable
+              style={styles.dismissBtn}
+              onPress={closeAuth}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="닫기">
+              <MaterialIcons name="close" size={24} color={c.textMuted2} />
+            </Pressable>
             <View style={styles.hero}>
               <View style={styles.logoWrap}>
                 <Image source={LOGO} style={styles.logo} resizeMode="contain" />
               </View>
               <Text style={styles.heroTitle}>로그인</Text>
-              
             </View>
 
             <View style={styles.card}>
@@ -258,6 +269,13 @@ const styles = StyleSheet.create({
     maxWidth: 430,
     width: '100%',
     alignSelf: 'center',
+  },
+  dismissBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 12,
+    zIndex: 2,
+    padding: 8,
   },
   hero: {
     alignItems: 'center',

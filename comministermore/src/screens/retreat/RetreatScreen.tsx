@@ -7,6 +7,7 @@ import { ReviewMain } from './review/ReviewMain';
 import { UpgradeMain } from './upgrade/UpgradeMain';
 import { RetreatCategoryProvider, type RetreatCategory } from './retreatCategoryContext';
 import { retreatColors } from './retreatTheme';
+import { useRootTabResetOnRequest } from '../../navigation/useRootTabResetOnRequest';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootTabParamList } from '../../navigation/RootTabs';
 
@@ -16,6 +17,10 @@ export function RetreatScreen() {
   const [category, setCategory] = useState<RetreatCategory>('place');
   const openTarget = route.params?.open;
   const targetCategory = openTarget?.category ?? category;
+
+  useRootTabResetOnRequest(() => {
+    setCategory('place');
+  });
 
   useEffect(() => {
     if (openTarget?.category) {

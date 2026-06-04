@@ -76,19 +76,55 @@ export function FloatingScrollActions({
 
 function useScrollToTopState() {
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const isAtTopRef = useRef(true);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setShowTopBtn(event.nativeEvent.contentOffset.y > 320);
+    const y = event.nativeEvent.contentOffset.y;
+    isAtTopRef.current = y <= 8;
+    setShowTopBtn(y > 320);
   }, []);
 
   const scrollToOffsetTop = useCallback(
-    (ref: { scrollToOffset: (opts: { offset: number; animated: boolean }) => void } | null) => {
+    (
+      ref: { scrollToOffset: (opts: { offset: number; animated: boolean }) => void } | null,
+    ): boolean => {
+      if (isAtTopRef.current) {
+        return true;
+      }
       ref?.scrollToOffset({ offset: 0, animated: true });
+      return false;
     },
     [],
   );
 
-  return { showTopBtn, onScroll, scrollToOffsetTop };
+  const scrollSectionToTop = useCallback(
+    (
+      ref: {
+        scrollToLocation: (opts: {
+          sectionIndex: number;
+          itemIndex: number;
+          animated?: boolean;
+        }) => void;
+      } | null,
+    ): boolean => {
+      if (isAtTopRef.current) {
+        return true;
+      }
+      ref?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true });
+      return false;
+    },
+    [],
+  );
+
+  const scrollViewToTop = useCallback((ref: ScrollView | null): boolean => {
+    if (isAtTopRef.current) {
+      return true;
+    }
+    ref?.scrollTo({ y: 0, animated: true });
+    return false;
+  }, []);
+
+  return { showTopBtn, onScroll, scrollToOffsetTop, scrollSectionToTop, scrollViewToTop, isAtTopRef };
 }
 
 export function useListScrollToTop<T>() {
@@ -96,7 +132,7 @@ export function useListScrollToTop<T>() {
   const { showTopBtn, onScroll, scrollToOffsetTop } = useScrollToTopState();
 
   const scrollToTop = useCallback(() => {
-    scrollToOffsetTop(listRef.current);
+    return scrollToOffsetTop(listRef.current);
   }, [scrollToOffsetTop]);
 
   useRootTabScrollToTopOnRequest(scrollToTop);
@@ -106,11 +142,11 @@ export function useListScrollToTop<T>() {
 
 export function useSectionListScrollToTop<T, S>() {
   const listRef = useRef<SectionList<T, S>>(null);
-  const { showTopBtn, onScroll, scrollToOffsetTop } = useScrollToTopState();
+  const { showTopBtn, onScroll, scrollSectionToTop } = useScrollToTopState();
 
   const scrollToTop = useCallback(() => {
-    scrollToOffsetTop(listRef.current);
-  }, [scrollToOffsetTop]);
+    return scrollSectionToTop(listRef.current);
+  }, [scrollSectionToTop]);
 
   useRootTabScrollToTopOnRequest(scrollToTop);
 
@@ -119,11 +155,11 @@ export function useSectionListScrollToTop<T, S>() {
 
 export function useScrollViewScrollToTop() {
   const scrollRef = useRef<ScrollView>(null);
-  const { showTopBtn, onScroll } = useScrollToTopState();
+  const { showTopBtn, onScroll, scrollViewToTop } = useScrollToTopState();
 
   const scrollToTop = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
+    return scrollViewToTop(scrollRef.current);
+  }, [scrollViewToTop]);
 
   useRootTabScrollToTopOnRequest(scrollToTop);
 

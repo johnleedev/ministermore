@@ -27,11 +27,40 @@ const getTableColumns = async (db, tableName) => {
   return columns.map((column) => column.Field);
 };
 
+const COUNT_METRIC_TYPES = [
+  'mainconnect',
+  'recruitview',
+  'retreatmenu',
+  'servicemenu',
+  'praisewordclick',
+];
 
-// 방문자 통계 조회 (일별 방문자 수)
+const webVisitorWhere = "ip NOT LIKE 'app:%'";
+const appVisitorWhere = "ip LIKE 'app:%'";
+
+const fetchVisitorStats = (whereClause) =>
+  queryAsync(
+    commondb,
+    `SELECT date, COUNT(DISTINCT ip) AS uniqueVisitors, SUM(count) AS totalVisits
+       FROM homeusercount
+      WHERE ${whereClause}
+      GROUP BY date
+      ORDER BY date DESC
+      LIMIT 30`,
+    []
+  );
+
+const fetchCountallByType = (type) =>
+  queryAsync(
+    commondb,
+    `SELECT date, count AS totalVisits FROM countall WHERE type = ? ORDER BY date DESC LIMIT 30`,
+    [type]
+  );
+
+// 방문자 통계 조회 (일별 방문자 수, 웹만)
 router.get('/homeusercount/statistics', (req, res) => {
   commondb.query(
-    `SELECT date, COUNT(DISTINCT ip) as uniqueVisitors, SUM(count) as totalVisits FROM homeusercount GROUP BY date ORDER BY date DESC LIMIT 30`,
+    `SELECT date, COUNT(DISTINCT ip) as uniqueVisitors, SUM(count) as totalVisits FROM homeusercount WHERE ${webVisitorWhere} GROUP BY date ORDER BY date DESC LIMIT 30`,
     [],
     function (error, result) {
       if (error) { return res.status(500).send(error); }
@@ -44,7 +73,7 @@ router.get('/homeusercount/statistics', (req, res) => {
 router.get('/homeusercount/statistics/all', (req, res) => {
   // ip별 방문자수 (homeusercount)
   commondb.query(
-    `SELECT date, COUNT(DISTINCT ip) as uniqueVisitors, SUM(count) as totalVisits FROM homeusercount GROUP BY date ORDER BY date DESC LIMIT 30`,
+    `SELECT date, COUNT(DISTINCT ip) as uniqueVisitors, SUM(count) as totalVisits FROM homeusercount WHERE ${webVisitorWhere} GROUP BY date ORDER BY date DESC LIMIT 30`,
     [],
     function (error, byIpResult) {
       if (error) { return res.status(500).send(error); }
@@ -106,6 +135,38 @@ router.post('/countup', (req, res) => {
       }
     }
   );
+});
+
+// 웹·앱 통합 대시보드 (관리자 통계 화면)
+router.get('/statistics/dashboard', async (req, res) => {
+  try {
+    const [webVisitors, appVisitors, webMetrics, appMetrics] = await Promise.all([
+      fetchVisitorStats(webVisitorWhere),
+      fetchVisitorStats(appVisitorWhere),
+      Promise.all(COUNT_METRIC_TYPES.map((type) => fetchCountallByType(type))),
+      Promise.all(COUNT_METRIC_TYPES.map((type) => fetchCountallByType(`app_${type}`))),
+    ]);
+
+    const metricMap = (rowsList) =>
+      COUNT_METRIC_TYPES.reduce((acc, type, index) => {
+        acc[type] = rowsList[index] || [];
+        return acc;
+      }, {});
+
+    return res.json({
+      web: {
+        visitors: webVisitors,
+        metrics: metricMap(webMetrics),
+      },
+      app: {
+        visitors: appVisitors,
+        metrics: metricMap(appMetrics),
+      },
+    });
+  } catch (error) {
+    console.error('statistics/dashboard error:', error);
+    return res.status(500).json({ message: 'failed to fetch statistics dashboard' });
+  }
 });
 
 // countall 통계 조회 (type별)

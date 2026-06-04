@@ -20,6 +20,7 @@ import { loginColors as c } from './loginTheme';
 import { persistSuccessfulLogin } from './mapLoginResponse';
 import { authenticateWithApple, authenticateWithKakao } from './socialAuth';
 import { LoginKeyboardScreen } from './LoginKeyboardScreen';
+import { completeAuthLogin } from '../navigation/completeAuthLogin';
 
 const LOGO = require('../images/login/mainlogo.png');
 const KAKAO_ICON = require('../images/login/kakao.png');
@@ -63,6 +64,7 @@ export function RegisterMainScreen() {
       if (result.status === 'success') {
         await persistSuccessfulLogin(result.data);
         setIsLoggedIn(true);
+        completeAuthLogin();
         return;
       }
 

@@ -29,6 +29,7 @@ import {
 import { SubStackScreenShell } from '../navigation/SubStackScreenShell';
 import { PrimaryButton, mpScreenContentStyle } from '../screens/shared/mypageUi';
 import { mpColors } from '../screens/shared/mypageTheme';
+import { useScrollViewScrollToTop } from '../screens/shared/listScrollUi';
 
 const DELETE_NOTICES = [
   '회원 탈퇴 시, 즉시 탈퇴 처리되며, 서비스 이용이 불가합니다.',
@@ -70,6 +71,7 @@ function ProfileField({
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const setIsLoggedIn = useSetAtom(isLoggedInAtom);
+  const { scrollRef, onScroll } = useScrollViewScrollToTop();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -251,6 +253,9 @@ export function ProfileScreen() {
   return (
     <SubStackScreenShell title="프로필 수정">
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={mpScreenContentStyle(24 + insets.bottom)}
         keyboardShouldPersistTaps="handled">

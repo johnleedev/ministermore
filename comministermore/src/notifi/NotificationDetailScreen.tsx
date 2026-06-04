@@ -18,9 +18,20 @@ import { mpScreenContentStyle } from '../screens/shared/mypageUi';
 
 type Props = NativeStackScreenProps<NotificationsStackParamList, 'NotificationDetail'>;
 
+function categoryFromTopic(topic: string | null | undefined) {
+  const key = String(topic || '').trim().toLowerCase();
+  if (!key) return null;
+  if (key === 'notice' || key === '공지') return 'notice' as const;
+  if (key === 'job' || key === 'recruit' || key === '구인구직') return 'job' as const;
+  if (key === 'retreat' || key === '수련회') return 'retreat' as const;
+  if (key === 'community' || key === 'board' || key === '게시판') return 'community' as const;
+  if (key === 'worship' || key === '예배사역') return 'worship' as const;
+  return null;
+}
+
 export function NotificationDetailScreen({ route, navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
-  useNotificationsScrollToTopOnRequest(undefined, scrollRef);
+  const { onScroll } = useNotificationsScrollToTopOnRequest(undefined, scrollRef);
   const tabNav = useNavigation();
   const { id } = route.params;
   const insets = useSafeAreaInsets();
@@ -42,7 +53,7 @@ export function NotificationDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const category = inferNotificationCategory(item.title, item.content);
+  const category = categoryFromTopic(item.topic) || inferNotificationCategory(item.title, item.content);
   const pill = categoryPillStyle(category);
   const timeLabel = formatNotificationListTime(item.sent_at);
 
@@ -50,6 +61,8 @@ export function NotificationDetailScreen({ route, navigation }: Props) {
     <SubStackScreenShell title="알림 상세" hideNotifiAction>
       <ScrollView
         ref={scrollRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         style={styles.root}
         contentContainerStyle={mpScreenContentStyle(32 + insets.bottom)}
         showsVerticalScrollIndicator={false}>
@@ -61,15 +74,6 @@ export function NotificationDetailScreen({ route, navigation }: Props) {
         <Text style={styles.title}>{item.title}</Text>
         {timeLabel ? <Text style={styles.time}>{timeLabel}</Text> : null}
         <Text style={styles.body}>{item.content}</Text>
-
-        <View style={styles.highlight}>
-          <Text style={styles.highlightTitle}>관련 정보</Text>
-          <Text style={styles.highlightItem}>• 알림 ID: {item.id}</Text>
-          {item.church_id ? (
-            <Text style={styles.highlightItem}>• 교회 ID: {item.church_id}</Text>
-          ) : null}
-          <Text style={styles.highlightItem}>• 읽음 횟수: {item.readCount}</Text>
-        </View>
 
         <View style={styles.actions}>
           <Pressable style={styles.btnSecondary} onPress={() => navigation.goBack()}>
@@ -133,15 +137,6 @@ const styles = StyleSheet.create({
     lineHeight: 27,
     marginBottom: 20,
   },
-  highlight: {
-    backgroundColor: mpColors.highlightBg,
-    borderWidth: 1,
-    borderColor: mpColors.highlightBorder,
-    borderRadius: 18,
-    padding: 16,
-  },
-  highlightTitle: { fontSize: 15, fontWeight: '700', color: mpColors.text, marginBottom: 10 },
-  highlightItem: { fontSize: 14, color: mpColors.textMuted, lineHeight: 26 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 24 },
   btnPrimary: {
     flex: 1,

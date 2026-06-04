@@ -461,6 +461,139 @@
             }
           }
         }
+
+        .company-inquiry {
+          width: 100%;
+
+          &__lead {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #5c7290;
+            margin: 0 0 28px;
+          }
+
+          &__field {
+            margin-bottom: 28px;
+          }
+
+          &__label {
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0b1f3a;
+          }
+
+          &__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+          }
+
+          &__chip {
+            padding: 11px 16px;
+            border: 1px solid #9eb0cc;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #1e3a5f;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+            &:hover {
+              border-color: #0b1f3a;
+              color: #0b1f3a;
+            }
+
+            &.is-active {
+              background: #0b1f3a;
+              border-color: #0b1f3a;
+              color: #ffffff;
+            }
+          }
+
+          &__textarea {
+            width: 100%;
+            min-height: 280px;
+            padding: 16px 18px;
+            border: 1px solid #9eb0cc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            line-height: 1.65;
+            color: #0b1f3a;
+            background: #ffffff;
+            resize: vertical;
+
+            &::placeholder {
+              color: #7a8fa8;
+            }
+
+            &:focus {
+              outline: none;
+              border-color: #0b1f3a;
+              box-shadow: 0 0 0 3px rgba(11, 31, 58, 0.12);
+            }
+          }
+
+          &__counter {
+            margin-top: 8px;
+            text-align: right;
+            font-size: 13px;
+            color: #5c7290;
+          }
+
+          &__input {
+            width: 100%;
+            min-height: 50px;
+            padding: 0 18px;
+            border: 1px solid #9eb0cc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            color: #0b1f3a;
+            background: #ffffff;
+
+            &::placeholder {
+              color: #7a8fa8;
+            }
+
+            &:focus {
+              outline: none;
+              border-color: #0b1f3a;
+              box-shadow: 0 0 0 3px rgba(11, 31, 58, 0.12);
+            }
+          }
+
+          &__actions {
+            display: flex;
+            justify-content: center;
+            padding-top: 8px;
+          }
+
+          &__submit {
+            width: 100%;
+            max-width: 420px;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            background: #0b1f3a;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease;
+
+            &:hover:not(:disabled) {
+              background: #132d54;
+            }
+
+            &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+            }
+          }
+        }
       }
       
       
@@ -1071,6 +1204,23 @@
 
     .info-label {
       width: auto;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .company {
+    > .inner {
+      .subpage__main {
+        .subpage__main__content {
+          .company-inquiry {
+            &__chip {
+              width: calc(50% - 5px);
+              text-align: center;
+            }
+          }
+        }
+      }
     }
   }
 }

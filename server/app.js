@@ -12,10 +12,14 @@ var cors = require('cors');
 // 라우터들
 const LoginRouter = require('./routers/common/login');
 const MypageRouter = require('./routers/common/Mypage');
+const InquiryRouter = require('./routers/common/inquiry');
 const PushNotificationRouter = require('./routers/common/pushNotification');
+const AppControlRouter = require('./routers/common/appcontrol');
 app.use('/login', LoginRouter);
 app.use('/mypage', MypageRouter);
+app.use('/inquiry', InquiryRouter);
 app.use('/pushnotifi', PushNotificationRouter);
+app.use('/appcontrol', AppControlRouter);
 
 // const HolyssumRouter = require('./routers/holyssum/holyssum');
 // app.use('/holyssum', HolyssumRouter);

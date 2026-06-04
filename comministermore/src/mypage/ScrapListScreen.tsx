@@ -3,8 +3,10 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { loadSessionUser } from '../login/sessionStorage';
+import { SubStackScreenShell } from '../navigation/SubStackScreenShell';
 import { fetchScrapList, type ScrapListItem } from '../shared/scrapApi';
 import { mpColors } from '../screens/shared/mypageTheme';
+import { useListScrollToTop } from '../screens/shared/listScrollUi';
 
 const FILTERS = [
   { id: 'all', label: '전체' },
@@ -17,6 +19,7 @@ type FilterId = (typeof FILTERS)[number]['id'];
 
 export function ScrapListScreen() {
   const navigation = useNavigation();
+  const { listRef, onScroll } = useListScrollToTop<ScrapListItem>();
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<FilterId>('all');
   const [list, setList] = useState<ScrapListItem[]>([]);
@@ -68,56 +71,63 @@ export function ScrapListScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.filterRow}>
-        {FILTERS.map(tab => (
-          <Pressable
-            key={tab.id}
-            style={[styles.filterBtn, filter === tab.id && styles.filterBtnOn]}
-            onPress={() => setFilter(tab.id)}>
-            <Text style={[styles.filterText, filter === tab.id && styles.filterTextOn]}>{tab.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+    <SubStackScreenShell title="스크랩 관리">
+      <View style={styles.content}>
+        <View style={styles.filterRow}>
+          {FILTERS.map(tab => (
+            <Pressable
+              key={tab.id}
+              style={[styles.filterBtn, filter === tab.id && styles.filterBtnOn]}
+              onPress={() => setFilter(tab.id)}>
+              <Text style={[styles.filterText, filter === tab.id && styles.filterTextOn]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => String(item.id)}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>{loading ? '불러오는 중...' : '스크랩한 항목이 없습니다.'}</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => void openItem(item)}>
-            <View style={styles.cardTop}>
-              <Text style={styles.typeTag}>{item.targetType}</Text>
-              <MaterialIcons name="open-in-new" size={18} color="#6b7280" />
+        <FlatList
+          ref={listRef}
+          data={filtered}
+          keyExtractor={item => String(item.id)}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>{loading ? '불러오는 중...' : '스크랩한 항목이 없습니다.'}</Text>
             </View>
-            <Text style={styles.title} numberOfLines={2}>
-              {item.title || '(제목 없음)'}
-            </Text>
-            {item.subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {item.subtitle}
+          }
+          renderItem={({ item }) => (
+            <Pressable style={styles.card} onPress={() => void openItem(item)}>
+              <View style={styles.cardTop}>
+                <Text style={styles.typeTag}>{item.targetType}</Text>
+                <MaterialIcons name="open-in-new" size={18} color="#6b7280" />
+              </View>
+              <Text style={styles.title} numberOfLines={2}>
+                {item.title || '(제목 없음)'}
               </Text>
-            ) : null}
-            {item.meta ? (
-              <Text style={styles.meta} numberOfLines={1}>
-                {item.meta}
-              </Text>
-            ) : null}
-            <Text style={styles.date}>{new Date(item.createdAt).toLocaleString('ko-KR')}</Text>
-          </Pressable>
-        )}
-      />
-    </View>
+              {item.subtitle ? (
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {item.subtitle}
+                </Text>
+              ) : null}
+              {item.meta ? (
+                <Text style={styles.meta} numberOfLines={1}>
+                  {item.meta}
+                </Text>
+              ) : null}
+              <Text style={styles.date}>{new Date(item.createdAt).toLocaleString('ko-KR')}</Text>
+            </Pressable>
+          )}
+        />
+      </View>
+    </SubStackScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: mpColors.bg, padding: 16 },
+  content: { flex: 1, padding: 16 },
+  list: { flex: 1 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   filterBtn: {
     borderWidth: 1,

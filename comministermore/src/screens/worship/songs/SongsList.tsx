@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { MAIN_API_BASE } from '../../../config/api';
+import { trackAppCountup } from '../../../analytics/adminStats';
 import {
   FloatingScrollActions,
   LIST_FAB_SCROLL_PADDING,
@@ -63,14 +64,8 @@ type Filters = {
 };
 
 const STATE_OPTIONS = ['', '찬송가', '복음송'] as const;
-const KEY_OPTIONS = ['', 'C', 'D', 'E', 'F', 'G', 'A', 'B'] as const;
+const KEY_OPTIONS = ['', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
 const TEMPO_OPTIONS = ['', '느린', '빠른'] as const;
-
-function normalizeTempo(t: string) {
-  if (t === '느린') return '느림';
-  if (t === '빠른') return '빠름';
-  return t;
-}
 
 function labelOrAll(value: string, all = '전체') {
   return value || all;
@@ -101,8 +96,13 @@ export function SongsList() {
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadSeqRef = useRef(0);
+  const endReachedLockRef = useRef(false);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
   const fetchPage = useCallback(async (page: number, append = false) => {
+    const seq = ++loadSeqRef.current;
     if (append) {
       setIsLoadingMore(true);
     } else {
@@ -111,19 +111,29 @@ export function SongsList() {
 
     try {
       const res = await axios.get(`${API_BASE}/worshipsongs/getsongs/${page}`);
+      if (seq !== loadSeqRef.current) {
+        return;
+      }
       const newItems: SongRow[] = Array.isArray(res.data?.resultData)
         ? res.data.resultData
         : [];
       setListView(prev => (append ? [...prev, ...newItems] : newItems));
       setHasMore(newItems.length >= PAGE_SIZE);
+      setIsSearching(false);
     } catch {
+      if (seq !== loadSeqRef.current) {
+        return;
+      }
       if (!append) {
         setListView([]);
       }
       setHasMore(false);
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (seq === loadSeqRef.current) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        endReachedLockRef.current = false;
+      }
     }
   }, []);
 
@@ -136,17 +146,29 @@ export function SongsList() {
   }, [fetchPage]);
 
   const handleLoadMore = () => {
-    if (isLoading || isLoadingMore || isSearching || !hasMore) return;
+    if (
+      isLoading ||
+      isLoadingMore ||
+      isSearching ||
+      !hasMore ||
+      endReachedLockRef.current ||
+      listView.length === 0
+    ) {
+      return;
+    }
+    endReachedLockRef.current = true;
     const next = currentPage + 1;
     setCurrentPage(next);
     void fetchPage(next, true);
   };
 
   const resetToDefaultList = useCallback(() => {
+    endReachedLockRef.current = false;
     setIsSearching(false);
     setSelectedThemes([]);
     setCurrentPage(1);
     setHasMore(true);
+    setListView([]);
     void fetchPage(1);
   }, [fetchPage]);
 
@@ -156,6 +178,15 @@ export function SongsList() {
       const active =
         !!searchWord.trim() || !!stateSort || !!keySort || !!tempoSort;
 
+      const sameFilters =
+        next.searchWord === filtersRef.current.searchWord &&
+        next.stateSort === filtersRef.current.stateSort &&
+        next.keySort === filtersRef.current.keySort &&
+        next.tempoSort === filtersRef.current.tempoSort;
+      if (sameFilters && isSearching) {
+        return;
+      }
+
       setFilters(next);
 
       if (!active) {
@@ -163,43 +194,92 @@ export function SongsList() {
         return;
       }
 
+      const seq = ++loadSeqRef.current;
+      endReachedLockRef.current = false;
+      setSelectedThemes([]);
       setIsSearching(true);
       setIsLoading(true);
       setHasMore(false);
+      setListView([]);
+      setCurrentPage(1);
+
       try {
         const res = await axios.post(`${API_BASE}/worshipsongs/getsongsfilter`, {
           word: searchWord || '',
           stateSort: stateSort || '',
           keySort: keySort || '',
-          tempoSort: normalizeTempo(tempoSort || ''),
+          tempoSort: tempoSort || '',
         });
+        if (seq !== loadSeqRef.current) {
+          return;
+        }
         const rows: SongRow[] = Array.isArray(res.data?.resultData)
           ? res.data.resultData
           : [];
         setListView(rows);
+      } catch {
+        if (seq !== loadSeqRef.current) {
+          return;
+        }
+        setListView([]);
       } finally {
-        setIsLoading(false);
+        if (seq === loadSeqRef.current) {
+          setIsLoading(false);
+        }
       }
     },
-    [resetToDefaultList],
+    [isSearching, resetToDefaultList],
   );
 
   const handleThemeSearching = async (themes: string[]) => {
+    void trackAppCountup('praisewordclick');
+    const seq = ++loadSeqRef.current;
+    endReachedLockRef.current = false;
     setIsSearching(true);
     setIsLoading(true);
     setHasMore(false);
     setSelectedThemes(themes);
+    setListView([]);
+    setCurrentPage(1);
+    setFilters({
+      searchWord: '',
+      stateSort: '',
+      keySort: '',
+      tempoSort: '',
+    });
     try {
       const res = await axios.post(`${API_BASE}/worshipsongs/getsongssearchtheme`, {
         theme: themes,
       });
+      if (seq !== loadSeqRef.current) {
+        return;
+      }
       const rows: SongRow[] = Array.isArray(res.data?.resultData)
         ? res.data.resultData
         : [];
       setListView(rows);
+    } catch {
+      if (seq !== loadSeqRef.current) {
+        return;
+      }
+      setListView([]);
     } finally {
-      setIsLoading(false);
+      if (seq === loadSeqRef.current) {
+        setIsLoading(false);
+      }
     }
+  };
+
+  const applyStateSort = (value: Filters['stateSort']) => {
+    void runFilterSearch({ ...filtersRef.current, stateSort: value });
+  };
+
+  const applyKeySort = (value: Filters['keySort']) => {
+    void runFilterSearch({ ...filtersRef.current, keySort: value });
+  };
+
+  const applyTempoSort = (value: Filters['tempoSort']) => {
+    void runFilterSearch({ ...filtersRef.current, tempoSort: value });
   };
 
   const handleReset = () => {
@@ -257,6 +337,10 @@ export function SongsList() {
     setFindMode('song');
     if (selectedThemes.length > 0) {
       resetToDefaultList();
+      return;
+    }
+    if (isSearching) {
+      return;
     }
   };
 
@@ -298,13 +382,13 @@ export function SongsList() {
             <WorshipFilterGroup
               label="구분"
               icon="category"
-              onReset={() => void runFilterSearch({ ...filters, stateSort: '' })}>
+              onReset={() => applyStateSort('')}>
               {STATE_OPTIONS.map(v => (
                 <WorshipFilterBtn
                   key={`state-${v || 'all'}`}
                   label={v || '전체'}
                   active={filters.stateSort === v}
-                  onPress={() => void runFilterSearch({ ...filters, stateSort: v })}
+                  onPress={() => applyStateSort(v)}
                 />
               ))}
             </WorshipFilterGroup>
@@ -312,14 +396,14 @@ export function SongsList() {
             <WorshipFilterGroup
               label="KEY"
               icon="music-note"
-              onReset={() => void runFilterSearch({ ...filters, keySort: '' })}>
+              onReset={() => applyKeySort('')}>
               {KEY_OPTIONS.map(v => (
                 <WorshipFilterBtn
                   key={`key-${v || 'all'}`}
                   label={v || '전체'}
                   active={filters.keySort === v}
                   variant="key"
-                  onPress={() => void runFilterSearch({ ...filters, keySort: v })}
+                  onPress={() => applyKeySort(v)}
                 />
               ))}
             </WorshipFilterGroup>
@@ -327,13 +411,13 @@ export function SongsList() {
             <WorshipFilterGroup
               label="TEMPO"
               icon="speed"
-              onReset={() => void runFilterSearch({ ...filters, tempoSort: '' })}>
+              onReset={() => applyTempoSort('')}>
               {TEMPO_OPTIONS.map(v => (
                 <WorshipFilterBtn
                   key={`tempo-${v || 'all'}`}
                   label={v || '전체'}
                   active={filters.tempoSort === v}
-                  onPress={() => void runFilterSearch({ ...filters, tempoSort: v })}
+                  onPress={() => applyTempoSort(v)}
                 />
               ))}
             </WorshipFilterGroup>
@@ -407,16 +491,17 @@ export function SongsList() {
   const { listRef, showTopBtn, onScroll, scrollToTop } = useListScrollToTop<SongRow>();
 
   const submitSongSearch = () => {
+    const current = filtersRef.current;
     const active =
-      !!filters.searchWord.trim() ||
-      !!filters.stateSort ||
-      !!filters.keySort ||
-      !!filters.tempoSort;
+      !!current.searchWord.trim() ||
+      !!current.stateSort ||
+      !!current.keySort ||
+      !!current.tempoSort;
     if (!active) {
       Alert.alert('', '검색 조건을 입력/선택해주세요');
       return;
     }
-    void runFilterSearch(filters);
+    void runFilterSearch(current);
   };
 
   const hasActiveSongFilters =
@@ -459,8 +544,8 @@ export function SongsList() {
         ListFooterComponent={isLoadingMore ? <ListLoadMoreFooter /> : null}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
+        onEndReached={!isSearching && hasMore ? handleLoadMore : undefined}
+        onEndReachedThreshold={0.2}
       />
       <FloatingScrollActions showTop={showTopBtn} onScrollToTop={scrollToTop} />
     </View>

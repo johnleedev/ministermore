@@ -10,8 +10,7 @@ import {
   extractDeepLinkFromNotifeeData,
 } from '../deepLink';
 import {
-  HOMEINAPP_API_BASE,
-  HOMEINAPP_CHURCH_ID,
+  MINISTER_PUSH_API_BASE,
 } from '../config/api';
 import { syncUserActiveToServer } from '../notifi/notificationSettings';
 
@@ -31,30 +30,24 @@ function resolveDeviceType(): 'android' | 'ios' | 'web' {
   return 'web';
 }
 
-async function resolveChurchId(): Promise<string> {
-  return HOMEINAPP_CHURCH_ID;
-}
-
 async function syncTokenToServer(
   endpoint: 'registerUserToken' | 'refreshUserToken',
   token: string,
   userToken?: string,
 ) {
-  const churchId = await resolveChurchId();
-  if (!churchId) {
-    console.log('[push] churchId missing, token sync skipped');
+  if (!userToken) {
+    console.log('[push] userToken missing, token sync skipped');
     return;
   }
 
   try {
-    const res = await fetch(`${HOMEINAPP_API_BASE}/${endpoint}`, {
+    const res = await fetch(`${MINISTER_PUSH_API_BASE}/${endpoint.toLowerCase()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        churchId,
         fcmToken: token,
         deviceType: resolveDeviceType(),
-        ...(userToken ? { userToken } : {}),
+        userToken,
       }),
     });
 

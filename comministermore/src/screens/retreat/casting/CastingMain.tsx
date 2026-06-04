@@ -34,6 +34,7 @@ import { CastingStack } from './CastingStack';
 import { DetailPressableImage } from '../../shared/ImagePreviewModal';
 import { FormKeyboardScreen, useFormInputFocusScroll } from '../../shared/FormKeyboardScreen';
 import { loadSessionUser } from '../../../login/sessionStorage';
+import { promptLogin } from '../../../navigation/authPrompt';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../../shared/scrapApi';
 import { RetreatRequestImageSection } from '../RetreatRequestImageSection';
 import {
@@ -226,7 +227,7 @@ export function CastingListView({
 
   const onToggleScrap = async (item: CastingItem) => {
     if (!userAccount) {
-      Alert.alert('', '로그인이 필요합니다.');
+      promptLogin();
       return;
     }
     const first = parseImageList(item.images)[0] || '';

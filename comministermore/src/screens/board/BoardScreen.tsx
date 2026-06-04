@@ -5,9 +5,14 @@ import { BOARD_CONFIG_BY_CATEGORY } from './boardConfigs';
 import { BoardCategoryProvider } from './boardCategoryContext';
 import type { BoardCategoryKey } from './boardUi';
 import { boardColors } from './boardTheme';
+import { useRootTabResetOnRequest } from '../../navigation/useRootTabResetOnRequest';
 
 export function BoardScreen() {
   const [category, setCategory] = useState<BoardCategoryKey>('freeboard');
+
+  useRootTabResetOnRequest(() => {
+    setCategory('freeboard');
+  });
 
   return (
     <BoardCategoryProvider category={category} setCategory={setCategory}>

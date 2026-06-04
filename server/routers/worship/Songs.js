@@ -13,6 +13,15 @@ var fs = require("fs");
 
 const escapeQuotes = (str) => str.replaceAll('è', '\è').replaceAll("'", "\\\'").replaceAll('"', '\\\"').replaceAll('\\n', '\\\\n');
 
+/** DB에 느린/느림, 빠른/빠름 혼재 — 필터 시 둘 다 매칭 */
+function tempoFilterValues(tempoSort) {
+  const t = String(tempoSort || '').trim();
+  if (!t) return [];
+  if (t === '느린' || t === '느림') return ['느린', '느림'];
+  if (t === '빠른' || t === '빠름') return ['빠른', '빠름'];
+  return [t];
+}
+
 
 
 // 전체 찬양곡 가져오기
@@ -163,7 +172,11 @@ router.post('/getsongsfilter', async (req, res) => {
 
   if (stateSort) { conditions.push('stateSort = ?'); params.push(stateSort); }
   if (keySort) { conditions.push('keySort = ?'); params.push(keySort); }
-  if (tempoSort) { conditions.push('tempoSort = ?'); params.push(tempoSort); }
+  const tempoValues = tempoFilterValues(tempoSort);
+  if (tempoValues.length) {
+    conditions.push(`tempoSort IN (${tempoValues.map(() => '?').join(',')})`);
+    params.push(...tempoValues);
+  }
   if (word) { conditions.push('title LIKE ?'); params.push(`%${word}%`); }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -231,15 +244,19 @@ router.post('/getsongsbykey', async (req, res) => {
 // 템포별 검색
 router.post('/getsongsbytempo', async (req, res) => {
   const { tempoSort } = req.body;
+  const tempoValues = tempoFilterValues(tempoSort);
+  if (!tempoValues.length) {
+    return res.status(400).json({ error: 'tempoSort required' });
+  }
 
   const query = `
     SELECT *
     FROM songs
-    WHERE tempoSort = ?
+    WHERE tempoSort IN (${tempoValues.map(() => '?').join(',')})
     ORDER BY id DESC;
   `;
 
-  worshipdb.query(query, [tempoSort], function(error, result) {
+  worshipdb.query(query, tempoValues, function(error, result) {
     if (error) throw error;
     if (result.length > 0) {
       res.json({ totalCount: result.length, resultData: result });

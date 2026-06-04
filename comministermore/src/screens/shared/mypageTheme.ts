@@ -22,6 +22,8 @@ export const mpColors = {
   pillCommunityText: '#7c3aed',
   pillWorshipBg: '#fff3e8',
   pillWorshipText: '#c97316',
+  pillNoticeBg: '#fff4d9',
+  pillNoticeText: '#a16207',
   tipBg: '#eff6ff',
   tipText: '#3563b8',
   highlightBg: '#f8fbff',
@@ -34,10 +36,11 @@ export const mpColors = {
 export const MP_SCREEN_PADDING_H = 18;
 export const MP_SCREEN_PADDING_TOP = 8;
 
-export type NotificationCategory = 'all' | 'job' | 'retreat' | 'community' | 'worship';
+export type NotificationCategory = 'all' | 'notice' | 'job' | 'retreat' | 'community' | 'worship';
 
 export const NOTIFICATION_TABS: { key: NotificationCategory; label: string }[] = [
   { key: 'all', label: '전체' },
+  { key: 'notice', label: '공지' },
   { key: 'job', label: '구인구직' },
   { key: 'retreat', label: '수련회' },
   { key: 'community', label: '게시판' },
@@ -46,6 +49,7 @@ export const NOTIFICATION_TABS: { key: NotificationCategory; label: string }[] =
 
 export function inferNotificationCategory(title: string, content: string): Exclude<NotificationCategory, 'all'> {
   const text = `${title} ${content}`;
+  if (/공지|안내|점검|업데이트|서비스\s*공지/.test(text)) return 'notice';
   if (/수련회|장소|후기|강사/.test(text)) return 'retreat';
   if (/게시판|게시글|댓글|답변|등업/.test(text)) return 'community';
   if (/예배|찬양|콘티|설교|적용찬양/.test(text)) return 'worship';
@@ -54,6 +58,8 @@ export function inferNotificationCategory(title: string, content: string): Exclu
 
 export function categoryPillStyle(category: Exclude<NotificationCategory, 'all'>) {
   switch (category) {
+    case 'notice':
+      return { bg: mpColors.pillNoticeBg, text: mpColors.pillNoticeText, label: '공지' };
     case 'retreat':
       return { bg: mpColors.pillRetreatBg, text: mpColors.pillRetreatText, label: '수련회' };
     case 'community':

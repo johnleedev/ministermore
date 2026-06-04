@@ -1,4 +1,5 @@
 import '../Company.scss';
+import { useNavigate } from 'react-router-dom';
 import heroImage from '../../../images/company/6pUW2VKd.jpeg';
 import serviceChurchAppImage from '../../../images/company/HpwbYom5.jpeg';
 import serviceRetreatImage from '../../../images/company/LY8vuqw5.jpeg';
@@ -6,6 +7,8 @@ import serviceResourceImage from '../../../images/company/MVxtreGD.jpeg';
 import serviceDigitalImage from '../../../images/company/VFlS33qD.jpeg';
 
 export default function Company() {
+  const navigate = useNavigate();
+
   return (
     <div className="company company-page-v2">
       <nav className="company-page-v2__nav">
@@ -170,6 +173,15 @@ export default function Company() {
               </p>
             </div>
             <div className="contact-right">
+              <div className="info-row">
+                <div className="info-label">온라인 문의</div>
+                <div
+                  className="info-value"
+                  style={{ cursor: 'pointer', color: '#1967ff', fontWeight: 700 }}
+                  onClick={() => navigate('/company/inquiry')}>
+                  문의하기 페이지로 이동
+                </div>
+              </div>
               <div className="info-row">
                 <div className="info-label">이메일 문의</div>
                 <div className="info-value">yeplat@naver.com</div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNotificationsScrollToTopOnRequest } from '../navigation/useNotificationsScrollToTopOnRequest';
+import { useRootTabResetOnRequest } from '../navigation/useRootTabResetOnRequest';
 import {
   FlatList,
   Pressable,
@@ -17,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NotificationsStackParamList } from '../navigation/NotificationsStack';
 import { notificationListAtom } from '../state/atoms';
 import type { HomeinappNotificationItem } from '../types/homeinappNotification';
-import { HOMEINAPP_API_BASE, HOMEINAPP_CHURCH_ID } from '../config/api';
+import { MINISTER_PUSH_API_BASE } from '../config/api';
+import { SESSION_REFRESH_TOKEN_KEY } from '../login/sessionStorage';
 import {
   NOTIFICATION_TABS,
   categoryPillStyle,
@@ -31,7 +33,7 @@ import {
 
 type Props = NativeStackScreenProps<NotificationsStackParamList, 'NotificationsList'>;
 
-const READ_NOTIFICATION_IDS_KEY = `notifications_read_ids:${HOMEINAPP_CHURCH_ID}`;
+const READ_NOTIFICATION_IDS_KEY = 'notifications_read_ids:ministermore';
 
 type NotificationListResponse = {
   success?: boolean;
@@ -45,10 +47,21 @@ type SectionRow =
   | { type: 'section'; key: string; label: string }
   | { type: 'item'; key: string; item: HomeinappNotificationItem };
 
+function categoryFromTopic(topic: string | null | undefined): Exclude<NotificationCategory, 'all'> | null {
+  const key = String(topic || '').trim().toLowerCase();
+  if (!key) return null;
+  if (key === 'notice' || key === '공지') return 'notice';
+  if (key === 'job' || key === 'recruit' || key === '구인구직') return 'job';
+  if (key === 'retreat' || key === '수련회') return 'retreat';
+  if (key === 'community' || key === 'board' || key === '게시판') return 'community';
+  if (key === 'worship' || key === '예배사역') return 'worship';
+  return null;
+}
+
 async function fetchNotificationList(): Promise<HomeinappNotificationItem[]> {
-  const churchId = HOMEINAPP_CHURCH_ID;
-  if (!churchId) throw new Error('churchId is required');
-  const url = `${HOMEINAPP_API_BASE}/notifications/${encodeURIComponent(churchId)}/list?limit=30&offset=0`;
+  const userToken = (await AsyncStorage.getItem(SESSION_REFRESH_TOKEN_KEY)) ?? '';
+  if (!userToken) throw new Error('userToken is required');
+  const url = `${MINISTER_PUSH_API_BASE}/mylist?limit=30&offset=0&userToken=${encodeURIComponent(userToken)}`;
   const res = await fetch(url, { method: 'GET' });
   const payload: NotificationListResponse = await res.json().catch(() => ({}));
   if (!res.ok || !payload?.success || !payload?.data) {
@@ -58,19 +71,27 @@ async function fetchNotificationList(): Promise<HomeinappNotificationItem[]> {
 }
 
 async function markNotificationRead(id: number): Promise<void> {
-  const churchId = HOMEINAPP_CHURCH_ID;
-  if (!churchId) return;
-  const url = `${HOMEINAPP_API_BASE}/notifications/${encodeURIComponent(churchId)}/${id}/read`;
-  await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+  const userToken = (await AsyncStorage.getItem(SESSION_REFRESH_TOKEN_KEY)) ?? '';
+  if (!userToken) return;
+  const url = `${MINISTER_PUSH_API_BASE}/myread/${id}`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userToken }),
+  });
 }
 
 export function NotificationsListScreen({ navigation }: Props) {
   const listRef = useRef<FlatList<SectionRow>>(null);
-  useNotificationsScrollToTopOnRequest(listRef);
+  const { onScroll: onTabScroll } = useNotificationsScrollToTopOnRequest(listRef);
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useAtom(notificationListAtom);
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
+
+  useRootTabResetOnRequest(() => {
+    setActiveTab('all');
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -103,7 +124,7 @@ export function NotificationsListScreen({ navigation }: Props) {
   const filtered = useMemo(() => {
     if (activeTab === 'all') return notifications;
     return notifications.filter(item => {
-      const cat = inferNotificationCategory(item.title, item.content);
+      const cat = categoryFromTopic(item.topic) || inferNotificationCategory(item.title, item.content);
       return cat === activeTab;
     });
   }, [notifications, activeTab]);
@@ -144,7 +165,7 @@ export function NotificationsListScreen({ navigation }: Props) {
 
     const { item } = row;
     const read = readIds.has(String(item.id));
-    const category = inferNotificationCategory(item.title, item.content);
+    const category = categoryFromTopic(item.topic) || inferNotificationCategory(item.title, item.content);
     const pill = categoryPillStyle(category);
 
     return (
@@ -195,6 +216,8 @@ export function NotificationsListScreen({ navigation }: Props) {
         renderItem={renderRow}
         ListHeaderComponent={listHeader}
         contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
+        onScroll={onTabScroll}
+        scrollEventThrottle={16}
         ListEmptyComponent={
           <Text style={styles.empty}>받은 알림이 없습니다.</Text>
         }

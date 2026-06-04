@@ -9,6 +9,7 @@ import {
   type LoginSuccessPayload,
   type NeedsSignupPayload,
 } from './mapLoginResponse';
+import { getFcmTokenSafe } from './pushToken';
 
 export type SocialAuthResult =
   | { status: 'success'; data: LoginSuccessPayload }
@@ -23,10 +24,12 @@ function isCancelledError(e: unknown): boolean {
 
 export async function authenticateWithKakao(): Promise<SocialAuthResult> {
   try {
+    const fcmToken = await getFcmTokenSafe();
     const token = await kakaoLogin();
     const res = await axios.post(`${MAIN_API_BASE}/login/login`, {
       url: 'kakao',
       AccessToken: token.accessToken,
+      token: fcmToken,
     });
     const data = res.data;
     if (isLoginSuccess(data)) return { status: 'success', data };
@@ -40,6 +43,7 @@ export async function authenticateWithKakao(): Promise<SocialAuthResult> {
 
 export async function authenticateWithApple(): Promise<SocialAuthResult> {
   try {
+    const fcmToken = await getFcmTokenSafe();
     const appleAuthRequestResponse = await appleAuth.performRequest({
       nonceEnabled: false,
       requestedOperation: appleAuth.Operation.LOGIN,
@@ -63,6 +67,7 @@ export async function authenticateWithApple(): Promise<SocialAuthResult> {
       userInfo,
       userFullName: appleAuthRequestResponse.fullName,
       AccessToken: identityToken,
+      token: fcmToken,
     });
     const data = res.data;
     if (isLoginSuccess(data)) return { status: 'success', data };

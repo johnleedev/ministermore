@@ -10,6 +10,7 @@ import type { CommunityBoardConfig, CommunityPost } from '../../screens/board/Bo
 import { BOARD_NOTICE_SORT } from '../../screens/board/boardConfigs';
 import CommunityBoardEditModal from './CommunityBoardEditModal';
 import CommunityBoardMoveModal from './CommunityBoardMoveModal';
+import CommunityBoardCommentModal from './CommunityBoardCommentModal';
 
 type Props = {
   config: CommunityBoardConfig;
@@ -51,6 +52,7 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
   const [activeSearchWord, setActiveSearchWord] = useState('');
   const [editPost, setEditPost] = useState<CommunityPost | null>(null);
   const [movePost, setMovePost] = useState<CommunityPost | null>(null);
+  const [commentPost, setCommentPost] = useState<CommunityPost | null>(null);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -226,6 +228,13 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
                         >
                           수정
                         </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-board-manage__comment-btn"
+                          onClick={() => setCommentPost(post)}
+                        >
+                          댓글
+                        </button>
                         <button type="button" className="admin-btn delete-btn" onClick={() => void deletePost(post)}>
                           삭제
                         </button>
@@ -291,6 +300,13 @@ export default function CommunityBoardManage({ config, manageTitle }: Props) {
         post={movePost}
         onClose={() => setMovePost(null)}
         onMoved={() => void fetchPosts()}
+      />
+
+      <CommunityBoardCommentModal
+        config={config}
+        post={commentPost}
+        onClose={() => setCommentPost(null)}
+        onSaved={() => void fetchPosts()}
       />
     </div>
   );
