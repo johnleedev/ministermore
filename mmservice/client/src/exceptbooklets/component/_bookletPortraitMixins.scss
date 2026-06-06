@@ -1,0 +1,46 @@
+// 섬김이 카드 아바타 · 담임목사 사진: 기본은 뷰포트 가로의 ~40vw, 큰 화면에서는 vw·상한을 내려 비율 축소
+@mixin bookletServersAvatarSize {
+  flex-shrink: 0;
+  width: min(40vw, 360px);
+  min-width: 96px;
+  max-width: min(40vw, 360px);
+  aspect-ratio: 104 / 120;
+  height: auto;
+  box-sizing: border-box;
+  @media (min-width: 600px) {
+    width: min(34vw, 300px);
+    max-width: min(34vw, 300px);
+  }
+  @media (min-width: 900px) {
+    width: min(28vw, 260px);
+    max-width: min(28vw, 260px);
+  }
+  @media (min-width: 1200px) {
+    width: min(22vw, 240px);
+    max-width: min(22vw, 240px);
+  }
+}
+
+@mixin bookletPastorPhotoImg {
+  display: block;
+  width: min(40vw, 360px);
+  min-width: 120px;
+  max-width: min(40vw, 360px);
+  height: auto;
+  aspect-ratio: 120 / 150;
+  object-fit: cover;
+  border-radius: 8px;
+  box-sizing: border-box;
+  @media (min-width: 600px) {
+    width: min(34vw, 300px);
+    max-width: min(34vw, 300px);
+  }
+  @media (min-width: 900px) {
+    width: min(28vw, 260px);
+    max-width: min(28vw, 260px);
+  }
+  @media (min-width: 1200px) {
+    width: min(22vw, 240px);
+    max-width: min(22vw, 240px);
+  }
+}

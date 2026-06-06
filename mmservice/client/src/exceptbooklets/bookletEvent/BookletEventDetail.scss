@@ -1,0 +1,913 @@
+@import '../component/bookletPortraitMixins';
+
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+};
+@mixin centerWidth {
+  width: 100%;
+  max-width: 1400px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  @media (max-width: 1400px) {
+    width: 90%;
+  }
+  @media (max-width: 800px) {
+    width: 95%;
+  }
+};
+
+
+.event_detail {
+  @media (max-width: 600px) { 
+    padding-top: 10px;
+  }
+   
+  .homapage_main_imagebox {
+    @include centerWidth();
+    position: relative;
+    @include middle();
+    img {
+      width: 95%;
+      object-fit: cover;
+    }
+    .homapage_main_title {
+      z-index: 1; 
+      width: 300px;
+      height: 100px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100px;
+      margin: auto;
+      @include middle();
+      flex-direction: column;
+      @media (max-width: 800px) { 
+        width: 250px;
+      }
+
+      .homapage_main_title-name {
+        font-size: 30px;
+        font-weight: bold;
+        color: #fff;
+      }
+      .homapage_main_title-subname {
+        font-size: 22px;
+        font-weight: bold;
+        color: #fff;
+      }
+      img {
+        width: 100%;
+        object-fit: contain;
+      }
+    }
+  }
+
+  .arrow-cover {
+    margin: 20px 0;
+    box-sizing: border-box;
+    width: 100%;
+    @include middle();
+    flex-direction: column;
+    display: none;
+    @media (max-width: 800px) { 
+      display: flex;
+    }
+
+    .arrow-text {
+      margin-bottom: 5px;
+    }
+    .arrow-icon {
+      font-size: 30px;
+    }
+  }
+  
+  .main-title-box {
+    h1 {
+      display: none;
+    }
+    h2 {
+      display: none;
+    }
+    h3 {
+      font-size: 30px;
+      margin-bottom: 50px;
+    }
+    @media (max-width: 600px) {
+      height: 500px;
+      @include middle();
+      flex-direction: column;
+      white-space: pre-line;
+      text-align: center;
+      h1 {
+        display: block;  
+        font-size: 50px;
+        font-family: DancingScript;
+        font-weight: bold;
+          line-height: 70px;
+        margin-bottom: 30px;
+      }
+      h2 {
+        display: block;
+        font-size: 25px;
+        font-weight: 300;
+        margin-bottom: 20px;
+        line-height: 40px;
+        color: #a97933;
+      }
+      h3 {
+        font-size: 18px;
+        white-space: pre-line;
+      }
+    }
+  }
+
+  .homepage_detail_titlebox {
+    margin: 20px 0;
+    width: 100%;
+    height: 80px;
+    @include middle();
+
+    .homepage_detail_title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      padding: 5px 5px;
+      border-top: 2px solid #333;
+      border-bottom: 2px solid #333;
+    }
+  }
+  .homepage_detail_bottomRow {
+    width: 100%;
+    height: 1px;
+    border-bottom: 1px solid #333;
+    margin-top: 20px;
+    margin-bottom: 50px;
+  }  
+
+  // selectBox ---------------
+  .selector__wrapper {
+    margin: 20px auto;
+    @include centerWidth();
+    @media (max-width: 1000px) {
+      margin-bottom: 50px;
+    }
+    display: grid;
+    grid-template-columns: 25% 25% 25% 25%;
+    grid-template-areas: 30px;
+    
+    .selector__bar {
+      display: flex;
+      height: 50px;
+      justify-content: center;
+      color: #767676;
+      border-bottom: 1px solid rgba(228, 228, 228, 1);
+      font-size: 21px;
+      font-weight: 700;
+      @media (max-width: 1000px) {
+      font-size: 18px;
+      font-weight: 700;
+      }
+      line-height: 1.6;
+      position: relative;
+      overflow: hidden;
+
+      &::after {
+        content: '';
+        display: block;
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        width: 0;
+        height: 3px;
+        transform: translateX(-50%);
+        transition: width 0.4s ease;
+        background-color: #333;
+      }
+
+      &:hover::after,
+      &.on::after {
+        width: 100%;
+      }
+      &:hover {
+        color: #333;
+        cursor: pointer;
+      }
+
+      &.on {
+        color: #333;
+
+        &::after {
+          content: '';
+          display: block;
+          position: absolute;
+          left: 50%;
+          bottom: 0;
+          width: 100%;
+          height: 3px;
+          transform: translateX(-50%);
+          background-color: #333;
+        }
+      }
+    }
+    
+  }
+
+
+  // notice-cover -----------------------
+  .notice-cover{
+    width: 100%;
+    margin-top: 50px;
+    margin-bottom: 100px;
+    text-align: center;
+
+    .title-row {
+      margin-top: 50px;
+      border-bottom: 2px solid #333;
+      
+      .title-row-text {
+        width: 100%;
+        font-size: 24px;
+        font-weight: 600;
+        @media (max-width: 1000px) { 
+          font-size: 20px;
+        }
+        @media (max-width: 600px) { 
+          width: 100%;
+          text-align: left;
+        }
+      }
+    }
+      
+        
+    .noticebox-sub {
+      @include centerWidth();
+      margin-bottom: 100px;
+      
+      .noticebox-sub-info {
+        width: 100%;
+        margin: 20px 0;
+
+        li.notice-list{
+          display: flex;
+          min-height: 70px;
+          align-items: center;
+          border-bottom: 1px solid #EAEAEA;
+          font-weight: bold;
+
+          p {
+            font-weight: 500;
+          }
+          .notice-title {
+            width: 20%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            @media (max-width: 600px) { 
+              width: 30%;
+              justify-content: start;
+            }
+
+            .notice-title-icon {
+              width: 40%;
+              font-size: 22px;
+              @include middle();
+              @media (max-width: 1000px) { 
+                font-size: 20px;
+              }
+              @media (max-width: 600px) { 
+                width: 30%;
+                font-size: 18px;
+              }
+              img {
+                width: 20px;
+                filter: grayscale(100%);
+                @media (max-width: 600px) { 
+                  width: 17px;
+                }
+              }
+            }
+            .notice-title-text {
+              width: 60%;
+              font-size: 20px;
+              font-weight: 600;
+              text-align: left;
+              @media (max-width: 1000px) { 
+                font-size: 18px;
+              }
+              @media (max-width: 600px) { 
+                font-size: 16px;
+              }
+            }
+          }
+          .notice-bar {
+            width: 1px;
+            height: 20px;
+            background-color: #d1d1d1;
+          }
+          .notice-content {
+            width: 80%;
+            font-size: 20px;
+            padding: 0 10px;
+            @include middle();
+            gap: 50px;
+            
+            @media (max-width: 1000px) { 
+              font-size: 18px;
+              gap: 30px;
+            }
+            @media (max-width: 600px) { 
+              width: 70%;
+              font-size: 16px;
+              padding: 5px 15px;
+              gap: 20px;
+            }
+            .notice-content-icon {
+              width: 40px;
+              height: 40px;
+              
+              img {
+                width: 40px;
+              }
+            }
+          }
+          .notice-content-check {
+            font-size: 22px;
+            font-weight: 600;
+            @media (max-width: 1000px) { 
+              font-size: 20px;
+            }
+            @media (max-width: 600px) { 
+              font-size: 18px;
+            }
+          }
+        }
+      }
+    }
+
+    // mapBox -----------------------
+    .noticebox-mapBox {
+      margin-top: 50px;
+      @include centerWidth();
+
+      .noticebox-maptitle {
+        display: flex;
+        justify-content: space-between;
+        @media (max-width: 600px) { 
+          flex-direction: column;
+          .for-pc {
+            display: none;
+          }
+        }
+        .noticebox-maptitle-right {
+          width: 75%;
+          text-align: left;
+          @media (max-width: 600px) { 
+            width: 100%;
+            text-align: center;
+          }
+
+          .noticebox-maptitle-right-text {
+            display: flex;  
+            align-items: center;
+            @media (max-width: 600px) { 
+              flex-direction: column;
+            }
+
+            .noticebox-maptitle-right-text-title {
+              font-size: 24px;
+              font-weight: 600;
+              @media (max-width: 1000px) { 
+                font-size: 20px;
+                margin-bottom: 20px;
+              }
+            }
+            .noticebox-maptitle-divider-vertical {
+              width: 2px;
+              height: 20px;
+              background-color: #333;
+              margin: 0 20px;
+            }
+          } 
+        }
+      }
+      .noticebox-mapBtnBox {
+        width: 100%;
+        margin-top: 50px;
+        margin-bottom: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        @media (max-width: 600px) { 
+          flex-direction: column;
+        }
+
+        .noticebox-mapBtn {
+          width: 47%;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          border: 1px solid #BDBDBD;
+          padding: 10px;
+          box-sizing: border-box;
+          border-radius: 5px;
+          @media (max-width: 1000px) { 
+            height: 60px;
+            margin-bottom: 20px;
+          }
+          @media (max-width: 600px) { 
+            width: 90%;
+          }
+
+          .noticebox-mapBtnImg {
+            width: 20%;
+            @media (max-width: 1000px) { 
+              height: 60px;
+              @include middle();
+              p {
+                width: 80%;
+                font-size: 16px;
+              }
+            }
+            img {
+              width: 50px;
+              @media (max-width: 1000px) { 
+                width: 50px;
+              }
+            }
+            .noticebox-icon {
+              width: 50px;
+              height: 50px;
+              border: 1px solid #BDBDBD;
+              border-radius: 25px;
+              @include middle();
+              @media (max-width: 1000px) { 
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+              }
+            }
+          }
+          .noticebox-map-text {
+            width: 80%;
+            font-size: 20px;
+            @media (max-width: 1000px) { 
+              font-size: 16px;
+            }
+          }
+          .noticebox-map-icon {
+            width: 10%;
+            color: #8C8C8C;
+          }
+        }
+        .noticebox-mapBtn:hover {
+          border: 1px solid #919191;
+        }
+      }
+
+
+    }
+    
+  }
+
+  .programbox {
+    @include centerWidth();
+    margin-top: 50px;
+    margin-bottom: 100px;
+    text-align: center;
+    @include middle;
+    flex-direction: column;
+
+    .program-container {
+      width: 100%;
+      margin-top: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      box-sizing: border-box;
+      @media (max-width: 800px) { 
+        flex-direction: column;
+      }
+      .program-playerImage {
+        width: 40%;
+        text-align: left;
+        display: flex;
+        align-items: start;
+        @media (max-width: 800px) { 
+          width: 100%;
+        }
+        .program-image {
+          width: 100%;
+          margin-left: 30px;
+        
+          @media (max-width: 800px) { 
+            margin-left: 0px;
+            margin-bottom: 50px;
+          }
+          img {
+            width: 100%;
+          }
+        }
+
+      }
+      .program-content {
+        width: 60%;
+        @media (max-width: 800px) { 
+          width: 100%;
+        }
+
+        .program-namecover {
+          width: 100%;
+          height: 80px;
+          border-top: 2px solid #a97933;;
+          border-bottom: 1px solid #a97933;;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 30px;
+          
+          .program-name-left {
+            display: flex;
+            align-items: center;
+            @media (max-width: 1000px) { 
+              flex-direction: column;
+              align-items: start;
+            }
+            .program-subTitle {
+              margin-right: 5px;
+              color: #a97933;
+              font-size: 30px;
+              @media (max-width: 1000px) { 
+                font-size: 24px;
+                margin-bottom: 10px;
+              }
+            }
+            .program-dateTime {
+              color: #a97933;
+            }
+          }
+          
+          .program-title {
+            font-size: 24px;
+            font-weight: 600;
+            @media (max-width: 1000px) { 
+              font-size: 22px;
+            }
+          }
+        }
+
+        .program-listcover {
+            
+          .program-writting{
+            font-size: 20px;
+            @media (max-width: 800px) { 
+              font-size: 18px;
+            }
+            line-height: 35px;
+            text-align: left;
+            white-space: pre-line;
+            word-break: keep-all;
+          }
+        }
+        .forpc {
+        
+          @media (max-width: 800px) { 
+            display: none;
+          }
+        }
+        .formobile {
+          display: none;
+          @media (max-width: 800px) { 
+            display: block;
+          }
+        }
+        
+      }
+      .formobile {
+        display: none;
+        @media (max-width: 800px) { 
+          display: block;
+        }
+      }
+    }
+    
+  }
+
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background-color: #EAEAEA;
+    margin: 20px 0;
+  } 
+  
+}
+
+// ----- 행사 전단지: 상단 탭 그리드만 탭 개수별 분기 -----
+.church_detail.church_detail--event-tabs2 {
+  .church_detail__tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 프로그램·프로필 탭 레이아웃·이미지 — 탭 2·3·4개 모두 동일 적용 (이전에는 tabs2에만 있어 3·4탭에서 빠짐) */
+.church_detail.church_detail--event-tabs2,
+.church_detail.church_detail--event-tabs3,
+.church_detail.church_detail--event-tabs4,
+.church_detail.church_detail--event-tabs5 {
+  .church_detail__body #event-embed-program {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 4px 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .template-event-program {
+    color: #1f2937;
+    font-size: 17px;
+    line-height: 1.65;
+    min-height: 3rem;
+  }
+
+  .template-event-program__empty,
+  .template-event-program__hint {
+    margin: 0;
+    padding: 12px 0;
+    color: #6b7280;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .template-event-program--loading .template-event-program__hint {
+    color: #9ca3af;
+  }
+
+  .template-event-program__head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .template-event-program__card.notice-detail__servers-card {
+    margin-bottom: 0;
+  }
+
+  /* 프로필: TemplateServers와 동일 `notice-detail__servers-card*` — 본문만 줄바꿈 보강 */
+  .template-event-cast__note {
+    white-space: pre-wrap;
+    word-break: keep-all;
+  }
+
+  .notice-detail__servers-card-avatar.template-event-program__avatar {
+    @include bookletServersAvatarSize();
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 8px;
+    border-radius: 10px;
+    margin-right: 16px;
+    overflow: visible;
+    aspect-ratio: auto;
+    height: auto;
+
+    .template-event-program__avatar-img-wrap {
+      width: 100%;
+      aspect-ratio: 104 / 120;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #f9fafb;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+    }
+  }
+}
+
+// 탭 개수에 따른 상단 탭 그리드 (행사 전단지)
+.church_detail.church_detail--event-tabs3 {
+  .church_detail__tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.church_detail.church_detail--event-tabs4 {
+  .church_detail__tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.church_detail.church_detail--event-tabs5 {
+  .church_detail__tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.church_detail.church_detail--event-tabs6 {
+  .church_detail__tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* 초대의글 탭: 본문 카드를 좌우 꽉 차게 */
+.church_detail.church_detail--greeting-tab {
+  .church_detail__body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .template-event-greeting {
+    padding: 0;
+  }
+
+  .template-event-greeting__card {
+    border-radius: 0;
+  }
+}
+
+.template-event-apply {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.template-event-apply__body {
+  margin-top: 8px;
+  padding: 4px 0 12px;
+}
+
+.template-event-apply__note {
+  margin: 0 0 16px 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  color: #334155;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.template-event-apply__placeholder {
+  margin: 0 0 16px 0;
+  color: #94a3b8;
+  font-size: 17px;
+}
+
+.template-event-apply__cta {
+  display: flex;
+  justify-content: center;
+}
+
+.template-event-apply__cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* 순서 — 프로필과 동일한 흰 카드, 한 줄: 제목(좌) · 부제(중앙) · 담당(우), 안내는 아래 (탭 개수 무관) */
+.church_detail .template-event-worship__list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.church_detail .template-event-worship__item {
+  margin: 0;
+}
+
+.church_detail .template-event-worship__card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.church_detail .template-event-worship__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.church_detail .template-event-worship__title {
+  min-width: 0;
+  justify-self: start;
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.church_detail .template-event-worship__sub {
+  min-width: 0;
+  max-width: 100%;
+  justify-self: center;
+  text-align: center;
+  color: #475569;
+  font-size: 0.95em;
+  font-weight: 500;
+}
+
+.church_detail .template-event-worship__charger {
+  min-width: 0;
+  justify-self: end;
+  text-align: right;
+  color: #334155;
+  font-size: 0.98em;
+}
+
+.church_detail .template-event-worship__content {
+  margin: 8px 0 0;
+  padding-left: 0;
+  font-size: 16px;
+  color: #374151;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.church_detail .template-event-worship__schedule-row-preview {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.church_detail .template-event-worship__schedule-time {
+  font-weight: 700;
+  color: #b45309;
+  flex-shrink: 0;
+}
+
+.church_detail .template-event-worship__schedule-sep {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.church_detail .template-event-worship__schedule-inline-body {
+  color: #374151;
+  word-break: keep-all;
+  min-width: 0;
+}
+
+.church_detail .template-event-worship__concert-line1 {
+  margin: 0 0 6px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #7c2d12;
+  text-align: center;
+}
+
+.church_detail .template-event-worship__concert-line2 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: #57534e;
+  text-align: center;
+}
+
+.church_detail .template-event-worship__concert-line3 {
+  margin: 0;
+  font-size: 15px;
+  color: #78716c;
+  text-align: center;
+  line-height: 1.55;
+}
+
+/* 행사 전단지 소개 탭 · 프로그램 미리보기(TemplateNotice): 패널·리스트 행 간격 */
+.notice-create__preview-section-panel.notice-create__preview-section-panel--event-program {
+  padding: 30px;
+
+  > .notice-create__preview-worship-list {
+    padding-top: 20px;
+  }
+
+  .notice-create__preview-worship-list .notice-create__preview-worship-item {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+}

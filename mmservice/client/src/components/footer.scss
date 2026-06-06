@@ -1,0 +1,158 @@
+@mixin middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+};
+
+.footer {
+  width: 100vw;
+  min-height: 150px;
+  border-top: 1px solid #EAEAEA;
+  color: #8C8C8C;
+  z-index: 99;
+  
+  .inner {
+    padding: 20px;
+
+    ul {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+
+      .divider {
+        width: 2px;
+        height: 10px;
+        margin-left: 10px;
+        margin-right: 10px;
+        background-color: #EAEAEA;
+      }
+
+      li.link {
+        font-weight: 700;
+      }
+      li.link:hover {
+        opacity: 0.8;
+      }
+
+      li.text {
+        margin-right: 20px;
+      }
+    }
+
+    .copyright {
+      margin-top: 20px;
+    }
+    .kakaoBtnBox {
+      display: none;
+    }
+
+  }
+
+}
+
+
+@media screen and (max-width : 1000px) {
+   
+  .footer {
+
+    .response-cover {
+      left: 0;
+      right: 0;
+      margin: auto;
+      width: 90vw;
+      
+      .inner {
+        padding: 20px 0;
+        
+        .mobile-none {
+          display: flex;
+          flex-direction: row;
+        }
+
+        ul {
+          width: 100%;
+          flex-direction: column;
+          display: flex;
+          align-items: flex-start;
+
+          li.text {
+            margin: 5px 0;
+            
+          }
+          .black {
+            color: #1B1B1B;
+            font-weight: 600;
+          }
+        }
+      
+      }
+
+      .kakaoBtnBox {
+        width: 100px;
+        height: 100px;
+        position: absolute;
+        top: 20px;
+        right: 0;
+        @include middle();
+        flex-direction: column;
+        img {
+          width: 50px;
+          margin-bottom: 5px;
+        }
+        p {
+          font-size: 14px;
+        }
+      }
+      .kakaoBtnBox:hover {
+        cursor: pointer;
+        opacity: 0.8;
+      }
+
+    }
+    
+  }
+}
+
+
+@media screen and (max-width : 600px) {
+   
+  .footer {
+
+    .response-cover {
+      left: 0;
+      right: 0;
+      margin: auto;
+      width: 90vw;
+
+      .inner {
+        padding: 20px 0;
+        position: relative;
+        
+        .mobile-none {
+          // display: none;
+        }
+        
+        ul {
+          width: 100%;
+          flex-direction: column;
+          display: flex;
+          align-items: flex-start;
+
+          li.text {
+            margin: 5px 0;
+            
+          }
+          .black {
+            color: #1B1B1B;
+            font-weight: 600;
+          }
+        }
+      
+        
+      }
+      
+
+    }
+    
+  }
+}

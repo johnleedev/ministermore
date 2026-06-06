@@ -1,0 +1,1050 @@
+import type { ClipboardEvent, KeyboardEvent } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useRecoilValue } from 'recoil';
+import axios from 'axios';
+import MainURL from '../../../MainURL';
+import { recoilUserData } from '../../../RecoilStore';
+import {
+  FaChevronRight,
+  FaCheck,
+  FaExclamationCircle,
+  FaTimes,
+} from 'react-icons/fa';
+import './HomeinappPayment.scss';
+
+/** 월 이용료 공급가액(원) */
+const PLAN_MONTHLY_PRICE = 30000;
+/** 부가세율 (10%) */
+const PLAN_MONTHLY_VAT_RATE = 0.1;
+/** 부가세 포함 실결제 금액 (원, 정수) */
+const PLAN_MONTHLY_PRICE_WITH_VAT = Math.round(PLAN_MONTHLY_PRICE * (1 + PLAN_MONTHLY_VAT_RATE));
+/** 부가세 금액 (원, 정수) */
+const PLAN_MONTHLY_VAT_AMOUNT = Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE);
+
+const HOMEINAPP_ORDER_NAME = '홈인앱 상세페이지 제작';
+const HOMEINAPP_PORTONE_CUSTOMER_KEY = 'portone_homeinapp_customer_id';
+
+type HomeinappBillingCustomData = {
+  userAccount: string;
+  serviceType: string;
+  plan: string;
+  churchName: string;
+  /** `churches.lilnkUrl` — DB 컬럼명과 동일 */
+  lilnkUrl?: string;
+};
+
+type HomeinappBillingKeySuccessResponse = {
+  ok: true;
+  paymentId: string;
+  schedulePaymentId: string;
+  billingKey: string;
+  customerId: string;
+  customData: HomeinappBillingCustomData;
+  paidAt: string | null;
+  payment: Record<string, unknown> | null;
+  timeToPay: string;
+  schedule: Record<string, unknown> | null;
+  /** `churches.id` (서버에서 결제 성공 후 INSERT) */
+  homeinappMainId: string;
+};
+
+type HomeinappAlertState = {
+  title: string;
+  message: string;
+};
+
+type PaymentSuccessState = {
+  homeinappMainId: string;
+};
+
+const PHONE_PREFIX_OPTIONS = [
+  '010', '011', '016', '017', '018', '019',
+  '02',
+  '031', '032', '033',
+  '041', '042', '043', '044',
+  '051', '052', '053', '054', '055',
+  '061', '062', '063', '064',
+  '070', '080',
+] as const;
+
+function getOrCreateHomeinappCustomerId(userAccount: string): string {
+  const acc = userAccount.trim();
+  if (acc) return acc;
+  try {
+    let id = sessionStorage.getItem(HOMEINAPP_PORTONE_CUSTOMER_KEY);
+    if (!id) {
+      id = `homeinapp_guest_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`;
+      sessionStorage.setItem(HOMEINAPP_PORTONE_CUSTOMER_KEY, id);
+    }
+    return id;
+  } catch {
+    return `homeinapp_guest_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`;
+  }
+}
+
+type CardPanParts = [string, string, string, string];
+
+const EMPTY_CARD_PAN: CardPanParts = ['', '', '', ''];
+
+function digitsToPanParts(raw: string): CardPanParts {
+  const d = raw.replace(/\D/g, '').slice(0, 16);
+  return [d.slice(0, 4), d.slice(4, 8), d.slice(8, 12), d.slice(12, 16)] as CardPanParts;
+}
+
+async function recordServiceApply(payload: {
+  serviceType: string;
+  orderName: string;
+  userAccount: string;
+  churchName: string;
+  ordererName: string;
+  ordererPhone: string;
+  amount: number;
+  vat: number;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentId?: string;
+  billingKey?: string;
+  memo?: string;
+}) {
+  try {
+    await axios.post(`${MainURL}/serviceapply/record`, payload);
+  } catch (err) {
+    console.error('failed to record service apply (homeinapp):', err);
+  }
+}
+
+type BillingErrorPayload = {
+  message?: string;
+  firstPaymentSucceeded?: boolean;
+  scheduleSucceeded?: boolean;
+  details?: Record<string, unknown> | null;
+};
+
+const BILLING_ERROR_FALLBACK =
+  '결제를 완료할 수 없습니다. 카드 정보와 입력 내용을 확인한 뒤 잠시 후 다시 시도해 주세요.';
+
+function billingErrorToKorean(payload: BillingErrorPayload | undefined, axiosMessage?: string): string {
+  const msg = typeof payload?.message === 'string' ? payload.message.trim() : '';
+  let pg = '';
+  const det = payload?.details;
+  if (det && typeof det === 'object') {
+    const d = det as { pgMessage?: string; message?: string };
+    if (typeof d.pgMessage === 'string' && d.pgMessage.trim()) pg = d.pgMessage.trim();
+    else if (typeof d.message === 'string' && d.message.trim()) pg = d.message.trim();
+  }
+
+  const firstPaid = Boolean(payload?.firstPaymentSucceeded);
+  const withScheduleNote = (body: string) =>
+    firstPaid ? `${body} 첫 결제는 이미 승인되었을 수 있습니다. 문제가 계속되면 고객센터로 문의해 주세요.` : body;
+
+  const serverRewrites: { test: (s: string) => boolean; ko: string }[] = [
+    {
+      test: (s) => s.includes('빌링키 발급'),
+      ko: '카드 정보를 확인해 주세요. 문제가 반복되면 카드사 또는 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('빌링키 응답') || /billingkey/i.test(s),
+      ko: '결제 연동 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('빌링키 결제') && s.includes('실패'),
+      ko: '결제가 승인되지 않았습니다. 카드 정보와 한도를 확인해 주세요.',
+    },
+    {
+      test: (s) => s.includes('다음 결제 예약') || s.includes('예약에 실패'),
+      ko: '다음 자동결제 예약에 실패했습니다. 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('전단지') && (s.includes('저장') || s.includes('실패')),
+      ko: '결제는 완료되었으나 전단지 저장에 실패했습니다. 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('이미') && s.includes('전단지'),
+      ko: '이미 이 결제로 전단지가 만들어졌을 수 있습니다. 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('홈인앱') && (s.includes('저장') || s.includes('실패')),
+      ko: '결제는 완료되었으나 홈인앱 주문 저장에 실패했습니다. 고객센터로 문의해 주세요.',
+    },
+    {
+      test: (s) => s.includes('이미') && s.includes('홈인앱'),
+      ko: '이미 이 결제로 홈인앱 주문이 있을 수 있습니다. 고객센터로 문의해 주세요.',
+    },
+  ];
+
+  const combined = `${msg} ${pg}`.trim();
+  for (const { test, ko } of serverRewrites) {
+    if (combined && test(combined)) return withScheduleNote(ko);
+  }
+
+  const primary = `${msg} ${pg} ${axiosMessage ?? ''}`.toLowerCase().replace(/\s+/g, ' ');
+  const detailSnippet =
+    det && typeof det === 'object'
+      ? JSON.stringify(det)
+          .slice(0, 900)
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+      : '';
+
+  const match = (hay: string, p: RegExp) => p.test(hay);
+
+  if (match(primary, /invalid|incorrect|wrong|bad|mismatch|not\s*valid/) && match(primary, /card|number|pan|account/)) {
+    return withScheduleNote('카드번호가 올바르지 않습니다. 다시 확인해 주세요.');
+  }
+  if (match(primary, /expir|만료|expired/) || match(primary, /유효/) && match(primary, /기간|날짜|month|year/)) {
+    return withScheduleNote('카드 유효기간(월·년)을 확인해 주세요.');
+  }
+  if (match(primary, /password|비밀번호|pwd|two\s*digit|2\s*자리/)) {
+    return withScheduleNote('카드 비밀번호 앞 두 자리를 확인해 주세요.');
+  }
+  if (match(primary, /birth|생년|주민|사업자|registration|business/)) {
+    return withScheduleNote('생년월일 또는 사업자등록번호를 확인해 주세요.');
+  }
+  if (match(primary, /cvc|cvv|보안코드|security\s*code/)) {
+    return withScheduleNote('카드 보안 정보를 확인해 주세요.');
+  }
+  if (
+    match(primary, /insufficient|한도|limit\s*exceed|exceed.*limit|잔액|over\s*limit/) ||
+    match(detailSnippet, /insufficient|한도/)
+  ) {
+    return withScheduleNote('카드 한도 또는 잔액을 확인해 주세요.');
+  }
+  if (match(primary, /declin|거절|reject|not\s*approved|승인.*거부|승인.*불가/)) {
+    return withScheduleNote('카드사에서 결제를 승인하지 않았습니다. 카드사로 문의해 주세요.');
+  }
+  if (match(primary, /billing|빌링|미사용|not\s*enabled|not\s*support/) || match(detailSnippet, /빌링|billing/)) {
+    return withScheduleNote('이 카드로 정기결제를 이용할 수 없습니다. 고객센터로 문의해 주세요.');
+  }
+  if (match(primary, /timeout|timed?\s*out|시간\s*초과/) || match(detailSnippet, /timeout/)) {
+    return withScheduleNote('응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  if (
+    match(primary, /network|econnrefused|enotfound|연결|통신|socket/) ||
+    match(axiosMessage ?? '', /network|econnrefused|timeout/i)
+  ) {
+    return withScheduleNote('네트워크 오류가 발생했습니다. 연결을 확인한 뒤 다시 시도해 주세요.');
+  }
+  if (match(primary, /duplicate|already|exist|중복/) || match(detailSnippet, /duplicate/)) {
+    return withScheduleNote('이미 처리된 결제일 수 있습니다. 고객센터로 문의해 주세요.');
+  }
+  if (match(primary, /unauthorized|인증|forbidden|401|403/) || match(detailSnippet, /unauthorized/)) {
+    return withScheduleNote('결제 인증에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+
+  if (combined && /^[\s가-힣0-9.,!?()[\]·\-'"%…]+$/.test(combined) && combined.length >= 4) {
+    return withScheduleNote(combined);
+  }
+
+  return withScheduleNote(BILLING_ERROR_FALLBACK);
+}
+
+export default function HomeinappPayment() {
+  const navigate = useNavigate();
+  const userData = useRecoilValue(recoilUserData);
+  const userAccount = userData?.userAccount || '';
+
+  const [churchName, setChurchName] = useState(userData?.authChurch || '');
+  const [ordererName, setOrdererName] = useState(userData?.userNickName || '');
+  const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
+  const [phoneMid, setPhoneMid] = useState('');
+  const [phoneLast, setPhoneLast] = useState('');
+  const phoneMidRef = useRef<HTMLInputElement | null>(null);
+  const phoneLastRef = useRef<HTMLInputElement | null>(null);
+  const [lilnkUrl, setLilnkUrl] = useState('');
+  const [memo, setMemo] = useState('');
+  const [cardNumberParts, setCardNumberParts] = useState<CardPanParts>(EMPTY_CARD_PAN);
+  const panInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [cardExpiryMonth, setCardExpiryMonth] = useState('');
+  const [cardExpiryYear, setCardExpiryYear] = useState('');
+  const [cardBirthOrBiz, setCardBirthOrBiz] = useState('');
+  const [cardPasswordTwoDigits, setCardPasswordTwoDigits] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentSuccessState, setPaymentSuccessState] = useState<PaymentSuccessState | null>(null);
+  const [homeinappAlert, setHomeinappAlert] = useState<HomeinappAlertState | null>(null);
+  const [alertCopyDone, setAlertCopyDone] = useState(false);
+
+  const openErrorAlert = (message: string, title = '안내') => {
+    setAlertCopyDone(false);
+    const m = String(message ?? '').trim() || '알 수 없는 오류';
+    setHomeinappAlert({ title: (title || '안내').trim() || '안내', message: m });
+  };
+
+  const handleAlertCopy = async () => {
+    if (!homeinappAlert) return;
+    try {
+      await navigator.clipboard.writeText(homeinappAlert.message);
+      setAlertCopyDone(true);
+      window.setTimeout(() => setAlertCopyDone(false), 2200);
+    } catch {
+      setAlertCopyDone(false);
+    }
+  };
+
+  const handlePaymentSubmit = async () => {
+    setPaymentLoading(true);
+    try {
+      const customerId = getOrCreateHomeinappCustomerId(userAccount);
+      const phoneDigits =
+        `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20) || '01000000000';
+      const customer = {
+        fullName: ordererName.trim() || userAccount || '주문자',
+        phoneNumber: phoneDigits,
+        email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
+      };
+      const churchTrim = churchName.trim();
+      if (!churchTrim || !ordererName.trim()) {
+        openErrorAlert('교회명과 담당자명을 입력해 주세요.', '입력 정보 확인');
+        return;
+      }
+      const lilnkUrlTrim = lilnkUrl.trim().slice(0, 2048);
+      const customData: HomeinappBillingCustomData = {
+        userAccount,
+        serviceType: 'homeinapp',
+        plan: 'monthly',
+        churchName: churchTrim,
+        ...(lilnkUrlTrim ? { lilnkUrl: lilnkUrlTrim } : {}),
+      };
+
+      const cardnum = cardNumberParts.join('');
+      const expM = cardExpiryMonth.trim();
+      const expY = cardExpiryYear.trim();
+      const birthBiz = cardBirthOrBiz.trim();
+      const pwd2 = cardPasswordTwoDigits.trim();
+      if (!cardnum || !expM || !expY || !birthBiz || pwd2.length !== 2) {
+        openErrorAlert(
+          '카드번호(16자리), 유효기간(월·년), 생년월일(또는 사업자번호), 카드 비밀번호 앞 2자리를 모두 입력해 주세요.',
+          '입력 정보 확인',
+        );
+        return;
+      }
+
+      const billingRes = await axios.post<HomeinappBillingKeySuccessResponse>(
+        `${MainURL}/paymentbilling/billingkey`,
+        {
+          customerId,
+          customer,
+          customData,
+          amount: PLAN_MONTHLY_PRICE_WITH_VAT,
+          cardnum,
+          expM,
+          expY,
+          birthBiz,
+          pwd2,
+          orderTitle: memo.trim(),
+        },
+      );
+
+      const payload = billingRes.data;
+      if (!payload?.ok || !payload.paymentId || !payload.schedulePaymentId || !payload.billingKey) {
+        openErrorAlert('결제 응답이 올바르지 않습니다. 고객센터로 문의해 주세요.', '결제 응답');
+        return;
+      }
+      if (payload.homeinappMainId == null || String(payload.homeinappMainId).trim() === '') {
+        openErrorAlert('홈인앱 주문 저장에 실패했습니다. 고객센터로 문의해 주세요.', '저장 오류');
+        return;
+      }
+
+      const homeinappIdStr = String(payload.homeinappMainId).trim();
+      const memoWithRef = [memo.trim(), `homeinappMainId=${homeinappIdStr}`].filter(Boolean).join('\n\n');
+      await recordServiceApply({
+        serviceType: 'homeinapp',
+        orderName: HOMEINAPP_ORDER_NAME,
+        userAccount: userAccount.trim(),
+        churchName: churchTrim,
+        ordererName: ordererName.trim(),
+        ordererPhone: phoneDigits,
+        amount: PLAN_MONTHLY_PRICE,
+        vat: PLAN_MONTHLY_VAT_AMOUNT,
+        totalAmount: PLAN_MONTHLY_PRICE_WITH_VAT,
+        paymentStatus: 'paid',
+        paymentId: payload.paymentId,
+        billingKey: payload.billingKey,
+        memo: memoWithRef || undefined,
+      });
+
+      setPaymentModalOpen(false);
+      setPaymentSuccessState({
+        homeinappMainId: homeinappIdStr,
+      });
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data) {
+        console.error('POST /paymentbilling/billingkey failed:', err.response.status, err.response.data);
+      } else {
+        console.error('POST /paymentbilling/billingkey failed:', err);
+      }
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        const d = err.response.data as { homeinappMainId?: string };
+        if (d.homeinappMainId != null && String(d.homeinappMainId).trim() !== '') {
+          setPaymentModalOpen(false);
+          setPaymentSuccessState({
+            homeinappMainId: String(d.homeinappMainId).trim(),
+          });
+          return;
+        }
+      }
+      let friendly: string;
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === 'object') {
+          friendly = billingErrorToKorean(err.response.data as BillingErrorPayload, err.message);
+        } else if (!err.response) {
+          friendly = '서버에 연결할 수 없습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
+        } else {
+          friendly = billingErrorToKorean(undefined, err.message);
+        }
+      } else {
+        friendly = '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+      }
+      openErrorAlert(friendly, '결제 실패');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const focusPanInput = (i: number) => {
+    panInputRefs.current[i]?.focus();
+  };
+
+  const handlePanChange = (index: number, raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    setCardNumberParts((prev) => {
+      const next = [...prev] as CardPanParts;
+      next[index] = digits;
+      return next;
+    });
+    if (digits.length === 4 && index < 3) {
+      requestAnimationFrame(() => focusPanInput(index + 1));
+    }
+  };
+
+  const handlePanKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !cardNumberParts[index] && index > 0) {
+      e.preventDefault();
+      focusPanInput(index - 1);
+    }
+  };
+
+  const handlePanPaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const parts = digitsToPanParts(e.clipboardData.getData('text') || '');
+    setCardNumberParts(parts);
+    const nextFocus = parts.findIndex((p) => p.length < 4);
+    requestAnimationFrame(() => focusPanInput(nextFocus >= 0 ? nextFocus : 3));
+  };
+
+  const setPanInputRef = (index: number) => (el: HTMLInputElement | null) => {
+    panInputRefs.current[index] = el;
+  };
+
+  useEffect(() => {
+    if (!paymentModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => panInputRefs.current[0]?.focus());
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [paymentModalOpen]);
+
+  useEffect(() => {
+    if (!paymentSuccessState) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [paymentSuccessState]);
+
+  useEffect(() => {
+    if (!paymentSuccessState) return;
+    const id = requestAnimationFrame(() => {
+      document.getElementById('homeinapp-payment-success-confirm')?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [paymentSuccessState]);
+
+  const finalizeSuccessfulPayment = useCallback(() => {
+    if (!paymentSuccessState) return;
+    const nextState = { homeinappMainId: paymentSuccessState.homeinappMainId };
+    setPaymentSuccessState(null);
+    navigate('/service/homeinapp/complete', { state: nextState, replace: true });
+    window.scrollTo(0, 0);
+  }, [navigate, paymentSuccessState]);
+
+  useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (homeinappAlert) {
+        setHomeinappAlert(null);
+        e.preventDefault();
+        return;
+      }
+      if (paymentSuccessState) {
+        finalizeSuccessfulPayment();
+        e.preventDefault();
+        return;
+      }
+      if (paymentModalOpen && !paymentLoading) {
+        setPaymentModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [homeinappAlert, paymentModalOpen, paymentLoading, paymentSuccessState, finalizeSuccessfulPayment]);
+
+  const cardFieldsIncomplete =
+    cardNumberParts.join('').length !== 16 ||
+    !cardExpiryMonth.trim() ||
+    !cardExpiryYear.trim() ||
+    !cardBirthOrBiz.trim() ||
+    cardPasswordTwoDigits.trim().length !== 2;
+
+  return (
+    <div className="homeinapp-payment">
+      <div className="homeinapp-payment__body">
+        <div className="homeinapp-payment__inner">
+          <section className="homeinapp-payment__form-wrap">
+            <h2 className="homeinapp-payment__form-title">주문 정보</h2>
+            <div className="homeinapp-payment__form-block homeinapp-payment__form-block--title">
+              <div className="homeinapp-payment__form-row">
+                <label className="homeinapp-payment__form-label" htmlFor="homeinapp-church-name">
+                  교회명
+                </label>
+                <input
+                  id="homeinapp-church-name"
+                  type="text"
+                  className="homeinapp-payment__input"
+                  placeholder="교회명을 입력하세요"
+                  value={churchName}
+                  onChange={(e) => setChurchName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <h2 className="homeinapp-payment__form-title">주문자정보</h2>
+            <div className="homeinapp-payment__form-block">
+              <div className="homeinapp-payment__form-row">
+                <span className="homeinapp-payment__form-label">계정</span>
+                <span className="homeinapp-payment__form-value">
+                  {userAccount || '(로그인 필요)'}
+                </span>
+              </div>
+              <div className="homeinapp-payment__form-row">
+                <label className="homeinapp-payment__form-label" htmlFor="homeinapp-orderer-name">
+                  담당자명
+                </label>
+                <input
+                  id="homeinapp-orderer-name"
+                  type="text"
+                  className="homeinapp-payment__input"
+                  placeholder="담당자명을 입력하세요"
+                  value={ordererName}
+                  onChange={(e) => setOrdererName(e.target.value)}
+                />
+              </div>
+              <div className="homeinapp-payment__form-row">
+                <label className="homeinapp-payment__form-label">전화번호</label>
+                <div className="homeinapp-payment__field-with-hint">
+                  <div className="homeinapp-payment__phone-row" role="group" aria-label="전화번호">
+                    <select
+                      className="homeinapp-payment__phone-prefix"
+                      value={phonePrefix}
+                      onChange={(e) => setPhonePrefix(e.target.value)}
+                      aria-label="전화번호 앞자리"
+                    >
+                      {PHONE_PREFIX_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="homeinapp-payment__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneMidRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="homeinapp-payment__phone-part"
+                      maxLength={4}
+                      value={phoneMid}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneMid(next);
+                        if (next.length === 4) {
+                          requestAnimationFrame(() => phoneLastRef.current?.focus());
+                        }
+                      }}
+                      aria-label="전화번호 가운데 자리"
+                    />
+                    <span className="homeinapp-payment__phone-sep" aria-hidden>
+                      -
+                    </span>
+                    <input
+                      ref={phoneLastRef}
+                      type="tel"
+                      inputMode="numeric"
+                      className="homeinapp-payment__phone-part"
+                      maxLength={4}
+                      value={phoneLast}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPhoneLast(next);
+                      }}
+                      aria-label="전화번호 끝자리"
+                    />
+                  </div>
+                  <p className="homeinapp-payment__form-hint">
+                    전화번호를 올바르게 입력하셔야 결제가 됩니다
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="homeinapp-payment__form-title">참조url</h2>
+            <div className="homeinapp-payment__form-block homeinapp-payment__form-block--reference-url">
+              <div className="homeinapp-payment__form-row">
+                <label className="homeinapp-payment__form-label" htmlFor="homeinapp-lilnk-url">
+                  URL
+                </label>
+                <input
+                  id="homeinapp-lilnk-url"
+                  type="url"
+                  inputMode="url"
+                  className="homeinapp-payment__input"
+                  placeholder="참고할 페이지 주소 (https://…)"
+                  value={lilnkUrl}
+                  onChange={(e) => setLilnkUrl(e.target.value)}
+                  autoComplete="url"
+                />
+              </div>
+            </div>
+
+            <h2 className="homeinapp-payment__form-title">요청사항</h2>
+            <div className="homeinapp-payment__form-block">
+              <div className="homeinapp-payment__form-row homeinapp-payment__form-row--memo">
+                <label className="homeinapp-payment__form-label" htmlFor="homeinapp-memo">
+                  메모
+                </label>
+                <textarea
+                  id="homeinapp-memo"
+                  className="homeinapp-payment__textarea"
+                  rows={5}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  placeholder="원하시는 메뉴 구성이나 참고 사이트를 적어주세요."
+                />
+              </div>
+            </div>
+
+            <h2 className="homeinapp-payment__form-title">서비스 안내</h2>
+            <div className="homeinapp-payment__plan-features">
+              <div className="homeinapp-payment__plan-feature-col">
+                <p className="homeinapp-payment__plan-feature-heading">제작</p>
+                <ul className="homeinapp-payment__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>교회 맞춤 상세페이지 구성</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>모바일·PC 반응형</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>메뉴·콘텐츠 블록 구성</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>실시간 저장 및 이어하기</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="homeinapp-payment__plan-feature-col">
+                <p className="homeinapp-payment__plan-feature-heading">연동</p>
+                <ul className="homeinapp-payment__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>앱·웹 연계 구조</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>SNS·지도 버튼 연결</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>문의처·교회 정보 표시</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>성도에게 익숙한 UI</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="homeinapp-payment__plan-feature-col">
+                <p className="homeinapp-payment__plan-feature-heading">결제·운영</p>
+                <ul className="homeinapp-payment__plan-feature-list">
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>주문·결제 내역 연동</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>월 정기결제(빌링키)</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>담당자·교회 정보 관리</span>
+                  </li>
+                  <li>
+                    <FaCheck aria-hidden />
+                    <span>포트원 서버 빌링 연동</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <aside className="homeinapp-payment__summary-wrap">
+            <div className="homeinapp-payment__summary-card">
+              <h2 className="homeinapp-payment__form-title">결제</h2>
+              <div className="homeinapp-payment__payment-block">
+                <h3 className="homeinapp-payment__plan-section-title">구독 플랜 안내</h3>
+                <div className="homeinapp-payment__plan-cards homeinapp-payment__plan-cards--single">
+                  <div className="homeinapp-payment__plan-card homeinapp-payment__plan-card--selected">
+                    <p className="homeinapp-payment__plan-card-name">월간 플랜</p>
+                    <p className="homeinapp-payment__plan-card-price">
+                      {PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원
+                    </p>
+                    <p className="homeinapp-payment__plan-card-billing">1인 / 월 1회 결제</p>
+                    <p className="homeinapp-payment__plan-card-vat">(부가세 10% 별도)</p>
+                  </div>
+                </div>
+                <dl className="homeinapp-payment__price-list">
+                  <div>
+                    <dt>상품 금액</dt>
+                    <dd>{PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div>
+                    <dt>부가세 (10%)</dt>
+                    <dd>{Math.round(PLAN_MONTHLY_PRICE * PLAN_MONTHLY_VAT_RATE).toLocaleString('ko-KR')}원</dd>
+                  </div>
+                  <div className="is-total">
+                    <dt>총 결제금액</dt>
+                    <dd>{PLAN_MONTHLY_PRICE_WITH_VAT.toLocaleString('ko-KR')}원</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="homeinapp-payment__footer-wrap">
+                <button
+                  type="button"
+                  className="homeinapp-payment__pay-btn"
+                  onClick={() => {
+                    setPaymentModalOpen(true);
+                  }}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading ? '결제 처리 중...' : '결제하기'}
+                </button>
+                <button
+                  type="button"
+                  className="homeinapp-payment__back-btn"
+                  onClick={() => {
+                    navigate('/service/homeinapp');
+                    window.scrollTo(0, 0);
+                  }}
+                >
+                  이전으로
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          {paymentModalOpen && !paymentSuccessState && (
+            <div
+              className="homeinapp-payment__modal-backdrop"
+              role="presentation"
+              onClick={() => !paymentLoading && setPaymentModalOpen(false)}
+            >
+              <div
+                className="homeinapp-payment__modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="homeinapp-payment-modal-title"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="homeinapp-payment__modal-header">
+                  <div className="homeinapp-payment__modal-header-main">
+                    <h2 className="homeinapp-payment__modal-title" id="homeinapp-payment-modal-title">
+                      카드 정보 (정기결제)
+                    </h2>
+                    <p className="homeinapp-payment__modal-pay-amount" aria-live="polite">
+                      결제 금액{' '}
+                      <strong style={{ marginLeft: '5px' }}>
+                        {PLAN_MONTHLY_PRICE_WITH_VAT.toLocaleString('ko-KR')}원
+                      </strong>
+                      <span className="homeinapp-payment__modal-pay-amount-note">
+                        {' '}
+                        (공급가 {PLAN_MONTHLY_PRICE.toLocaleString('ko-KR')}원 + 부가세 10%)
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="homeinapp-payment__modal-close"
+                    aria-label="닫기"
+                    disabled={paymentLoading}
+                    onClick={() => {
+                      setPaymentModalOpen(false);
+                      setPaymentSuccessState(null);
+                    }}
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+                <div className="homeinapp-payment__modal-body">
+                  <div className="homeinapp-payment__card-form homeinapp-payment__card-form--modal">
+                    <div className="homeinapp-payment__card-field">
+                      <span className="homeinapp-payment__card-label" id="homeinapp-modal-card-pan-label">
+                        카드번호 (4자리 × 4)
+                      </span>
+                      <div
+                        className="homeinapp-payment__card-pan-row"
+                        role="group"
+                        aria-labelledby="homeinapp-modal-card-pan-label"
+                      >
+                        {cardNumberParts.map((part, index) => (
+                          <Fragment key={index}>
+                            {index > 0 && (
+                              <span className="homeinapp-payment__card-pan-sep" aria-hidden>
+                                ·
+                              </span>
+                            )}
+                            <input
+                              ref={setPanInputRef(index)}
+                              id={`homeinapp-modal-card-pan-${index}`}
+                              type={index === 1 || index === 2 ? 'password' : 'text'}
+                              inputMode="numeric"
+                              autoComplete={index === 0 ? 'cc-number' : 'off'}
+                              spellCheck={false}
+                              maxLength={4}
+                              aria-label={`카드번호 ${index + 1}번째 네 자리`}
+                              className="homeinapp-payment__card-input homeinapp-payment__card-input--pan-chunk"
+                              placeholder="0000"
+                              value={part}
+                              onChange={(e) => handlePanChange(index, e.target.value)}
+                              onKeyDown={(e) => handlePanKeyDown(index, e)}
+                              onPaste={handlePanPaste}
+                            />
+                          </Fragment>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="homeinapp-payment__card-field-row homeinapp-payment__card-field-row--expiry">
+                      <div className="homeinapp-payment__card-field">
+                        <label className="homeinapp-payment__card-label" htmlFor="homeinapp-modal-card-exp-m">
+                          유효기간 (월)
+                        </label>
+                        <input
+                          id="homeinapp-modal-card-exp-m"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-exp-month"
+                          className="homeinapp-payment__card-input homeinapp-payment__card-input--digits-2"
+                          placeholder="MM"
+                          maxLength={2}
+                          value={cardExpiryMonth}
+                          onChange={(e) => {
+                            const next = e.target.value.replace(/\D/g, '').slice(0, 2);
+                            setCardExpiryMonth(next);
+                            if (next.length === 2) {
+                              requestAnimationFrame(() => {
+                                document.getElementById('homeinapp-modal-card-exp-y')?.focus();
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="homeinapp-payment__card-field">
+                        <label className="homeinapp-payment__card-label" htmlFor="homeinapp-modal-card-exp-y">
+                          유효기간 (년)
+                        </label>
+                        <input
+                          id="homeinapp-modal-card-exp-y"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-exp-year"
+                          className="homeinapp-payment__card-input homeinapp-payment__card-input--digits-4"
+                          placeholder="YY"
+                          maxLength={4}
+                          value={cardExpiryYear}
+                          onChange={(e) => setCardExpiryYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        />
+                      </div>
+                    </div>
+                    <div className="homeinapp-payment__card-field homeinapp-payment__card-field--birth">
+                      <label className="homeinapp-payment__card-label" htmlFor="homeinapp-modal-card-birth">
+                        생년월일 (개인) 또는 사업자등록번호 (법인)
+                      </label>
+                      <input
+                        id="homeinapp-modal-card-birth"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        className="homeinapp-payment__card-input homeinapp-payment__card-input--digits-10"
+                        placeholder="YYMMDD 또는 10자리 사업자번호"
+                        maxLength={10}
+                        value={cardBirthOrBiz}
+                        onChange={(e) => setCardBirthOrBiz(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      />
+                    </div>
+                    <div className="homeinapp-payment__card-field homeinapp-payment__card-field--pwd">
+                      <label className="homeinapp-payment__card-label" htmlFor="homeinapp-modal-card-pwd">
+                        카드 비밀번호 앞 2자리
+                      </label>
+                      <input
+                        id="homeinapp-modal-card-pwd"
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        className="homeinapp-payment__card-input homeinapp-payment__card-input--pwd"
+                        placeholder="••"
+                        maxLength={2}
+                        value={cardPasswordTwoDigits}
+                        onChange={(e) => setCardPasswordTwoDigits(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="homeinapp-payment__modal-footer">
+                  <p className="homeinapp-payment__modal-lead">카드 정보는 서버에 저장되지 않습니다.</p>
+                  <div className="homeinapp-payment__modal-footer-actions">
+                    <button
+                      type="button"
+                      className="homeinapp-payment__modal-btn homeinapp-payment__modal-btn--ghost"
+                      disabled={paymentLoading}
+                      onClick={() => {
+                        setCardNumberParts(EMPTY_CARD_PAN);
+                        setCardExpiryMonth('');
+                        setCardExpiryYear('');
+                        setCardBirthOrBiz('');
+                        setCardPasswordTwoDigits('');
+                        requestAnimationFrame(() => panInputRefs.current[0]?.focus());
+                      }}
+                    >
+                      초기화
+                    </button>
+                    <button
+                      type="button"
+                      className="homeinapp-payment__modal-btn homeinapp-payment__modal-btn--secondary"
+                      disabled={paymentLoading}
+                      onClick={() => {
+                        setPaymentModalOpen(false);
+                        setPaymentSuccessState(null);
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      className="homeinapp-payment__modal-btn homeinapp-payment__modal-btn--primary"
+                      onClick={handlePaymentSubmit}
+                      disabled={paymentLoading || cardFieldsIncomplete}
+                    >
+                      {paymentLoading ? '결제 처리 중...' : '구독 결제'}
+                      <FaChevronRight />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {paymentSuccessState && (
+        <div className="homeinapp-payment__modal-backdrop" role="presentation">
+          <div
+            className="homeinapp-payment__modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="homeinapp-payment-success-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="homeinapp-payment__modal-header homeinapp-payment__modal-header--success">
+              <div className="homeinapp-payment__modal-header-main">
+                <h2 className="homeinapp-payment__modal-title" id="homeinapp-payment-success-title">
+                  결제 완료
+                </h2>
+              </div>
+            </div>
+            <div className="homeinapp-payment__modal-body homeinapp-payment__modal-body--success">
+              <div className="homeinapp-payment__modal-success">
+                <div className="homeinapp-payment__modal-success-icon" aria-hidden>
+                  <FaCheck />
+                </div>
+                <p className="homeinapp-payment__modal-success-head">결제가 되었습니다.</p>
+                <p className="homeinapp-payment__modal-success-line">
+                  확인을 누르면 완료 안내 화면으로 이동합니다.
+                </p>
+              </div>
+            </div>
+            <div className="homeinapp-payment__modal-footer homeinapp-payment__modal-footer--success">
+              <div className="homeinapp-payment__modal-footer-actions homeinapp-payment__modal-footer-actions--single">
+                <button
+                  id="homeinapp-payment-success-confirm"
+                  type="button"
+                  className="homeinapp-payment__modal-btn homeinapp-payment__modal-btn--primary"
+                  onClick={finalizeSuccessfulPayment}
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {homeinappAlert && (
+        <div
+          className="homeinapp-payment__alert-backdrop"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="homeinapp-alert-title"
+          aria-describedby="homeinapp-alert-message"
+          onClick={() => setHomeinappAlert(null)}
+        >
+          <div className="homeinapp-payment__alert-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="homeinapp-payment__alert-icon" aria-hidden>
+              <FaExclamationCircle />
+            </div>
+            <h2 className="homeinapp-payment__alert-title" id="homeinapp-alert-title">
+              {homeinappAlert.title}
+            </h2>
+            <p className="homeinapp-payment__alert-message" id="homeinapp-alert-message">
+              {homeinappAlert.message}
+            </p>
+            <div className="homeinapp-payment__alert-actions">
+              <button
+                type="button"
+                className="homeinapp-payment__alert-btn homeinapp-payment__alert-btn--ghost"
+                onClick={handleAlertCopy}
+              >
+                {alertCopyDone ? '복사됨' : '메시지 복사'}
+              </button>
+              <button
+                type="button"
+                className="homeinapp-payment__alert-btn homeinapp-payment__alert-btn--primary"
+                onClick={() => setHomeinappAlert(null)}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

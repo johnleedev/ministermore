@@ -1,1 +1,51 @@
-/server/routers/service/homeinappkeys/
+# Secrets — Firebase service account keys 등
+**/homeinappkeys/
+
+# OS
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React / CRA
+build/
+coverage/
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# React Native (comministermore)
+**/ios/Pods/
+**/android/.gradle/
+**/android/build/
+**/android/local.properties
+**/android/.cxx/
+**/.xcode.env.local
+**/DerivedData/
+*.xcuserstate
+*.ipa
+*.iml
+.idea/
+
+# Metro
+.metro-health-check*
+
+# Ruby / CocoaPods vendor
+**/vendor/bundle/
+
+# fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
