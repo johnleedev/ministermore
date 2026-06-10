@@ -3,6 +3,7 @@ import './Admin.scss';
 import { Routes, Route } from 'react-router-dom';
 import Main from './Main';
 import Login from './Login';
+import AdminRequireAuth from './AdminRequireAuth';
 
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -14,7 +15,8 @@ import WorshipManage from './worship/WorshipManage';
 import WorshipManageAdmin from './worship/WorshipManageAdmin';
 import Backup from './Backup';
 import AdminEmail from './email/AdminEmail';
-import AppManage from './appmanage/AppManage';
+import PushNotificationPage from './appmanage/PushNotificationPage';
+import AppVersionPage from './appmanage/AppVersionPage';
 import ServiceApplyList from './service/ServiceApplyList';
 import AdminUser from './user/AdminUser';
 import AdminInquiryManage from './user/AdminInquiryManage';
@@ -25,22 +27,23 @@ export default function AdminMain( props: any) {
     <div className="AdminContainer">
       <Routes>
         <Route path="/" element={<Login/>}/>
-        <Route path="/main" element={<Main/>}/>
-        <Route path="/registerrecruit" element={<RegisterRecruit/>}/>
-        <Route path="/recruitlistmanagepre" element={<RecruitListManagePre/>}/>
-        <Route path="/adminmanage" element={<AdminStatistics />}/>
-        <Route path="/boardpostmanage" element={<BoardPostManage />} />
-        <Route path="/freeboardmanage" element={<BoardPostManage initialTab="free" />} />
-        <Route path="/eventsboardmanage" element={<BoardPostManage initialTab="events" />} />
-        <Route path="/usedboardmanage" element={<BoardPostManage initialTab="used" />} />
-        <Route path="/worshipmanage" element={<WorshipManage/>}/> 
-        <Route path="/backup" element={<Backup/>}/>
-        <Route path="/worshipmanageadmin" element={<WorshipManageAdmin/>}/>
-        <Route path="/emailmanage" element={<AdminEmail />}/>
-        <Route path="/pushnotifi" element={<AppManage />}/>
-        <Route path="/serviceapply" element={<ServiceApplyList />}/>
-        <Route path="/adminuser" element={<AdminUser />}/>
-        <Route path="/admininquiry" element={<AdminInquiryManage />}/>
+        <Route path="/main" element={<AdminRequireAuth><Main/></AdminRequireAuth>}/>
+        <Route path="/registerrecruit" element={<AdminRequireAuth><RegisterRecruit/></AdminRequireAuth>}/>
+        <Route path="/recruitlistmanagepre" element={<AdminRequireAuth><RecruitListManagePre/></AdminRequireAuth>}/>
+        <Route path="/adminmanage" element={<AdminRequireAuth><AdminStatistics /></AdminRequireAuth>}/>
+        <Route path="/boardpostmanage" element={<AdminRequireAuth><BoardPostManage /></AdminRequireAuth>} />
+        <Route path="/freeboardmanage" element={<AdminRequireAuth><BoardPostManage initialTab="free" /></AdminRequireAuth>} />
+        <Route path="/eventsboardmanage" element={<AdminRequireAuth><BoardPostManage initialTab="events" /></AdminRequireAuth>} />
+        <Route path="/usedboardmanage" element={<AdminRequireAuth><BoardPostManage initialTab="used" /></AdminRequireAuth>} />
+        <Route path="/worshipmanage" element={<AdminRequireAuth><WorshipManage/></AdminRequireAuth>}/> 
+        <Route path="/backup" element={<AdminRequireAuth><Backup/></AdminRequireAuth>}/>
+        <Route path="/worshipmanageadmin" element={<AdminRequireAuth><WorshipManageAdmin/></AdminRequireAuth>}/>
+        <Route path="/emailmanage" element={<AdminRequireAuth><AdminEmail /></AdminRequireAuth>}/>
+        <Route path="/pushnotifi" element={<AdminRequireAuth><PushNotificationPage /></AdminRequireAuth>}/>
+        <Route path="/appversion" element={<AdminRequireAuth><AppVersionPage /></AdminRequireAuth>}/>
+        <Route path="/serviceapply" element={<AdminRequireAuth><ServiceApplyList /></AdminRequireAuth>}/>
+        <Route path="/adminuser" element={<AdminRequireAuth><AdminUser /></AdminRequireAuth>}/>
+        <Route path="/admininquiry" element={<AdminRequireAuth><AdminInquiryManage /></AdminRequireAuth>}/>
       </Routes>
       <Footer />
     </div>

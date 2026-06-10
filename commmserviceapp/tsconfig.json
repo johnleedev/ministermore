@@ -1,0 +1,9 @@
+{
+  "extends": "./node_modules/@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2015"],
+    "types": ["jest"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", "src/screens/auth/LoginSample.tsx.disabled"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}

@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">사역자모아관리자</string>
+    <string name="kakao_app_key">f1b2ec248c2bee36797192655ed2e587</string>
+    <string moduleConfig="true" name="CodePushServerUrl">https://api.revopush.org</string>
+    <string moduleConfig="true" name="CodePushDeploymentKey">OE8G-uajayhkmccTyAnExJxvKP9wEJGSafC1Ee</string>
+</resources>

@@ -13,6 +13,31 @@ const axios = require('axios');
 
 const escapeQuotes = (str) => str.replaceAll('è', '\è').replaceAll("'", "\\\'").replaceAll('"', '\\\"').replaceAll('\\n', '\\\\n');
 
+const DEFAULT_HOPE_INFO = {
+  hopeType: '',
+  hopeLocation: '',
+  hopeSalary: '',
+  hopeSalaryPaySort: '월',
+  hopeRoles: '',
+  hopeDepartment: '',
+  hopeInsurance: '',
+  hopeWelfare: '',
+};
+
+/** DB TEXT 컬럼이 빈 문자열·공백·null일 때 JSON.parse가 터지지 않도록 처리 */
+function safeParseJson(value, fallback = null) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  const trimmed = String(value).trim();
+  if (!trimmed) return fallback;
+  try {
+    return JSON.parse(trimmed);
+  } catch (err) {
+    console.error('JSON 파싱 오류:', err);
+    return fallback;
+  }
+}
+
 // 프로필 이미지 저장 미들웨어
 const storage = multer.diskStorage({
   destination(req, file, done) { 
@@ -74,25 +99,10 @@ router.post('/saveresume', upload.single('profileImage'), (req, res) => {
       saveDate
     } = req.body;
 
-    // 희망사항 정보 파싱
-    let parsedHopeInfo = {
-      hopeType: '',
-      hopeLocation: '',
-      hopeSalary: '',
-      hopeSalaryPaySort: '월',
-      hopeRoles: '',
-      hopeDepartment: '',
-      hopeInsurance: '',
-      hopeWelfare: ''
+    const parsedHopeInfo = {
+      ...DEFAULT_HOPE_INFO,
+      ...safeParseJson(hopeInfo, {}),
     };
-
-    if (hopeInfo) {
-      try {
-        parsedHopeInfo = typeof hopeInfo === 'string' ? JSON.parse(hopeInfo) : hopeInfo;
-      } catch (error) {
-        console.error('hopeInfo 파싱 오류:', error);
-      }
-    }
 
     if (!userAccount || !name || !phone || !email) {
       return res.status(400).send({ 
@@ -107,9 +117,8 @@ router.post('/saveresume', upload.single('profileImage'), (req, res) => {
       profileImageName = req.file.filename;
     }
 
-    // JSON 문자열 파싱
-    const educationItemsParsed = educationItems ? JSON.parse(educationItems) : [];
-    const careerItemsParsed = careerItems ? JSON.parse(careerItems) : [];
+    const educationItemsParsed = safeParseJson(educationItems, []);
+    const careerItemsParsed = safeParseJson(careerItems, []);
 
     // 이력서 데이터 삽입
     const insertQuery = `
@@ -197,25 +206,10 @@ router.post('/updateresume', upload.single('profileImage'), (req, res) => {
       saveDate
     } = req.body;
 
-    // 희망사항 정보 파싱
-    let parsedHopeInfo = {
-      hopeType: '',
-      hopeLocation: '',
-      hopeSalary: '',
-      hopeSalaryPaySort: '월',
-      hopeRoles: '',
-      hopeDepartment: '',
-      hopeInsurance: '',
-      hopeWelfare: ''
+    const parsedHopeInfo = {
+      ...DEFAULT_HOPE_INFO,
+      ...safeParseJson(hopeInfo, {}),
     };
-
-    if (hopeInfo) {
-      try {
-        parsedHopeInfo = typeof hopeInfo === 'string' ? JSON.parse(hopeInfo) : hopeInfo;
-      } catch (error) {
-        console.error('hopeInfo 파싱 오류:', error);
-      }
-    }
 
     if (!resumeId || !userAccount) {
       return res.status(400).send({ 
@@ -231,9 +225,8 @@ router.post('/updateresume', upload.single('profileImage'), (req, res) => {
       });
     }
 
-    // JSON 문자열 파싱
-    const educationItemsParsed = educationItems ? JSON.parse(educationItems) : [];
-    const careerItemsParsed = careerItems ? JSON.parse(careerItems) : [];
+    const educationItemsParsed = safeParseJson(educationItems, []);
+    const careerItemsParsed = safeParseJson(careerItems, []);
 
     // 기존 이력서 정보 조회 (기존 이미지 파일명 확인용)
     resumedb.query(
@@ -426,30 +419,22 @@ router.get('/getresume/:resumeId', (req, res) => {
     }
 
     const resume = result[0];
-    
-    // JSON 필드 파싱
-    try {
-      if (resume.educationItems) {
-        resume.educationItems = JSON.parse(resume.educationItems);
-      }
-      if (resume.careerItems) {
-        resume.careerItems = JSON.parse(resume.careerItems);
-      }
-      if (resume.hopeInfo) {
-        const parsedHopeInfo = JSON.parse(resume.hopeInfo);
-        // 기존 개별 필드 형식과의 호환성을 위해 개별 필드로도 설정
-        resume.hopeType = parsedHopeInfo.hopeType || '';
-        resume.hopeLocation = parsedHopeInfo.hopeLocation || '';
-        resume.hopeSalary = parsedHopeInfo.hopeSalary || '';
-        resume.hopeSalaryPaySort = parsedHopeInfo.hopeSalaryPaySort || '월';
-        resume.hopeRoles = parsedHopeInfo.hopeRoles || '';
-        resume.hopeDepartment = parsedHopeInfo.hopeDepartment || '';
-        resume.hopeInsurance = parsedHopeInfo.hopeInsurance || '';
-        resume.hopeWelfare = parsedHopeInfo.hopeWelfare || '';
-      }
-    } catch (parseError) {
-      console.error('JSON 파싱 오류:', parseError);
-    }
+
+    resume.educationItems = safeParseJson(resume.educationItems, []);
+    resume.careerItems = safeParseJson(resume.careerItems, []);
+
+    const parsedHopeInfo = {
+      ...DEFAULT_HOPE_INFO,
+      ...safeParseJson(resume.hopeInfo, {}),
+    };
+    resume.hopeType = parsedHopeInfo.hopeType || '';
+    resume.hopeLocation = parsedHopeInfo.hopeLocation || '';
+    resume.hopeSalary = parsedHopeInfo.hopeSalary || '';
+    resume.hopeSalaryPaySort = parsedHopeInfo.hopeSalaryPaySort || '월';
+    resume.hopeRoles = parsedHopeInfo.hopeRoles || '';
+    resume.hopeDepartment = parsedHopeInfo.hopeDepartment || '';
+    resume.hopeInsurance = parsedHopeInfo.hopeInsurance || '';
+    resume.hopeWelfare = parsedHopeInfo.hopeWelfare || '';
 
     res.send({ 
       success: true, 

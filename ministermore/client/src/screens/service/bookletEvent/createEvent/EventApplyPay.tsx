@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
-import axios from 'axios';
-import MainURL from '../../../../MainURL';
-import { requestEventBookletPayment } from '../../../../payment/portonePayment';
 import { recoilUserData } from '../../../../RecoilStore';
-import { FaChevronDown, FaCheck, FaExclamationCircle } from 'react-icons/fa';
+import { FaChevronDown, FaCheck } from 'react-icons/fa';
+import {
+  PHONE_PREFIX_OPTIONS,
+  PaymentErrorAlert,
+  defineServicePaymentConfig,
+  digitsFromPhoneParts,
+  useOneTimePayment,
+} from '../../payment';
 import './EventApplyPay.scss';
 import {
   type EventBookletTypeId,
@@ -19,75 +23,18 @@ import {
   MAX_EVENT_VISIBLE_TAB_COUNT,
 } from './eventTemplateTypes';
 
-/** 행사 전단지 1건 공급가액(원) */
-const EVENT_TEMPLATE_PRICE = 50000;
-const EVENT_TEMPLATE_VAT_RATE = 0.1;
-const EVENT_TEMPLATE_PRICE_WITH_VAT = Math.round(EVENT_TEMPLATE_PRICE * (1 + EVENT_TEMPLATE_VAT_RATE));
+const PAYMENT = defineServicePaymentConfig({
+  kind: 'oneTime',
+  supplyPrice: 50_000,
+  orderName: '행사 전단지 제작',
+});
 
-/** `portonePayment.requestEventBookletPayment` · 서버 검증과 동일한 주문명 */
-const EVENT_ORDER_NAME = '행사 전단지 제작';
-
-/** 전화번호 앞자리 선택지 — 휴대전화/주요 지역번호/인터넷전화 등 (NoticeApplyPay 와 동일) */
-const PHONE_PREFIX_OPTIONS = [
-  '010', '011', '016', '017', '018', '019',
-  '02',
-  '031', '032', '033',
-  '041', '042', '043', '044',
-  '051', '052', '053', '054', '055',
-  '061', '062', '063', '064',
-  '070', '080',
-] as const;
-
-type CompleteBrowserSuccessResponse = {
-  ok: true;
-  paymentId: string;
-  eventMainId: number;
-};
-
-type EventAlertState = {
-  title: string;
-  message: string;
-};
-
-/** 결제 성공 후 확인 시 제작 화면으로 넘길 정보 */
 type EventPaymentSuccessState = {
   eventMainId: number;
   ordererName: string;
   ordererPhone: string;
-};
-
-type ServerErrorPayload = { message?: string; ok?: boolean };
-
-async function recordServiceApply(payload: {
-  serviceType: string;
-  orderName: string;
-  userAccount: string;
-  ordererName: string;
-  ordererPhone: string;
-  amount: number;
-  vat: number;
-  totalAmount: number;
-  paymentStatus: string;
   paymentId?: string;
-  memo?: string;
-}) {
-  try {
-    await axios.post(`${MainURL}/serviceapply/record`, payload);
-  } catch (err) {
-    console.error('failed to record service apply (event):', err);
-  }
-}
-
-function serverErrorToKorean(payload: ServerErrorPayload | undefined, axiosMessage?: string): string {
-  const msg = typeof payload?.message === 'string' ? payload.message.trim() : '';
-  if (msg && /^[\s가-힣0-9.,!?()[\]·\-'"%…]+$/.test(msg) && msg.length >= 2) {
-    return msg;
-  }
-  if (axiosMessage && /network|econnrefused|timeout/i.test(axiosMessage)) {
-    return '서버에 연결할 수 없습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
-  }
-  return '처리 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.';
-}
+};
 
 export default function EventApplyPay() {
   const navigate = useNavigate();
@@ -107,142 +54,76 @@ export default function EventApplyPay() {
   const [phoneLast, setPhoneLast] = useState('');
   const phoneMidRef = useRef<HTMLInputElement | null>(null);
   const phoneLastRef = useRef<HTMLInputElement | null>(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentSuccessState, setPaymentSuccessState] = useState<EventPaymentSuccessState | null>(null);
-  const [eventAlert, setEventAlert] = useState<EventAlertState | null>(null);
-  const [alertCopyDone, setAlertCopyDone] = useState(false);
-
-  const openErrorAlert = (message: string, title = '안내') => {
-    setAlertCopyDone(false);
-    const m = String(message ?? '').trim() || '알 수 없는 오류';
-    setEventAlert({ title: (title || '안내').trim() || '안내', message: m });
-  };
-
-  const handleAlertCopy = async () => {
-    if (!eventAlert) return;
-    try {
-      await navigator.clipboard.writeText(eventAlert.message);
-      setAlertCopyDone(true);
-      window.setTimeout(() => setAlertCopyDone(false), 2200);
-    } catch {
-      setAlertCopyDone(false);
-    }
-  };
-
-  const handlePaymentSubmit = async () => {
-    const titleTrim = orderTitle.trim();
-    const nameTrim = ordererName.trim();
-    /** PortOne `customer.phoneNumber` 허용 문자: digits + `+- ` 만. 그 외(괄호/점/한글 등) 들어오면 400. */
-    const phoneDigits = `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20);
-    if (!titleTrim || !nameTrim || !phoneDigits) {
-      openErrorAlert('타이틀, 이름, 전화번호를 모두 입력해 주세요.', '입력 정보 확인');
-      return;
-    }
-
-    setPaymentLoading(true);
-    try {
-      const customer = {
-        fullName: nameTrim || userAccount || '주문자',
-        phoneNumber: phoneDigits || '01000000000',
-        email: userAccount.includes('@') ? userAccount : 'noreply@ministermore.co.kr',
+  const {
+    paymentLoading,
+    paymentSuccess: paymentSuccessState,
+    setPaymentSuccess: setPaymentSuccessState,
+    alert: eventAlert,
+    alertCopyDone,
+    openErrorAlert,
+    closeAlert,
+    handleAlertCopy,
+    handlePaymentSubmit,
+  } = useOneTimePayment<EventPaymentSuccessState>({
+    payment: PAYMENT,
+    recordServiceType: 'bookletEvent',
+    subscriptionServiceType: 'FLYER',
+    userAccount,
+    ordererName,
+    phoneDigits: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+    memo,
+    completePath: '/paymentrequestpay/event/complete-browser',
+    validateBeforePay: () => {
+      const titleTrim = orderTitle.trim();
+      const nameTrim = ordererName.trim();
+      const phoneDigits = digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast);
+      if (!titleTrim || !nameTrim || !phoneDigits) {
+        return '타이틀, 이름, 전화번호를 모두 입력해 주세요.';
+      }
+      return null;
+    },
+    buildCompleteBody: () => ({
+      orderTitle: orderTitle.trim(),
+      ordererName: ordererName.trim(),
+      ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+      userAccount,
+      bookletType: selectedBookletType,
+      visibleTabs: JSON.stringify(orderVisibleTabIds(selectedTabSet)),
+    }),
+    parseSuccess: (data) => {
+      const d = data as { ok?: boolean; eventMainId?: number; paymentId?: string };
+      if (!d?.ok || d.eventMainId == null || Number.isNaN(Number(d.eventMainId))) return null;
+      return {
+        eventMainId: Number(d.eventMainId),
+        ordererName: ordererName.trim(),
+        ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        paymentId: d.paymentId,
       };
-      const visibleTabsJson = JSON.stringify(orderVisibleTabIds(selectedTabSet));
-
-      const payResult = await requestEventBookletPayment({
-        orderName: EVENT_ORDER_NAME,
-        totalAmount: EVENT_TEMPLATE_PRICE_WITH_VAT,
-        customer
-      });
-
-      if (!payResult.ok) {
-        openErrorAlert(payResult.message, '결제');
-        return;
-      }
-
-      const completeRes = await axios.post<CompleteBrowserSuccessResponse>(
-        `${MainURL}/paymentrequestpay/event/complete-browser`,
-        {
-          paymentId: payResult.paymentId,
-          txId: payResult.txId,
-          /** 서버가 PortOne 승인 금액과 동일한지 검증 (클라이언트 `EVENT_TEMPLATE_PRICE_WITH_VAT` 와 맞출 것) */
-          totalAmount: EVENT_TEMPLATE_PRICE_WITH_VAT,
-          orderTitle: titleTrim,
-          ordererName: nameTrim,
-          ordererPhone: phoneDigits,
-          userAccount,
-          bookletType: selectedBookletType,
-          visibleTabs: visibleTabsJson,
-        },
-      );
-
-      const data = completeRes.data;
-      if (!data?.ok || data.eventMainId == null || Number.isNaN(Number(data.eventMainId))) {
-        openErrorAlert('행사 전단지 저장에 실패했습니다. 고객센터로 문의해 주세요.', '저장 오류');
-        return;
-      }
-
-      const eventMainIdStr = String(data.eventMainId);
-      const memoWithRef = [memo.trim(), `eventMainId=${eventMainIdStr}`].filter(Boolean).join('\n\n');
-      await recordServiceApply({
-        serviceType: 'bookletEvent',
-        orderName: EVENT_ORDER_NAME,
-        userAccount,
-        ordererName: nameTrim,
-        ordererPhone: phoneDigits,
-        amount: EVENT_TEMPLATE_PRICE,
-        vat: Math.round(EVENT_TEMPLATE_PRICE * EVENT_TEMPLATE_VAT_RATE),
-        totalAmount: EVENT_TEMPLATE_PRICE_WITH_VAT,
-        paymentStatus: 'paid',
-        paymentId: data.paymentId,
-        memo: memoWithRef || undefined,
-      });
-
-      setPaymentSuccessState({
-        eventMainId: Number(data.eventMainId),
-        ordererName: nameTrim,
-        ordererPhone: phoneDigits,
-      });
-    } catch (err) {
-      console.error('event payment error:', err);
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        const d = err.response.data as { eventMainId?: number };
-        if (d?.eventMainId != null && !Number.isNaN(Number(d.eventMainId))) {
-          setPaymentSuccessState({
-            eventMainId: Number(d.eventMainId),
-            ordererName: ordererName.trim(),
-            ordererPhone: `${phonePrefix}${phoneMid}${phoneLast}`.replace(/\D/g, '').slice(0, 20),
-          });
-          return;
-        }
-      }
-      let friendly: string;
-      if (axios.isAxiosError(err)) {
-        if (err.response?.data && typeof err.response.data === 'object') {
-          friendly = serverErrorToKorean(err.response.data as ServerErrorPayload, err.message);
-        } else if (!err.response) {
-          friendly = '서버에 연결할 수 없습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.';
-        } else {
-          friendly = serverErrorToKorean(undefined, err.message);
-        }
-      } else {
-        friendly = '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-      }
-      openErrorAlert(friendly, '결제 실패');
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
+    },
+    parseConflict: (data) => {
+      const d = data as { eventMainId?: number };
+      if (d?.eventMainId == null || Number.isNaN(Number(d.eventMainId))) return null;
+      return {
+        eventMainId: Number(d.eventMainId),
+        ordererName: ordererName.trim(),
+        ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+      };
+    },
+    buildRecordMemo: (success) =>
+      [memo.trim(), `eventMainId=${success.eventMainId}`].filter(Boolean).join('\n\n'),
+    getPaymentId: (success, fallback) => success.paymentId || fallback,
+  });
 
   const finalizeSuccessfulPayment = useCallback(() => {
     if (!paymentSuccessState) return;
-    const nextState = {
-      eventMainId: paymentSuccessState.eventMainId,
-      ordererName: paymentSuccessState.ordererName,
-      ordererPhone: paymentSuccessState.ordererPhone,
-      visibleTabs: orderVisibleTabIds(selectedTabSet),
-    };
+    const q = new URLSearchParams({
+      id: String(paymentSuccessState.eventMainId),
+    });
+    q.set('visibleTabs', JSON.stringify(orderVisibleTabIds(selectedTabSet)));
+    if (paymentSuccessState.ordererName) q.set('ordererName', paymentSuccessState.ordererName);
+    if (paymentSuccessState.ordererPhone) q.set('ordererPhone', paymentSuccessState.ordererPhone);
     setPaymentSuccessState(null);
-    navigate('/service/bookleteventpay/complete', { state: nextState, replace: true });
+    navigate(`/service/bookleteventcreate?${q.toString()}`);
     window.scrollTo(0, 0);
   }, [navigate, paymentSuccessState, selectedTabSet]);
 
@@ -267,7 +148,7 @@ export default function EventApplyPay() {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (eventAlert) {
-        setEventAlert(null);
+        closeAlert();
         e.preventDefault();
         return;
       }
@@ -278,7 +159,7 @@ export default function EventApplyPay() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [eventAlert, paymentSuccessState, finalizeSuccessfulPayment]);
+  }, [closeAlert, eventAlert, paymentSuccessState, finalizeSuccessfulPayment]);
 
   const setTabIncluded = (id: EventVisibleTabId, include: boolean) => {
     if (id === 'info') return;
@@ -553,7 +434,7 @@ export default function EventApplyPay() {
                   </li>
                   <li>
                     <FaCheck aria-hidden />
-                    <span>결제 완료 후 서비스관리자에서 제작</span>
+                    <span>결제 완료 후 바로 제작 화면 이동</span>
                   </li>
                 </ul>
               </div>
@@ -583,7 +464,7 @@ export default function EventApplyPay() {
                   <div className="event-template-select__plan-card event-template-select__plan-card--selected">
                     <p className="event-template-select__plan-card-name">1건 제작</p>
                     <p className="event-template-select__plan-card-price">
-                      {EVENT_TEMPLATE_PRICE.toLocaleString('ko-KR')}원
+                      {PAYMENT.supplyPrice.toLocaleString('ko-KR')}원
                     </p>
                     <p className="event-template-select__plan-card-billing">선택한 유형으로 제작 · 3개월 이용</p>
                     <p className="event-template-select__plan-card-vat">(부가세 10% 별도)</p>
@@ -592,15 +473,15 @@ export default function EventApplyPay() {
                 <dl className="event-template-select__price-list">
                   <div>
                     <dt>상품 금액</dt>
-                    <dd>{EVENT_TEMPLATE_PRICE.toLocaleString('ko-KR')}원</dd>
+                    <dd>{PAYMENT.supplyPrice.toLocaleString('ko-KR')}원</dd>
                   </div>
                   <div>
                     <dt>부가세 (10%)</dt>
-                    <dd>{Math.round(EVENT_TEMPLATE_PRICE * EVENT_TEMPLATE_VAT_RATE).toLocaleString('ko-KR')}원</dd>
+                    <dd>{PAYMENT.vatAmount.toLocaleString('ko-KR')}원</dd>
                   </div>
                   <div className="is-total">
                     <dt>총 결제금액</dt>
-                    <dd>{EVENT_TEMPLATE_PRICE_WITH_VAT.toLocaleString('ko-KR')}원</dd>
+                    <dd>{PAYMENT.totalAmount.toLocaleString('ko-KR')}원</dd>
                   </div>
                 </dl>
 
@@ -654,7 +535,7 @@ export default function EventApplyPay() {
                 </div>
                 <p className="event-template-select__modal-success-head">결제가 되었습니다.</p>
                 <p className="event-template-select__modal-success-line">
-                  확인을 누르면 서비스관리자에서 제작 안내 페이지로 이동합니다.
+                  확인을 누르면 행사 전단지 제작 화면으로 이동합니다.
                 </p>
               </div>
             </div>
@@ -674,44 +555,13 @@ export default function EventApplyPay() {
         </div>
       )}
 
-      {eventAlert && (
-        <div
-          className="event-template-select__alert-backdrop"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="event-alert-title"
-          aria-describedby="event-alert-message"
-          onClick={() => setEventAlert(null)}
-        >
-          <div className="event-template-select__alert-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="event-template-select__alert-icon" aria-hidden>
-              <FaExclamationCircle />
-            </div>
-            <h2 className="event-template-select__alert-title" id="event-alert-title">
-              {eventAlert.title}
-            </h2>
-            <p className="event-template-select__alert-message" id="event-alert-message">
-              {eventAlert.message}
-            </p>
-            <div className="event-template-select__alert-actions">
-              <button
-                type="button"
-                className="event-template-select__alert-btn event-template-select__alert-btn--ghost"
-                onClick={handleAlertCopy}
-              >
-                {alertCopyDone ? '복사됨' : '메시지 복사'}
-              </button>
-              <button
-                type="button"
-                className="event-template-select__alert-btn event-template-select__alert-btn--primary"
-                onClick={() => setEventAlert(null)}
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentErrorAlert
+        classPrefix="event-template-select"
+        alert={eventAlert}
+        alertCopyDone={alertCopyDone}
+        onClose={closeAlert}
+        onCopy={handleAlertCopy}
+      />
     </div>
   );
 }

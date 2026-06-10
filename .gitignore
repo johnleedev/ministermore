@@ -1,5 +1,9 @@
-# Secrets — Firebase service account keys 등
+# Secrets — Firebase / Google Cloud service account keys 등
 **/homeinappkeys/
+**/*firebase-adminsdk*.json
+**/*-adminsdk-*.json
+comministermore/android/fastlane/mapapi-test-*.json
+**/fastlane/*adminsdk*.json
 
 # OS
 .DS_Store

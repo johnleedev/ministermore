@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import '../Admin.scss';
 import MainURL from '../../MainURL';
 import { citydata, religiousbodyList } from '../../DefaultData';
+import { getAdminDisplayName, getAdminEmail } from '../adminSession';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ReactDOM from 'react-dom';
@@ -237,8 +238,8 @@ export default function RecruitListManagePre ( props: any) {
   // 게시글 가져오기 (임시 저장글)
   const fetchPosts = async () => {
     try {
-      const user = sessionStorage.getItem('user');
-      const limit = user === 'johnleedev' ? 50 : 50;
+      const adminEmail = getAdminEmail();
+      const limit = 50;
       const url = `${MainURL}/recruitwork/getrecruitmanagepre?limit=${limit}`;
       const res = await axios.get(url)
       if (res.data.resultData && Array.isArray(res.data.resultData) && res.data.resultData.length > 0) {
@@ -406,7 +407,7 @@ export default function RecruitListManagePre ( props: any) {
       await Promise.all(copy.map((item: any) =>
         axios.post(`${MainURL}/recruitwork/setrecruitediting`, {
           postID: item.id,
-          editingUser: user || '',
+          editingUser: adminEmail || '',
           editingAt,
         })
       ));
@@ -877,7 +878,7 @@ export default function RecruitListManagePre ( props: any) {
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
       const saveDate = `${yyyy}-${mm}-${dd}`;
-      const saveUser = sessionStorage.getItem('user') || '';
+      const saveUser = getAdminDisplayName() || getAdminEmail();
       // 모든 항목에 saveDate, saveUser 적용 및 workday, workTimeSunDay, workTimeWeek, dawnPray를 빈 배열로 설정
       const sendList = preEditList.map(item => {
         let updatedItem: any = { ...item, saveDate, saveUser };
@@ -923,7 +924,7 @@ export default function RecruitListManagePre ( props: any) {
   // 교회 테이블에 저장 핸들러
   const handleSaveToChoir = async (item: ListProps) => {
     try {
-      const userAccount = sessionStorage.getItem('user') || '';
+      const userAccount = getAdminEmail();
       const res = await axios.post(`${MainURL}/recruitwork/postsrecruitchurch`, {
         postID: item.id,
         userAccount,
@@ -979,7 +980,7 @@ export default function RecruitListManagePre ( props: any) {
   // 기관 테이블에 저장 핸들러
   const handleSaveToInstitute = async (item: ListProps) => {
     try {
-      const userAccount = sessionStorage.getItem('user') || '';
+      const userAccount = getAdminEmail();
       const res = await axios.post(`${MainURL}/recruitwork/postsrecruitinstitute`, {
         postID: item.id,
         userAccount,

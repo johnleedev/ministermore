@@ -38,6 +38,12 @@ type PlatformStats = {
 type DashboardResponse = {
   web: PlatformStats;
   app: PlatformStats;
+  users: UserStats;
+};
+
+type UserStats = {
+  totalUsers: number;
+  todaySignups: number;
 };
 
 type MergedStatRow = {
@@ -105,6 +111,25 @@ const STATS_TAB_HINTS: Record<StatsTab, string> = {
   web: '홈페이지(client) 접속·메뉴 클릭 데이터입니다. 순방문자는 IP 기준입니다.',
   app: 'React Native 앱(comministermore) 데이터입니다. 순방문자는 기기 ID 기준이며, 앱 실행·탭·화면 이벤트는 app_ 접두사로 저장됩니다.',
 };
+
+function UserStatsSummary({ users }: { users: UserStats }) {
+  return (
+    <div className="admin-statistics-user-summary">
+      <div className="admin-statistics-user-summary__card">
+        <span className="admin-statistics-user-summary__label">현재 회원 수</span>
+        <strong className="admin-statistics-user-summary__value">
+          {users.totalUsers.toLocaleString('ko-KR')}명
+        </strong>
+      </div>
+      <div className="admin-statistics-user-summary__card">
+        <span className="admin-statistics-user-summary__label">오늘 가입</span>
+        <strong className="admin-statistics-user-summary__value">
+          {users.todaySignups.toLocaleString('ko-KR')}명
+        </strong>
+      </div>
+    </div>
+  );
+}
 
 function StatsSection({
   chartTitle,
@@ -233,6 +258,7 @@ export default function AdminStatistics() {
   const [activeTab, setActiveTab] = useState<StatsTab>('web');
   const [webStats, setWebStats] = useState<PlatformStats>({ visitors: [], metrics: {} });
   const [appStats, setAppStats] = useState<PlatformStats>({ visitors: [], metrics: {} });
+  const [userStats, setUserStats] = useState<UserStats>({ totalUsers: 0, todaySignups: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -243,10 +269,15 @@ export default function AdminStatistics() {
       const res = await axios.get<DashboardResponse>(`${MainURL}/admin/statistics/dashboard`);
       setWebStats(res.data?.web ?? { visitors: [], metrics: {} });
       setAppStats(res.data?.app ?? { visitors: [], metrics: {} });
+      setUserStats({
+        totalUsers: Number(res.data?.users?.totalUsers ?? 0),
+        todaySignups: Number(res.data?.users?.todaySignups ?? 0),
+      });
     } catch {
       setError('통계 데이터를 불러오지 못했습니다.');
       setWebStats({ visitors: [], metrics: {} });
       setAppStats({ visitors: [], metrics: {} });
+      setUserStats({ totalUsers: 0, todaySignups: 0 });
     } finally {
       setLoading(false);
     }
@@ -280,6 +311,8 @@ export default function AdminStatistics() {
             {loading ? '불러오는 중...' : '새로고침'}
           </button>
         </div>
+
+        {!loading && !error && <UserStatsSummary users={userStats} />}
 
         <div className="service-detail-overview__tabs" role="tablist" aria-label="통계 플랫폼">
           {STATS_TABS.map(({ value, label }) => (

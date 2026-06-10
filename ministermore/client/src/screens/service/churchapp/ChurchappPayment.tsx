@@ -3,32 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
 import axios from "axios";
 import { recoilUserData } from "../../../RecoilStore";
-import MainURL from "../../../MainURL";
+import { recordServiceApply, defineServicePaymentConfig } from "../payment";
 import "./ChurchappPayment.scss";
 
-type ChurchappInquiryResponse = {
-  ok: boolean;
-  message?: string;
-};
-
-async function recordServiceApply(payload: {
-  serviceType: string;
-  orderName: string;
-  userAccount: string;
-  churchName: string;
-  ordererName: string;
-  ordererPhone: string;
-  paymentStatus: string;
-  memo?: string;
-}) {
-  try {
-    const res = await axios.post<ChurchappInquiryResponse>(`${MainURL}/serviceapply/record`, payload);
-    return !!res.data?.ok;
-  } catch (err) {
-    console.error("failed to record service apply (churchapp):", err);
-    return false;
-  }
-}
+/** 결제 방식·가격 — inquiry는 실결제 없음, supplyPrice는 안내 표시용 */
+const PAYMENT = defineServicePaymentConfig({
+  kind: "inquiry",
+  supplyPrice: 1_000_000,
+  orderName: "교회앱 제작 상담 신청",
+});
 
 export default function ChurchappPayment() {
   const navigate = useNavigate();
@@ -53,7 +36,7 @@ export default function ChurchappPayment() {
     try {
       const ok = await recordServiceApply({
         serviceType: "churchapp",
-        orderName: "교회앱 제작 상담 신청",
+        orderName: PAYMENT.orderName,
         userAccount: email.trim(),
         churchName: churchName.trim(),
         ordererName: managerName.trim(),
@@ -170,7 +153,9 @@ export default function ChurchappPayment() {
                 <h3 className="churchapp-payment__plan-section-title">비용 안내</h3>
                 <div className="churchapp-payment__plan-cards churchapp-payment__plan-cards--single">
                   <div className="churchapp-payment__plan-card churchapp-payment__plan-card--selected">
-                    <p className="churchapp-payment__plan-card-price">1,000,000원 ~</p>
+                    <p className="churchapp-payment__plan-card-price">
+                      {PAYMENT.supplyPrice.toLocaleString("ko-KR")}원 ~
+                    </p>
                     <p className="churchapp-payment__plan-card-vat">(부가세 10% 별도)</p>
                   </div>
                 </div>

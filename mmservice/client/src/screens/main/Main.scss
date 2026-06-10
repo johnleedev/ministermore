@@ -319,6 +319,57 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
+
+    &--two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 880px;
+    }
+
+    &--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 1200px;
+    }
+
+    &--five {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 1200px;
+    }
+  }
+
+  &__ministry-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+  }
+
+  &__ministry-value {
+    font-size: 15px;
+    color: var(--text-dark);
+    margin: 0 0 20px;
+    font-weight: 500;
+  }
+
+  &__subs-status {
+    font-size: 14px;
+    color: var(--text-gray);
+    margin: 8px 0 0;
+
+    &--error {
+      color: #c62828;
+    }
+  }
+
+  &__expire {
+    font-size: 13px;
+    color: var(--text-gray);
+    margin: 0 0 16px;
+  }
+
+  &__lock-label {
+    font-size: 20px;
+    line-height: 1;
   }
 
   &__service-card {
@@ -342,19 +393,59 @@
       background: var(--primary);
     }
 
-    &.card-1::before {
+    // &.card-1::before {
+    //   background: linear-gradient(90deg, #5bc0eb, #4a90e2);
+    // }
+
+    // &.card-2::before {
+    //   background: linear-gradient(90deg, #4a90e2, #2e5bba);
+    // }
+
+    // &.card-3::before {
+    //   background: linear-gradient(90deg, #2e5bba, #1a3a8f);
+    // }
+
+    &.card-retreat::before {
+      background: linear-gradient(90deg, #6bc9a8, #3d9b7a);
+    }
+
+    &.card-church-app::before {
       background: linear-gradient(90deg, #5bc0eb, #4a90e2);
     }
 
-    &.card-2::before {
+    &.card-attendance::before {
+      background: linear-gradient(90deg, #9b7fe8, #7c5cbf);
+    }
+
+    &.card-intro::before {
+      background: linear-gradient(90deg, #56b8f0, #2e8bc4);
+    }
+
+    &.card-event::before {
+      background: linear-gradient(90deg, #f0b429, #d4920a);
+    }
+
+    &.card-flyer::before {
+      background: linear-gradient(90deg, #5bc0eb, #4a90e2);
+    }
+
+    &.card-push::before {
       background: linear-gradient(90deg, #4a90e2, #2e5bba);
     }
 
-    &.card-3::before {
-      background: linear-gradient(90deg, #2e5bba, #1a3a8f);
+    &--locked {
+      cursor: default;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.35);
+        pointer-events: none;
+      }
     }
 
-    &:hover:not(&--disabled) {
+    &:hover:not(&--disabled):not(&--locked) {
       transform: translateY(-4px);
       box-shadow: var(--shadow-lg);
       border-color: var(--primary);
@@ -376,18 +467,53 @@
       margin: 0 0 6px;
     }
 
-    &.card-1 .service-admin__service-icon {
-      background: #e3f4fc;
-      color: #5bc0eb;
+    // &.card-1 .service-admin__service-icon {
+    //   background: #e3f4fc;
+    //   color: #5bc0eb;
+    // }
+
+    // &.card-2 .service-admin__service-icon {
+    //   background: #e3edfb;
+    //   color: #4a90e2;
+    // }
+
+    // &.card-3 .service-admin__service-icon {
+    //   background: #dae4f5;
+    //   color: #2e5bba;
+    // }
+
+    &.card-retreat .service-admin__service-icon {
+      background: #e8f7f0;
+      color: #3d9b7a;
     }
 
-    &.card-2 .service-admin__service-icon {
-      background: #e3edfb;
+    &.card-church-app .service-admin__service-icon {
+      background: #e3f4fc;
       color: #4a90e2;
     }
 
-    &.card-3 .service-admin__service-icon {
-      background: #dae4f5;
+    &.card-attendance .service-admin__service-icon {
+      background: #f0ebfc;
+      color: #7c5cbf;
+    }
+
+    &.card-intro .service-admin__service-icon {
+      background: #e8f4fc;
+      color: #2e8bc4;
+    }
+
+    &.card-event .service-admin__service-icon {
+      background: #fef6e6;
+      color: #d4920a;
+    }
+
+    &.card-flyer .service-admin__service-icon {
+      background: #e3f4fc;
+      color: #4a90e2;
+    }
+
+    &.card-push .service-admin__service-icon {
+      background: #e8eef8;
       color: #2e5bba;
     }
   }
@@ -445,6 +571,17 @@
     &:disabled {
       background: #94a3b8;
       cursor: default;
+    }
+
+    &--apply {
+      background: #fff;
+      color: var(--primary-dark);
+      border: 1px solid var(--primary);
+      margin-left: auto;
+
+      &:hover {
+        background: #eef4fc;
+      }
     }
   }
 

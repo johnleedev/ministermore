@@ -16,6 +16,7 @@ import { applydocSubSort, applyhowSubSort, careerSubSort, dawnPraySubMenu, hourS
 import { citydata } from '../../DefaultData';
 import { DateBoxSingle } from '../../components/DateBoxSingle';
 import { EditorTinymce } from '../../components/EditorTinymce';
+import { getAdminDisplayName, getAdminEmail, getAdminSession } from '../adminSession';
 
 
 
@@ -71,9 +72,6 @@ export default function RegisterRecruit( props: any) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [listAllLength, setListAllLength] = useState<number>(0);
 
-  // 작업내역 데이터 상태 추가
-  const [workHistory, setWorkHistory] = useState<any[]>([]);
-
   // 검색 관련 상태 추가
   const [searchWord, setSearchWord] = useState('');
   const [searchResult, setSearchResult] = useState<ListProps[] | null>(null);
@@ -103,20 +101,11 @@ export default function RegisterRecruit( props: any) {
           setList([]);
           setListAllLength(0);
         }
-      } else if (listSort === '작업내역') {
-        const res = await axios.get(`${MainURL}/recruitwork/getrecruitcount`)
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const copy = [...res.data];
-          setWorkHistory(copy);
-        } else {
-          setWorkHistory([]);
-        }
       }
     } catch (error) {
       console.error('데이터 가져오기 실패:', error);
       setList([]);
       setListAllLength(0);
-      setWorkHistory([]);
     }
    };
 
@@ -159,7 +148,9 @@ export default function RegisterRecruit( props: any) {
  
   const [postID, setPostID] = useState('');
   
-  const userData = sessionStorage.getItem('user');
+  const adminSession = getAdminSession();
+  const adminEmail = getAdminEmail(adminSession);
+  const adminDisplayName = getAdminDisplayName(adminSession);
 
   const [source, setSource] = useState('');
   const [title, setTitle] = useState('');
@@ -284,7 +275,7 @@ export default function RegisterRecruit( props: any) {
   const getParams = {
     postID,
     saveDate: todayDate,
-    saveUser: userData,
+    saveUser: adminDisplayName || adminEmail,
     source,
     title,
     writer,
@@ -368,17 +359,6 @@ export default function RegisterRecruit( props: any) {
   // [추가] 작업중 상태 관리
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-
-  // [수정] userData가 JSON이 아닐 때도 안전하게 처리
-  function getUserName(userData: string | null): string {
-    if (!userData) return '';
-    try {
-      const parsed = JSON.parse(userData);
-      return parsed.name || userData;
-    } catch {
-      return userData;
-    }
-  }
 
   // [추가] 서버에 작업중 상태 저장 함수
   const setRecruitEditing = async (postID: string, editingUser: string) => {
@@ -490,7 +470,7 @@ export default function RegisterRecruit( props: any) {
   // 교회 테이블에 저장 핸들러
   const handleSaveToChoir = async (item: ListProps) => {
     try {
-      const userAccount = sessionStorage.getItem('user') || '';
+      const userAccount = adminEmail;
       const res = await axios.post(`${MainURL}/recruitwork/postsrecruitchurch`, {
         postID: item.id,
         userAccount,
@@ -544,7 +524,7 @@ export default function RegisterRecruit( props: any) {
   // 기관 테이블에 저장 핸들러
   const handleSaveToInstitute = async (item: ListProps) => {
     try {
-      const userAccount = sessionStorage.getItem('user') || '';
+      const userAccount = adminEmail;
       const res = await axios.post(`${MainURL}/recruitwork/postsrecruitinstitute`, {
         postID: item.id,
         userAccount,
@@ -616,68 +596,11 @@ export default function RegisterRecruit( props: any) {
         }}>
           저장된리스트
         </div>
-        <div className='amdin_Main_Btn' 
-        style={{backgroundColor:listSort === '작업내역' ? '#333' : '', color:listSort === '작업내역' ? '#fff' : '#333'}}
-          onClick={()=>{
-            setListSort('작업내역');
-            resetForm();
-            handleClearSearch();
-        }}>
-          작업내역
-        </div>
       </div>
     
       <div className="inner">
 
-        {
-          listSort === '작업내역' 
-          ?
-          (
-            // 사람별로 먼저 그룹화 후, 각 사람별로 월별 작업내역을 표로 보여줌
-            <div style={{width: '100%', minHeight: '600px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', fontSize: '1.2rem', fontWeight: 400}}>
-              <h2 style={{margin: '30px 0 20px 0', fontWeight: 700}}>월별 작업 내역</h2>
-              {
-                Object.entries(
-                  workHistory.reduce((acc: any, cur: any) => {
-                    if (!acc[cur.saveUser]) acc[cur.saveUser] = [];
-                    acc[cur.saveUser].push(cur);
-                    return acc;
-                  }, {})
-                ).map(([user, items]: any) => (
-                  <div key={user} style={{width: '100%', maxWidth: '600px', marginBottom: '40px'}}>
-                    <h3 style={{margin: '10px 0', fontWeight: 600}}>{user}</h3>
-                    <table style={{width: '100%', borderCollapse: 'collapse', background: '#fff'}}>
-                      <thead>
-                        <tr style={{background: '#f5f5f5'}}>
-                          <th style={{padding: '8px', border: '1px solid #eee'}}>월</th>
-                          <th style={{padding: '8px', border: '1px solid #eee'}}>건수</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(
-                          items.reduce((acc: any, cur: any) => {
-                            const month = cur.month ? cur.month.replace('.', '-') : '';
-                            if (month) {
-                              acc[month] = (acc[month] || 0) + cur.count;
-                            }
-                            return acc;
-                          }, {})
-                        ).map(([month, count]: any, idx: number) => (
-                          <tr key={idx}>
-                            <td style={{padding: '8px', border: '1px solid #eee'}}>{month}</td>
-                            <td style={{padding: '8px', border: '1px solid #eee'}}>{count}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))
-              }
-              {workHistory.length === 0 && <p>작업내역 데이터가 없습니다.</p>}
-            </div>
-          )
-          :
-          <>
+        <>
             {/* 이메일 검색 영역 - 저장된 리스트에만 표시 */}
             {listSort === '저장' && (
               <div style={{marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center'}}>
@@ -729,8 +652,7 @@ export default function RegisterRecruit( props: any) {
               </div>
             )}
             {/* 작업중 일괄 해제 버튼 */}
-            {listSort !== '작업내역' && (
-              <div style={{marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center'}}>
+            <div style={{marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center'}}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -749,8 +671,7 @@ export default function RegisterRecruit( props: any) {
                 >
                   작업중 일괄 해제
                 </div>
-              </div>
-            )}
+            </div>
 
             <div className="recruitBox">
               { displayList.length > 0
@@ -821,7 +742,7 @@ export default function RegisterRecruit( props: any) {
                               setList(prev => prev.map((row, idx) => idx === index ? row : { ...row, editingUser: '' }));
                               // 선택한 row만 editingUser 설정
                               setEditingPostId(item.id);
-                              const userName = getUserName(userData);
+                              const userName = adminDisplayName || adminEmail;
                               setEditingUser(userName);
                               // [추가] 서버에도 작업중 상태 저장
                               await setRecruitEditing(item.id, userName);
@@ -937,7 +858,7 @@ export default function RegisterRecruit( props: any) {
                               setList(prev => prev.map((row, idx) => idx === index ? row : { ...row, editingUser: '' }));
                               // 선택한 row만 editingUser 설정
                               setEditingPostId(item.id);
-                              const userName = getUserName(userData);
+                              const userName = adminDisplayName || adminEmail;
                               setEditingUser(userName);
                               // [추가] 서버에도 작업중 상태 저장
                               await setRecruitEditing(item.id, userName);
@@ -1018,8 +939,6 @@ export default function RegisterRecruit( props: any) {
                             )}
                           </div>
                           {listSort === '저장' && (
-                            // 저장된 리스트 - johnleedev만 삭제 가능
-                            getUserName(userData) === 'johnleedev' && (
                               <div className="recruit-input-btn" 
                                 style={{
                                   flex: 1,
@@ -1031,7 +950,7 @@ export default function RegisterRecruit( props: any) {
                                     try {
                                       const res = await axios.post(`${MainURL}/recruitwork/deleterecruit`, {
                                         id: item.id,
-                                        saveUser: getUserName(userData)
+                                        saveUser: adminDisplayName || adminEmail
                                       });
                                     if (res.data.success) {
                                       alert('삭제되었습니다.');
@@ -1058,7 +977,6 @@ export default function RegisterRecruit( props: any) {
                               >
                                 <p>삭제</p>
                               </div>
-                            )
                           )}
                         </div>
                       )}
@@ -1109,16 +1027,12 @@ export default function RegisterRecruit( props: any) {
               </div>
               <div className="button reset" 
                 style={{
-                  backgroundColor: postID && (listSort === '크롤링' || getUserName(userData) === 'johnleedev') ? '#e74c3c' : '#ccc', 
-                  color: postID && (listSort === '크롤링' || getUserName(userData) === 'johnleedev') ? '#fff' : '#8B8B8B'
+                  backgroundColor: postID ? '#e74c3c' : '#ccc', 
+                  color: postID ? '#fff' : '#8B8B8B'
                 }}
                 onClick={async ()=>{
                   if (!postID) {
                     alert('삭제할 항목을 선택해주세요.');
-                    return;
-                  }
-                  if (listSort === '저장' && getUserName(userData) !== 'johnleedev') {
-                    alert('삭제 권한이 없습니다.');
                     return;
                   }
                   if (window.confirm('정말 삭제하시겠습니까?')) {
@@ -1126,7 +1040,7 @@ export default function RegisterRecruit( props: any) {
                       const endpoint = listSort === '크롤링' ? 'deleterecruitpre' : 'deleterecruit';
                       const params = listSort === '크롤링' 
                         ? { id: postID }
-                        : { id: postID, saveUser: getUserName(userData) };
+                        : { id: postID, saveUser: adminDisplayName || adminEmail };
                       
                       const res = await axios.post(`${MainURL}/recruitwork/${endpoint}`, params);
                       
@@ -1194,14 +1108,9 @@ export default function RegisterRecruit( props: any) {
                 dangerouslySetInnerHTML={{ __html: customInput }}
               />
             </div>
-          </>
-        }
+        </>
 
-        
-   
-        {
-          listSort !== '작업내역' && 
-          <div className="recruit">
+        <div className="recruit">
 
             <div className="inner">
 
@@ -2185,7 +2094,6 @@ export default function RegisterRecruit( props: any) {
 
             
           </div>
-        }
 
         <div className="buttonbox" style={{width:'100%', marginBottom:'100px'}}>
           <div className="button reset" onClick={()=>{navigate(-1)}}>

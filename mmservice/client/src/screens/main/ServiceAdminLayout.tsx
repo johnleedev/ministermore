@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
 import MainSiteURL from '../../MainSiteURL';
-import ServiceAdminNavbar from './ServiceAdminNavbar';
 import './Main.scss';
 
 export default function ServiceAdminLayout() {
@@ -8,7 +7,6 @@ export default function ServiceAdminLayout() {
 
   return (
     <div className="service-admin">
-      <ServiceAdminNavbar />
       <div className="service-admin__list-shell">
         <Outlet />
       </div>

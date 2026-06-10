@@ -40,7 +40,6 @@ export const recoilKaKaoLoginData = atom({
   default: {
     APIKEY : '0ceb02a4c2ba5343e679e135b09a649a',
     REDIRECT_URI_Auth : 'https://ministermore.co.kr/login/loginsns'
-    // REDIRECT_URI_Auth : 'http://localhost:3000/login/loginsns'
   },
 });
 
@@ -51,7 +50,6 @@ export const recoilNaverLoginData = atom({
     CLIENTID : 'oC2ypvaePVUFUTmJueXq',
     SECRET : 'IlPy8cgw0i',
     REDIRECT_URI_Auth : 'https://ministermore.co.kr/login/loginsns'
-    // REDIRECT_URI_Auth : 'http://localhost:3000/login/loginsns'
   },
 });
 

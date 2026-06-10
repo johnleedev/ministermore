@@ -138,13 +138,33 @@ router.post('/countup', (req, res) => {
 });
 
 // 웹·앱 통합 대시보드 (관리자 통계 화면)
+const fetchUserStats = async () => {
+  const [totalRows, todayRows] = await Promise.all([
+    queryAsync(commondb, 'SELECT COUNT(*) AS totalUsers FROM `user`', []),
+    queryAsync(
+      commondb,
+      `SELECT COUNT(*) AS todaySignups
+         FROM \`user\`
+        WHERE logisterDate IS NOT NULL
+          AND DATE(logisterDate) = CURDATE()`,
+      []
+    ),
+  ]);
+
+  return {
+    totalUsers: Number(totalRows[0]?.totalUsers ?? 0),
+    todaySignups: Number(todayRows[0]?.todaySignups ?? 0),
+  };
+};
+
 router.get('/statistics/dashboard', async (req, res) => {
   try {
-    const [webVisitors, appVisitors, webMetrics, appMetrics] = await Promise.all([
+    const [webVisitors, appVisitors, webMetrics, appMetrics, users] = await Promise.all([
       fetchVisitorStats(webVisitorWhere),
       fetchVisitorStats(appVisitorWhere),
       Promise.all(COUNT_METRIC_TYPES.map((type) => fetchCountallByType(type))),
       Promise.all(COUNT_METRIC_TYPES.map((type) => fetchCountallByType(`app_${type}`))),
+      fetchUserStats(),
     ]);
 
     const metricMap = (rowsList) =>
@@ -162,6 +182,7 @@ router.get('/statistics/dashboard', async (req, res) => {
         visitors: appVisitors,
         metrics: metricMap(appMetrics),
       },
+      users,
     });
   } catch (error) {
     console.error('statistics/dashboard error:', error);

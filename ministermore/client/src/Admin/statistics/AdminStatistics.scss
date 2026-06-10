@@ -1,1 +1,30 @@
 @import '../service/ServiceDetailOverview.scss';
+
+.admin-statistics-user-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-statistics-user-summary__card {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
+}
+
+.admin-statistics-user-summary__label {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.admin-statistics-user-summary__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f386e;
+}

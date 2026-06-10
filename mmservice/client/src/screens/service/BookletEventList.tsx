@@ -82,7 +82,7 @@ export default function BookletEventList() {
   };
 
   const handleViewEventBooklet = (eventMainId: number) => {
-    window.open(`/event?id=${eventMainId}`, '_blank', 'noopener,noreferrer');
+    window.open(`/booklet-event?id=${eventMainId}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleEditEventBooklet = async (eventMainId: number) => {

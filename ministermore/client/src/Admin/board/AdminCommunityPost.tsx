@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import '../Admin.scss';
 import MainURL from '../../MainURL';
+import { getAdminEmail } from '../adminSession';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
@@ -19,7 +20,7 @@ type Props = {
 const getPostRoute = (config: CommunityBoardConfig) => config.postRoute ?? `${config.routePrefix}post`;
 
 export default function AdminCommunityPost({ config, randomUserNickName = false }: Props) {
-  const adminAccount = sessionStorage.getItem('user') || 'admin';
+  const adminAccount = getAdminEmail() || 'admin';
   const adminNickName = '관리자';
 
   const [selectedCategory, setSelectedCategory] = useState('');

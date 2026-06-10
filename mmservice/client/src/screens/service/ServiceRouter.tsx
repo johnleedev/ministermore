@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import ChurchDetail from '../../exceptbooklets/bookletNotice/BookletNoticeDetail';
 import ServiceAdminLayout from '../main/ServiceAdminLayout';
@@ -19,7 +18,6 @@ import ChurchappList from './churchapp/ChurchappList';
 function LegacyServiceShell({ children }: { children: ReactNode }) {
   return (
     <div>
-      <Header />
       {children}
       <Footer />
     </div>

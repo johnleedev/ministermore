@@ -6,6 +6,9 @@ import ServiceMain from './ServiceMain';
 
 import NoticeMain from './bookletNotice/NoticeMain';
 import EventMain from './bookletEvent/EventMain';
+import RetreatMain from './bookletRetreat/RetreatMain';
+import RetreatApplyPay from './bookletRetreat/RetreatApplyPay';
+import RetreatPayComplete from './bookletRetreat/RetreatPayComplete';
 
 import ChurchDetail from '../../exceptbooklets/bookletNotice/BookletNoticeDetail';
 
@@ -39,9 +42,13 @@ export default function ServiceRouter() {
       <Header/>
       <Routes>
         <Route path="/" element={<ServiceMain/>}/>
+        <Route path="/bookletretreat" element={<RetreatMain/>}/>
+        <Route path="/bookletretreatpay" element={<RetreatApplyPay/>}/>
+        <Route path="/bookletretreatpay/complete" element={<RetreatPayComplete/>}/>
 
-        <Route path="/notice" element={<NoticeMain/>}/>
+        {/* <Route path="/notice" element={<NoticeMain/>}/>
         <Route path="/event" element={<EventMain/>}/>
+        <Route path="/retreat" element={<RetreatMain/>}/>
 
         <Route path="/churchdetail" element={<ChurchDetail/>}/>
 
@@ -49,6 +56,8 @@ export default function ServiceRouter() {
         <Route path="/bookletnoticepay/complete" element={<NoticePayComplete/>}/>
         <Route path="/bookleteventpay" element={<EventApplyPay/>}/>
         <Route path="/bookleteventpay/complete" element={<EventPayComplete/>}/>
+        <Route path="/bookletretreatpay" element={<RetreatApplyPay/>}/>
+        <Route path="/bookletretreatpay/complete" element={<RetreatPayComplete/>}/>
         <Route path="/bookletnoticecreate" element={<RedirectToMmservice/>}/>
         <Route path="/bookleteventcreate" element={<RedirectToMmservice/>}/>
         <Route path="/bookletnoticecomplete" element={<RedirectToMmservice/>}/>
@@ -60,7 +69,7 @@ export default function ServiceRouter() {
         
         <Route path="/churchapp" element={<ChurchappMain/>}/>
         <Route path="/churchapp/payment" element={<ChurchappPayment/>}/>
-        <Route path="/churchapp/payment/complete" element={<ChurchappComplete/>}/>
+        <Route path="/churchapp/payment/complete" element={<ChurchappComplete/>}/> */}
 
        
       </Routes>

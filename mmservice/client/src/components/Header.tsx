@@ -1,91 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './Header.scss';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { recoilLoginPath, recoilLoginState, recoilUserData } from '../RecoilStore';
-import MainURL from '../MainURL';
 import logoPng from '../images/logopng.png';
+import {
+  SERVICE_ADMIN_NAV_ITEMS,
+  isServiceAdminNavActive,
+  isServiceAdminNavEnabled,
+  type ServiceAdminNavItem,
+} from './serviceAdminNavItems';
+import '../screens/main/Main.scss';
+import './Header.scss';
 
-const Header: React.FC = () => {
-  
-  let navigate = useNavigate();
-  const [isLogin, setIsLogin] = useRecoilState(recoilLoginState);
-  const [userData, setUserData] = useRecoilState(recoilUserData);
+export default function Header() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isLogin = useRecoilValue(recoilLoginState);
   const loginPath = useRecoilValue(recoilLoginPath);
+  const [userData, setUserData] = useRecoilState(recoilUserData);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const menus = [
-   { title: "서비스", url:"/service", countType: "servicemenu",
-      links: [
-        {title:"홈인앱", subUrl:"/service/homeinapp"},
-        {title:"교회어플", subUrl:"/service/churchapp"},
-        {title:"모바일전단지(소개)", subUrl:"/service/notice"},
-        {title:"모바일전단지(행사)", subUrl:"/service/event"},
-        // {title:"홈페이지", subUrl:"/service/homepage"},
-        // {title:"모바일주보", subUrl:"/service/bulletin"},     
-      ]
-    },
-   
-  ];
+  const displayName = useMemo(() => {
+    if (userData?.userNickName) return `${userData.userNickName}님`;
+    return '게스트';
+  }, [userData?.userNickName]);
 
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<{ [key: number]: boolean }>({});
+  const avatarInitial = useMemo(() => {
+    const name = userData?.userNickName?.trim();
+    return name ? name.charAt(0) : 'G';
+  }, [userData?.userNickName]);
 
   const toggleMenu = () => {
-      setMenuOpen(!menuOpen);
+    setMenuOpen((prev) => !prev);
   };
 
-  // 메뉴(수련회/서비스 등) 클릭수 카운트
-  const countMenuClick = (type?: string) => {
-    if (!type) return;
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const date = `${yyyy}-${mm}-${dd}`;
-    axios.post(`${MainURL}/admin/countup`, { date, type }).catch(() => {});
+  const closeMenu = () => {
+    setMenuOpen(false);
   };
 
-  const toggleMobileMenu = (index: number) => {
-      setMobileMenuOpen((prevState) => ({
-          ...prevState,
-          [index]: !prevState[index],
-      }));
-  };
-  const handleLogout = async () => {
+  const handleLogout = () => {
     localStorage.clear();
-    setIsLogin(false);
     setUserData({
-      userAccount : '',
-      userNickName : '',
+      userAccount: '',
+      userNickName: '',
       userSort: '',
-      userDetail : '',
-      grade: ''
-    })
-    alert('로그아웃 되었습니다.')
-    window.location.replace(loginPath);
+      userDetail: '',
+      grade: '',
+      authInstitution: '',
+      authChurch: '',
+      authDepartment: '',
+      authGroup: '',
+    });
+    closeMenu();
+    window.location.replace(loginPath || '/login');
   };
-    
-  
-  useEffect(() => {
-    const handleScroll = () => {
-      /** 모바일 메뉴가 열려있을 때는 페이지 스크롤로 닫히지 않도록 가드 */
-      if (menuOpen) return;
-      if (window.scrollY > 10 && window.scrollY < 100) {
-        setMenuOpen(false);
-      } 
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [menuOpen]);
 
-  /**
-   * 모바일 햄버거 메뉴 오픈 동안 배경(페이지) 스크롤 차단.
-   * `overflow: hidden`만으로는 iOS Safari 등에서 체인 스크롤이 남는 경우가 있어
-   * 스크롤 위치를 유지한 채 `body`를 fixed로 고정한다.
-   */
+  const goTo = (path: string) => {
+    navigate(path);
+    window.scrollTo(0, 0);
+    closeMenu();
+  };
+
+  const handleNavClick = (item: ServiceAdminNavItem) => {
+    if (!isServiceAdminNavEnabled(item)) {
+      alert('준비중입니다');
+      return;
+    }
+    if (item.path) goTo(item.path);
+  };
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -129,147 +116,145 @@ const Header: React.FC = () => {
     };
   }, [menuOpen]);
 
-
   return (
-    <div className="header">
-      <div className="header-top">
-        <div className="inner">
-          <div className="container header-top-container">
-            {
-              isLogin 
-              ? <p style={{color:'#fff', marginRight:'20px'}}>{userData.userNickName}님 환영합니다</p>
-              : <p style={{color:'#fff', marginRight:'20px'}}>로그인해주세요</p>
-            }
-            {
-              isLogin 
-              ?
-              <div className="header-button_wrap">
-                <div className="header-button"
-                  onClick={handleLogout}
-                >로그아웃</div>
-                <div className="header-button"
-                  onClick={()=>{navigate('/mypage');}}
-                >마이페이지</div>
-              </div>
-              :
-              <div className="header-button_wrap">
-                <div className="header-button"
-                  onClick={()=>{navigate('/login');}}
-                >로그인</div>
-                <div className="header-button" 
-                  onClick={()=>{navigate('/login/logister');}}
-                >회원가입</div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-      <div className="header-content">
-        <div className="inner">
-          <div className="container header-content-container">
-              <div className="header-logo" 
-                onClick={()=>{navigate('/')}}
+    <div className="service-admin service-admin--header-only">
+      <nav className="service-admin__navbar">
+        <div className="service-admin__container service-admin__nav-inner">
+          <button
+            type="button"
+            className="service-admin__nav-logo"
+            onClick={() => goTo('/')}
+          >
+            <img src={logoPng} alt="사역자모아" className="service-admin__logo-img" />
+            <span className="service-admin__logo-text">
+              사역자모아{' '}
+              <span className="service-admin__logo-accent service-admin__logo-accent--sub">
+                서비스관리자
+              </span>
+            </span>
+          </button>
+
+          <ul className="service-admin__nav-menu service-admin__nav-menu--desktop">
+            {SERVICE_ADMIN_NAV_ITEMS.map((item) => {
+              const enabled = isServiceAdminNavEnabled(item);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={[
+                      isServiceAdminNavActive(pathname, item) ? 'active' : '',
+                      !enabled ? 'disabled' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined}
+                    onClick={() => handleNavClick(item)}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="service-admin__nav-right service-admin__nav-right--desktop">
+            <div className="service-admin__user-info">
+              <div className="service-admin__avatar">{avatarInitial}</div>
+              <span className="service-admin__user-name">{displayName}</span>
+            </div>
+            {isLogin ? (
+              <button type="button" className="service-admin__logout-btn" onClick={handleLogout}>
+                로그아웃
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="service-admin__logout-btn"
+                onClick={() => navigate('/login')}
               >
-                <img src={logoPng} alt="" className="header-logo__mark" />
-                <h1>사역자모아 서비스관리자</h1>
-              </div>
-              <div className="header-menu">
-                {
-                  menus.map((item:any, index:any) => (
-                    <div className="menu-item" key={index}>
-                        <div className="menu-face" 
-                          onClick={()=>{
-                            countMenuClick(item.countType);
-                            navigate(item.url);
-                          }}
-                        >{item.title}</div>
-                        <div className="menu-body">
-                          { 
-                            item.links.map((subItem:any, subIndex:any) => (
-                              <div className="menu-part" key={subIndex}>
-                                <div onClick={()=>{
-                                    countMenuClick(item.countType);
-                                    navigate(subItem.subUrl)
-                                  }}>{subItem.title}</div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                    </div>
-                  ))
-                }
-              </div>
-              <div className={`header-hamburger_menu ${menuOpen ? 'header-hamburger_menu--open' : ''}`}>
-                  <div className="header-hamburger_icon" onClick={toggleMenu}></div>
-                  <div className="header-mobile_menu">
-                      <div className="mobile_menu-inner">
-                          {
-                            isLogin 
-                            ?
-                            <div className="mobile_menu-top">
-                              <span className="mobile_menu-announce">{userData.userNickName}님 환영합니다.</span>
-                              <div className="mobile_menu-button_wrap">
-                                  <div className="header-button" onClick={handleLogout}>로그아웃</div>
-                                  <div className="header-button" onClick={()=>{navigate("/mypage"); toggleMenu();}}>마이페이지</div>
-                              </div>
-                            </div>
-                            :
-                            <div className="mobile_menu-top">
-                              <span className="mobile_menu-announce">로그인해 주세요</span>
-                              <div className="mobile_menu-button_wrap">
-                                  <div className="header-button" onClick={()=>{
-                                    navigate("/login"); toggleMenu();
-                                  }}>로그인</div>
-                                  <div className="header-button" onClick={()=>{
-                                    navigate("/login/logister"); toggleMenu();}}
-                                  >회원가입</div>
-                              </div>
-                            </div>
-                          }
-                          
-                          <div className="mobile_menu-list">
-                              {
-                                menus.map((item:any, index:any) => (
-                                  <div className={`mobile_menu-item ${mobileMenuOpen[index] ? 'mobile_menu-item--open' : ''}`} 
-                                    key={index} onClick={() => 
-                                      toggleMobileMenu(index)
-                                    }>
-                                      <div className="mobile_menu-item_inner">
-                                          <div className={`mobile_menu-face ${mobileMenuOpen[index] ? 'mobile_menu-face--open' : ''}`}>
-                                              <div className="mobile_menu-face_text" 
-                                                onClick={()=>{
-                                                  countMenuClick(item.countType);
-                                                  navigate(item.url);
-                                                  toggleMenu();
-                                                }}>{item.title}</div>
-                                              <div className="mobile_menu-face_icon"></div>
-                                          </div>
-                                          <div className="mobile_menu-body">
-                                              {
-                                                item.links.map((subItem:any, subIndex:any) => (
-                                                  <div className="mobile_menu-part"
-                                                    onClick={()=>{
-                                                      countMenuClick(item.countType);
-                                                      navigate(subItem.subUrl);
-                                                      toggleMenu();
-                                                    }} key={subIndex}
-                                                  >
-                                                    {subItem.title}
-                                                  </div>
-                                              ))}
-                                          </div>
-                                      </div>
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
+                로그인
+              </button>
+            )}
+          </div>
+
+          <div
+            className={`service-admin__hamburger ${menuOpen ? 'service-admin__hamburger--open' : ''}`}
+          >
+            <button
+              type="button"
+              className="service-admin__hamburger-btn"
+              onClick={toggleMenu}
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
+            >
+              <span className="service-admin__hamburger-icon" />
+            </button>
+
+            {menuOpen && (
+              <button
+                type="button"
+                className="service-admin__mobile-overlay"
+                aria-label="메뉴 닫기"
+                onClick={closeMenu}
+              />
+            )}
+
+            <div className="service-admin__mobile-panel">
+              <div className="service-admin__mobile-panel-inner">
+                <div className="service-admin__mobile-user">
+                  <div className="service-admin__user-info">
+                    <div className="service-admin__avatar">{avatarInitial}</div>
+                    <span className="service-admin__user-name">{displayName}</span>
                   </div>
+                  {isLogin ? (
+                    <button
+                      type="button"
+                      className="service-admin__logout-btn"
+                      onClick={handleLogout}
+                    >
+                      로그아웃
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="service-admin__logout-btn"
+                      onClick={() => goTo('/login')}
+                    >
+                      로그인
+                    </button>
+                  )}
+                </div>
+
+                <button type="button" className="service-admin__mobile-notify" aria-label="알림">
+                  🔔 알림
+                  <span className="service-admin__badge" />
+                </button>
+
+                <ul className="service-admin__mobile-nav">
+                  {SERVICE_ADMIN_NAV_ITEMS.map((item) => {
+                    const enabled = isServiceAdminNavEnabled(item);
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className={[
+                            isServiceAdminNavActive(pathname, item) ? 'active' : '',
+                            !enabled ? 'disabled' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ') || undefined}
+                          onClick={() => handleNavClick(item)}
+                        >
+                          {item.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
+            </div>
           </div>
         </div>
-      </div>
+      </nav>
     </div>
   );
-};
-
-export default Header;
+}

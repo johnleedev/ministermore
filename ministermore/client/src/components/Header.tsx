@@ -42,12 +42,12 @@ const Header: React.FC = () => {
         {title:"콘티만들기", subUrl:"/worship/conti"}, 
       ]
     },
-    { title: "서비스", url:"/service", countType: "servicemenu",
+    { title: "서비스", url:"/service/bookletretreat", countType: "servicemenu",
       links: [
-        {title:"홈인앱", subUrl:"/service/homeinapp"},
-        {title:"교회어플", subUrl:"/service/churchapp"},
-        {title:"모바일전단지(소개)", subUrl:"/service/notice"},
-        {title:"모바일전단지(행사)", subUrl:"/service/event"},
+        {title:"수련회전단지", subUrl:"/service/bookletretreat"},
+        // {title:"교회어플", subUrl:"/service/churchapp"},
+        // {title:"모바일전단지(소개)", subUrl:"/service/notice"},
+        // {title:"모바일전단지(행사)", subUrl:"/service/event"},
         // {title:"홈페이지", subUrl:"/service/homepage"},
         // {title:"모바일주보", subUrl:"/service/bulletin"},     
       ]

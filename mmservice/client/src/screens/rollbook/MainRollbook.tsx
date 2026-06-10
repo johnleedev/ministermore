@@ -5,12 +5,9 @@ import RollbookChurhMain from './churchs/RollbookChurhMain';
 import RollbookDepartment from './depart/RollbookDepartment';
 import RollbookGroup from './group/RollbookGroup';
 import RollbookGroupAdmin from './group/RollbookGroupAdmin';
-import Header from '../../components/Header';
-
 export default function MainRollbook() {
   return (
     <div>
-      {/* <Header /> */}
       <Routes>
         <Route path="/" element={<RollbookList />} />
         <Route path="/churhmain" element={<RollbookChurhMain />} />

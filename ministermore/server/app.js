@@ -82,22 +82,15 @@ app.use('/rollbookattendance', AttendanceRouter);
 
 const AdminStatisticsRouter = require('./routers/admin/AdminStatistics');
 const AdminUserRouter = require('./routers/admin/AdminUser');
-const AdminTodosRouter = require('./routers/admin/AdminTodos');
-const FinanceRouter = require('./routers/admin/FinanceRouter');
-const {
-  employeeRouter: AdminAttendanceEmployeeRouter,
-  adminRouter: AdminAttendanceAdminRouter,
-} = require('./routers/admin/AdminAttendance');
-const { startFinanceRecurringScheduler } = require('./routers/admin/financeRecurringScheduler');
 app.use('/admin', AdminStatisticsRouter);
 app.use('/adminuser', AdminUserRouter);
-app.use('/admintodos', AdminTodosRouter);
-app.use('/api', FinanceRouter);
-app.use('/api/admin', AdminTodosRouter);
-app.use('/api/admin', AdminAttendanceAdminRouter);
-app.use('/api/attendance', AdminAttendanceEmployeeRouter);
 
-startFinanceRecurringScheduler();
+const PortoneBillingRouter = require('./routers/payment/PortoneBilling');
+const PortoneRequestPayRouter = require('./routers/payment/PortoneRequestPay');
+const PaymentRecordRouter = require('./routers/payment/PaymentRecord');
+app.use('/paymentbilling', PortoneBillingRouter);
+app.use('/paymentrequestpay', PortoneRequestPayRouter);
+app.use('/payment', PaymentRecordRouter);
 
 app.use(express.static('build'));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1058678600555",
+    "project_id": "mmserviceapp-47df0",
+    "storage_bucket": "mmserviceapp-47df0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1058678600555:android:f37dee09cc044cb7c1522e",
+        "android_client_info": {
+          "package_name": "com.mmserviceapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJF0GvM2Rhz67ld00jJXuV30VLS_AEXAU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

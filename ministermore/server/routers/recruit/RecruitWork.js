@@ -1102,18 +1102,12 @@ router.post('/deleterecruitpre', async (req, res) => {
   }
 });
 
-// [추가] 저장된 리스트 삭제 (사용자 권한 확인)
+// [추가] 저장된 리스트 삭제
 router.post('/deleterecruit', async (req, res) => {
-  const { id, saveUser } = req.body;
+  const { id } = req.body;
   if (!id) return res.status(400).json({ success: false, message: 'id required' });
   
   try {
-    // johnleedev만 삭제 가능
-    if (saveUser !== 'johnleedev') {
-      return res.status(403).json({ success: false, message: 'Permission denied' });
-    }
-    
-    // 삭제 실행
     recruitdb.query('DELETE FROM recruitMinister WHERE id = ?', [id], (deleteError, deleteResult) => {
       if (deleteError) {
         console.error(deleteError);

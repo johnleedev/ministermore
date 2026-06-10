@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import MainURL from '../../MainURL';
+import { getAdminEmail } from '../adminSession';
 import Loading from '../../components/Loading';
 import DateFormmating from '../../components/DateFormmating';
 import type { CommunityBoardConfig, CommunityComment, CommunityPost } from '../../screens/board/BoardTypes';
@@ -38,7 +39,7 @@ export default function CommunityBoardCommentModal({ config, post, onClose, onSa
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const adminAccount = sessionStorage.getItem('user') || 'admin';
+  const adminAccount = getAdminEmail() || 'admin';
 
   const fetchComments = useCallback(async () => {
     if (!post) return;

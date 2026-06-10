@@ -3,9 +3,7 @@ const router = express.Router();
 const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const { admindb } = require('../dbdatas/admindb');
 const { commondb } = require('../dbdatas/commondb');
-const { isActiveAdminStatus } = require('../admin/adminUserStatus');
 const { getFirebaseAdmin } = require('./firebaseAppManager');
 const secretKey = require('../../secretKey');
 
@@ -34,15 +32,6 @@ const FIXED_FIREBASE_KEY_PATH = path.resolve(
 );
 const MULTICAST_CHUNK_SIZE = 500;
 
-function queryAdmin(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    admindb.query(sql, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows);
-    });
-  });
-}
-
 function queryCommon(sql, params = []) {
   return new Promise((resolve, reject) => {
     commondb.query(sql, params, (err, rows) => {
@@ -61,7 +50,7 @@ function execCommon(sql, params = []) {
   });
 }
 
-function readRequesterId(req) {
+function readOptionalRequesterId(req) {
   const candidates = [
     req.body?.requesterId,
     req.query?.requesterId,
@@ -72,42 +61,7 @@ function readRequesterId(req) {
     const id = Number(value);
     if (Number.isInteger(id) && id > 0) return id;
   }
-  return null;
-}
-
-
-async function adminAuthMiddleware(req, res, next) {
-  try {
-    const requesterId = readRequesterId(req);
-    if (!requesterId) {
-      return res.status(401).json({
-        success: false,
-        message: '관리자 인증 정보가 없습니다. requesterId를 전달해 주세요.',
-      });
-    }
-    const rows = await queryAdmin(
-      'SELECT id, role, status FROM adminusers WHERE id = ? LIMIT 1',
-      [requesterId]
-    );
-    const admin = rows[0];
-    if (!admin || !isActiveAdminStatus(admin.status)) {
-      return res.status(403).json({
-        success: false,
-        message: '활성화된 관리자만 푸시를 발송할 수 있습니다.',
-      });
-    }
-    req.adminAuth = {
-      id: admin.id,
-      role: admin.role,
-    };
-    return next();
-  } catch (error) {
-    console.error('push adminAuthMiddleware error:', error);
-    return res.status(500).json({
-      success: false,
-      message: '관리자 인증 처리 중 오류가 발생했습니다.',
-    });
-  }
+  return 0;
 }
 
 function makePushPayload(title, body) {
@@ -271,7 +225,7 @@ router.post('/updateuseractive', async (req, res) => {
   }
 });
 
-router.get('/usertokencount', adminAuthMiddleware, async (req, res) => {
+router.get('/usertokencount', async (req, res) => {
   try {
     const rows = await queryCommon(
       `SELECT COUNT(*) AS tokenUserCount
@@ -293,7 +247,7 @@ router.get('/usertokencount', adminAuthMiddleware, async (req, res) => {
   }
 });
 
-router.get('/sendhistory', adminAuthMiddleware, async (req, res) => {
+router.get('/sendhistory', async (req, res) => {
   try {
     const rows = await queryCommon(
       `SELECT id, adminId, mode, topic, title, body, total, successCount, failureCount, chunkSize, chunkCount, createdAt
@@ -373,7 +327,7 @@ router.post('/myread/:id', async (req, res) => {
   }
 });
 
-router.post('/send', adminAuthMiddleware, async (req, res) => {
+router.post('/send', async (req, res) => {
   const title = String(req.body?.title || '').trim();
   const body = String(req.body?.body || '').trim();
   const topic = String(req.body?.topic || '').trim();
@@ -393,7 +347,7 @@ router.post('/send', adminAuthMiddleware, async (req, res) => {
         ...makePushPayload(title, body),
       });
       await savePushHistory({
-        adminId: req.adminAuth?.id,
+        adminId: readOptionalRequesterId(req),
         mode: 'topic',
         topic: category || topic,
         title,
@@ -430,7 +384,7 @@ router.post('/send', adminAuthMiddleware, async (req, res) => {
       failureCount += response.failureCount;
     }
     await savePushHistory({
-      adminId: req.adminAuth?.id,
+      adminId: readOptionalRequesterId(req),
       mode: 'tokens',
       topic: category || null,
       title,

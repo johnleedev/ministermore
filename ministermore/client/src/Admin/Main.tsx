@@ -5,7 +5,8 @@ import RegisterRecruit from './recruit/RegisterRecruit';
 import RecruitListManagePre from './recruit/RecruitListManagePre';
 import WorshipManage from './worship/WorshipManage';
 import AdminEmail from './email/AdminEmail';
-import AppManage from './appmanage/AppManage';
+import PushNotificationPage from './appmanage/PushNotificationPage';
+import AppVersionPage from './appmanage/AppVersionPage';
 import ServiceApplyList from './service/ServiceApplyList';
 import ServiceDetailOverview from './service/ServiceDetailOverview';
 import AdminStatistics from './statistics/AdminStatistics';
@@ -15,20 +16,15 @@ import BoardPostManage from './board/BoardPostManage';
 import RetreatManage from './retreat/RetreatManage';
 import AdminUser from './user/AdminUser';
 import AdminInquiryManage from './user/AdminInquiryManage';
-import AdminStaffManage from './staff/AdminStaffManage';
-import AdminAttendance from './staff/AdminAttendance';
-import TopbarAttendance from './staff/TopbarAttendance';
-import AdminTodoManage from './todos/AdminTodoManage';
-import FinanceDashboard from './finance/FinanceDashboard';
-import { clearAdminSession, getAdminSession, isSuperAdmin } from './adminSession';
+import { clearAdminSession, getAdminDisplayName, getAdminSession, isSuperAdmin } from './adminSession';
 
 type MenuKey =
-  | 'admintodos'
   | 'registerrecruit'
   | 'recruitlistmanagepre'
   | 'worshipmanage'
   | 'emailmanage'
   | 'pushnotifi'
+  | 'appversion'
   | 'serviceapply'
   | 'servicedetail'
   | 'noticepost'
@@ -36,9 +32,6 @@ type MenuKey =
   | 'retreatmanage'
   | 'adminuser'
   | 'admininquiry'
-  | 'adminstaff'
-  | 'attendanceadmin'
-  | 'finance'
   | 'adminmanage'
   | 'backup';
 
@@ -61,13 +54,11 @@ type MenuGroup = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { key: 'admintodos', label: 'To-Do 관리', icon: '✅' },
-  { key: 'attendanceadmin', label: '출퇴근 현황', icon: '📅', superOnly: true },
   { key: 'registerrecruit', label: '사역게시판', icon: '📄' },
   { key: 'worshipmanage', label: '예배사역 관리', icon: '🎵' },
   { key: 'recruitlistmanagepre', label: '일괄 관리 (사역게시판)', icon: '🗂️' },
   { key: 'emailmanage', label: '메일전송관리', icon: '✉️' },
-  { key: 'pushnotifi', label: '앱 관리', icon: '📱', superOnly: true },
+  { key: 'appversion', label: '앱 버전', icon: '📱', superOnly: true },
   { key: 'serviceapply', label: '서비스 결제/신청 내역', icon: '💳' },
   { key: 'servicedetail', label: '서비스 상세현황', icon: '📋' },
   { key: 'noticepost', label: '게시판 글 작성', icon: '📢' },
@@ -75,9 +66,8 @@ const MENU_ITEMS: MenuItem[] = [
   { key: 'retreatmanage', label: '수련회 관리', icon: '🏕️' },
   { key: 'adminuser', label: '회원 관리', icon: '👤' },
   { key: 'admininquiry', label: '고객문의 관리', icon: '💬' },
-  { key: 'adminstaff', label: '직원 관리', icon: '🛡️', superOnly: true },
+  { key: 'pushnotifi', label: '앱 푸시 알림', icon: '🔔' },
   { key: 'adminmanage', label: '통계', icon: '📊' },
-  { key: 'finance', label: '재무 관리', icon: '💰' },
   { key: 'backup', label: '백업', adminOnly: true, icon: '🗄️' },
 ];
 
@@ -98,7 +88,7 @@ const MENU_GROUPS: MenuGroup[] = [
     key: 'owner-only',
     label: '대표자 전용',
     icon: '🔒',
-    childKeys: ['attendanceadmin', 'adminstaff', 'pushnotifi', 'backup'],
+    childKeys: ['appversion', 'backup'],
     bottom: true,
   },
 ];
@@ -116,22 +106,13 @@ function AdminMainContent({
   activeMenu: MenuKey;
   adminSession: ReturnType<typeof getAdminSession>;
 }) {
-  if (
-    (activeMenu === 'adminstaff' || activeMenu === 'pushnotifi') &&
-    !isSuperAdmin(adminSession)
-  ) {
+  if (activeMenu === 'appversion' && !isSuperAdmin(adminSession)) {
     return (
       <p className="admin-main-layout__forbidden">이 메뉴는 최종관리자(대표자)만 이용할 수 있습니다.</p>
     );
   }
 
   switch (activeMenu) {
-    case 'admintodos':
-      return <AdminTodoManage />;
-    case 'attendanceadmin':
-      return <AdminAttendance />;
-    case 'finance':
-      return <FinanceDashboard />;
     case 'registerrecruit':
       return <RegisterRecruit />;
     case 'recruitlistmanagepre':
@@ -141,7 +122,9 @@ function AdminMainContent({
     case 'emailmanage':
       return <AdminEmail />;
     case 'pushnotifi':
-      return <AppManage />;
+      return <PushNotificationPage />;
+    case 'appversion':
+      return <AppVersionPage />;
     case 'serviceapply':
       return <ServiceApplyList />;
     case 'servicedetail':
@@ -156,23 +139,20 @@ function AdminMainContent({
       return <AdminUser />;
     case 'admininquiry':
       return <AdminInquiryManage />;
-    case 'adminstaff':
-      return <AdminStaffManage />;
     case 'adminmanage':
       return <AdminStatistics />;
     case 'backup':
       return <Backup />;
     default:
-      return <AdminTodoManage />;
+      return <RegisterRecruit />;
   }
 }
 
 export default function Main(props: any) {
   const navigate = useNavigate();
   const adminSession = getAdminSession();
-  const userData = adminSession?.email ?? sessionStorage.getItem('user');
   const superAdmin = isSuperAdmin(adminSession);
-  const [activeMenu, setActiveMenu] = useState<MenuKey>('admintodos');
+  const [activeMenu, setActiveMenu] = useState<MenuKey>('registerrecruit');
   const [openMenuGroups, setOpenMenuGroups] = useState<Record<MenuGroupKey, boolean>>({
     'service-management': false,
     'board-management': false,
@@ -236,9 +216,8 @@ export default function Main(props: any) {
   return (
     <div className="AdminContainer admin-main-shell">
       <header className="admin-main-shell__topbar">
-        <div className="admin-main-shell__brand">Ministermore Admin</div>
+        <div className="admin-main-shell__brand">사역자모아 Admin</div>
         <div className="admin-main-shell__user">
-          <TopbarAttendance />
           <button
             type="button"
             className="admin-main-shell__home-btn"
@@ -254,7 +233,7 @@ export default function Main(props: any) {
             로그아웃
           </button>
           <span className="admin-main-shell__user-name">
-            {adminSession?.name || userData || 'admin'}
+            {getAdminDisplayName(adminSession) || 'admin'}
           </span>
           <span className="admin-main-shell__user-role">
             {superAdmin ? '최종관리자' : '관리자'}

@@ -37,6 +37,107 @@
     }
   }
 
+  .main__app__adv__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background-color: rgba(0, 0, 0, 0.55);
+  }
+
+  .main__app__adv__modal {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #fff;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    padding: 30px;
+
+    a {
+      display: block;
+    }
+
+    .main__app__adv__img {
+      width: 100%;
+      display: block;
+      vertical-align: top;
+    }
+
+    .main__app__adv__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+
+    .main__app__adv__dismiss {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #555;
+      cursor: pointer;
+      user-select: none;
+
+      input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+    }
+
+    .main__app__adv__go {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 120px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #2d8cff 0%, #1a6fe0 100%);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(45, 140, 255, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(45, 140, 255, 0.45);
+      }
+    }
+  }
+
+  .main__app__adv__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.75);
+    }
+  }
+
   .main__top__banner {
     width: 100%;
     display: flex;

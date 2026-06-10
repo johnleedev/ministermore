@@ -9,14 +9,29 @@ import { useNavigate } from 'react-router-dom';
 import kakaologo from "../../images/login/kakao.png"
 import instarlogo from "../../images/instarlogo.jpeg"
 import mainBanner from '../../images/main.png';
+import appAdvBanner from '../../images/appadv.png';
 import { FaArrowRight } from "react-icons/fa";
 import { BsFileEarmarkPerson } from "react-icons/bs";
 import { RiAdvertisementLine } from "react-icons/ri";
 import { FaItunesNote } from "react-icons/fa";
 import Header from '../../components/Header';
 import ScrollToTopButton from '../../components/ScrollToTopButton';
-import { IoIosArrowForward } from "react-icons/io";
+import { MdKeyboardDoubleArrowRight } from "react-icons/md";
+import { IoClose } from "react-icons/io5";
 import { motion } from "framer-motion";
+
+const APP_ADV_POPUP_KEY = 'appAdvPopupDismissedDate';
+
+function getTodayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function shouldShowAppAdvPopup() {
+  return sessionStorage.getItem(APP_ADV_POPUP_KEY) !== getTodayDateString();
+}
+
+const APP_STORE_URL =
+  'https://apps.apple.com/kr/app/%EC%82%AC%EC%97%AD%EC%9E%90%EB%AA%A8%EC%95%84/id6771267063';
 
 
 interface RecruitProps {
@@ -83,6 +98,8 @@ export default function Main(props:any) {
   const [activeTab, setActiveTab] = useState<'denomination' | 'school'>('denomination');
   const [listNotice, setListNotice] = useState<any[]>([]);
   const [myIp, setMyIp] = useState<string>('');
+  const [showAppAdvPopup, setShowAppAdvPopup] = useState(false);
+  const [dismissAppAdvToday, setDismissAppAdvToday] = useState(false);
   // REMOVE: const [totalVisits, setTotalVisits] = useState<number>(0);
   // REMOVE: const [uniqueVisitors, setUniqueVisitors] = useState<number>(0);
 
@@ -244,12 +261,62 @@ export default function Main(props:any) {
     fetchNews();
   }, []);
 
+  useEffect(() => {
+    if (shouldShowAppAdvPopup()) {
+      setShowAppAdvPopup(true);
+    }
+  }, []);
+
+  const closeAppAdvPopup = () => {
+    if (dismissAppAdvToday) {
+      sessionStorage.setItem(APP_ADV_POPUP_KEY, getTodayDateString());
+    }
+    setShowAppAdvPopup(false);
+  };
+
 
 
 	return (
 		<div className='main'>
 
       <Header/>
+      {showAppAdvPopup && (
+        <div className="main__app__adv__overlay" onClick={closeAppAdvPopup}>
+          <div className="main__app__adv__modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="main__app__adv__close"
+              onClick={closeAppAdvPopup}
+              aria-label="닫기"
+            >
+              <IoClose />
+            </button>
+            <img
+              src={appAdvBanner}
+              alt="사역자모아 공식 앱 출시"
+              className="main__app__adv__img"
+            />
+            <div className="main__app__adv__footer">
+              <label className="main__app__adv__dismiss">
+                <input
+                  type="checkbox"
+                  checked={dismissAppAdvToday}
+                  onChange={(e) => setDismissAppAdvToday(e.target.checked)}
+                />
+                <span>오늘 그만 보기</span>
+              </label>
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="main__app__adv__go"
+              >
+                바로가기 <MdKeyboardDoubleArrowRight style={{marginLeft: '5px', fontSize: '25px'}}/>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 상단 배너 이미지 + 텍스트 */}
       <div className="main__top__banner">
         <img src={mainBanner} alt="메인 배너" className="main__top__banner__img" />

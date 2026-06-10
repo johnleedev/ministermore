@@ -7,12 +7,13 @@ import imageCompression from 'browser-image-compression';
 import Loading from '../../components/Loading';
 import { CiCircleMinus } from 'react-icons/ci';
 import { format } from 'date-fns';
+import { getAdminDisplayName, getAdminEmail } from '../adminSession';
 
 const NOTICE_SORT = 'notice';
 
 export default function NoticePost() {
-  const adminAccount = sessionStorage.getItem('user') || 'admin';
-  const adminNickName = '관리자';
+  const adminAccount = getAdminEmail() || 'admin';
+  const adminNickName = getAdminDisplayName() || '관리자';
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');

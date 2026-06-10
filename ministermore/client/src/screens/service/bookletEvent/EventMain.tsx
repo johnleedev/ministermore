@@ -8,19 +8,16 @@ import "../../../exceptbooklets/bookletEvent/styles/EventCreate.scss";
 import mockupOrdination from "../../../images/bookletevent/mockups/4weLbRv9.jpeg";
 import mockupNewcomer from "../../../images/bookletevent/mockups/LHik6kjh.jpeg";
 import mockupConcert from "../../../images/bookletevent/mockups/EhUOrZGh.jpeg";
-import mockupRetreat from "../../../images/bookletevent/mockups/mKljmC27.jpeg";
 import kakaoSampleOrdination from "../../../images/bookletevent/kakaosample/1.jpg";
 import kakaoSampleNewcomer from "../../../images/bookletevent/kakaosample/2.jpg";
 import kakaoSampleConcert from "../../../images/bookletevent/kakaosample/3.jpg";
-import kakaoSampleRetreat from "../../../images/bookletevent/kakaosample/4.jpg";
 
-type EventMainTabId = "ordination" | "newcomer" | "concert" | "retreat";
+type EventMainTabId = "ordination" | "newcomer" | "concert";
 
 const KAKAO_SAMPLE_BY_TAB: Record<EventMainTabId, string> = {
   ordination: kakaoSampleOrdination,
   newcomer: kakaoSampleNewcomer,
   concert: kakaoSampleConcert,
-  retreat: kakaoSampleRetreat,
 };
 
 type ValueCard = { icon: string; title: string; text: string };
@@ -382,116 +379,6 @@ const VARIANTS: EventMainVariant[] = [
         </>
       ),
       p: "찬양제·특별 음악회·기념 예배 등에 맞춘 모바일 안내 페이지로 제작해 보세요.",
-    },
-  },
-  {
-    id: "retreat",
-    sampleBookletId: 4,
-    label: "수련회&집회",
-    image: mockupRetreat,
-    imageAlt: "수련회·집회 모바일 행사 전단지 목업",
-    hero: {
-      badge: "수련회 · 집회 · 세미나",
-      title: (
-        <>
-          수련회·집회를
-          <br />
-          모바일 한 페이지로
-        </>
-      ),
-      desc:
-        "기간·장소, 준비물, 프로그램·조 안내까지 참가자가 현장 전에 필요한 정보를 한 번에 확인할 수 있습니다.",
-      stats: [
-        { strong: "기간·장소", span: "한 링크에 정리" },
-        { strong: "모바일 최적화", span: "참가자 동선 안내" },
-        { strong: "공지·알림", span: "변경 사항 전달" },
-      ],
-    },
-    valueCards: [
-      {
-        icon: "📅",
-        title: "행사 정보를 한곳에",
-        text: "포스터·일시·장소·강사·준비물까지 참가자가 궁금해하는 내용을 모바일 한 페이지에 정리해 전달할 수 있습니다.",
-      },
-      {
-        icon: "📝",
-        title: "신청부터 관리까지",
-        text: "맞춤 신청 양식, 인원 제한, 유료·무료 옵션 등 행사 운영에 필요한 접수 흐름을 디지털로 처리할 수 있습니다.",
-      },
-      {
-        icon: "📣",
-        title: "알림으로 참여를 돕습니다",
-        text: "접수 확인, 행사 전 리마인더, 긴급 공지까지 알림으로 놓치기 쉬운 일정을 챙겨 줄 수 있습니다.",
-      },
-    ],
-    about: {
-      badge: "왜 모바일 행사 전단지인가요?",
-      h2: "행사 홍보와 참가 관리를 한 번에 정리합니다",
-      p:
-        "종이 전단지·별도 폼·수기 명단으로 나뉘기 쉬운 행사 안내를 모바일 한곳으로 모으면, 참가자는 편하고 운영진은 덜 바쁩니다.",
-    },
-    sampleCta: {
-      title: "실제 수련회·집회 전단지 화면을 확인해 보세요",
-      desc: "샘플이 새 창(탭)에서 열립니다.",
-    },
-    process: {
-      badge: "이용 흐름",
-      h2: "참가자와 운영진이 함께 따라가기 쉬운 흐름",
-      p:
-        "링크 하나로 행사 정보 확인부터 신청, 알림 수신, 현장 체크인까지 자연스럽게 이어지도록 설계할 수 있습니다.",
-      steps: [
-        {
-          step: "1",
-          title: "행사 페이지 접속",
-          desc: "문자, 카카오톡, QR, 홈페이지 링크로 모바일 행사 전단지에 접속합니다.",
-        },
-        {
-          step: "2",
-          title: "정보 확인·신청",
-          desc: "일정과 장소를 확인하고 필요 시 모바일에서 바로 신청·결제를 완료합니다.",
-        },
-        {
-          step: "3",
-          title: "알림 수신",
-          desc: "접수 확인과 행사 전 알림으로 일정을 놓치지 않도록 안내받습니다.",
-        },
-        {
-          step: "4",
-          title: "현장 참여",
-          desc: "현장에서는 QR 체크인 등으로 빠르게 입장하고, 이후에도 링크로 자료를 공유할 수 있습니다.",
-        },
-      ],
-    },
-    pricing: {
-      title: (
-        <>
-          수련회·집회 페이지를
-          <br />
-          운영 흐름에 맞게 제작하세요
-        </>
-      ),
-      label: "수련회·집회 모바일 전단지 제작비",
-      price: "₩50,000 ",
-      priceSub: "(VAT 10% 별도)",
-      pills: ["일정/준비물 안내", "참가자 동선 지원", "공지 업데이트 용이", "모바일 현장 활용"],
-      items: [
-        "기간·장소·프로그램·준비물 안내 구조 반영",
-        "참가자 동선과 공지 전달에 맞춘 화면 구성",
-        "문자/카카오/QR 공유 흐름 지원",
-        "행사 전후 변경사항 반영을 위한 기본 수정 포함",
-        "체크인/신청 연동은 범위에 따라 비용 조정",
-      ],
-    },
-    cta: {
-      h3: (
-        <>
-          이번 수련회·집회,
-          <br />
-          모바일 전단지로 준비하시겠어요?
-        </>
-      ),
-      p:
-        "수련회·부흥회·특별 집회·세미나 등 교회 행사에 맞춘 모바일 안내 페이지로 제작해 보세요.",
     },
   },
 ];

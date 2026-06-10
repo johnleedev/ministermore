@@ -1,9 +1,9 @@
 import './Admin.scss';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import MainURL from '../MainURL';
-import { saveAdminSession, type AdminSession } from './adminSession';
+import { getAdminSession, normalizeAdminSession, saveAdminSession } from './adminSession';
 
 type AuthMode = 'login' | 'register';
 
@@ -11,7 +11,7 @@ type AdminAuthResponse = {
   ok: boolean;
   message?: string;
   code?: string;
-  admin?: AdminSession & { status?: string };
+  admin?: unknown;
   isFirstSuper?: boolean;
 };
 
@@ -19,6 +19,12 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (getAdminSession()) {
+      navigate('/admin/main', { replace: true });
+    }
+  }, [navigate]);
 
   const [email, setEmail] = useState('');
   const [passwd, setPasswd] = useState('');
@@ -36,14 +42,15 @@ export default function AdminLogin() {
 
     setLoading(true);
     try {
-      const res = await axios.post<AdminAuthResponse>(`${MainURL}/adminuser/login`, {
+      const res = await axios.post<AdminAuthResponse>(`https://www.yeplat.com/adminuser/login`, {
         email: trimmedEmail,
         password: passwd,
       });
 
-      if (res.data?.ok && res.data.admin) {
+      const admin = normalizeAdminSession(res.data?.admin);
+      if (res.data?.ok && admin) {
         alert('관리자 로그인 되었습니다.');
-        saveAdminSession(res.data.admin);
+        saveAdminSession(admin);
         navigate('/admin/main');
         window.scrollTo(0, 0);
       } else {
@@ -80,7 +87,7 @@ export default function AdminLogin() {
 
     setLoading(true);
     try {
-      const res = await axios.post<AdminAuthResponse>(`${MainURL}/adminuser/register`, {
+      const res = await axios.post<AdminAuthResponse>(`https://www.yeplat.com/adminuser/register`, {
         email: trimmedEmail,
         password: passwd,
         name: trimmedName,
@@ -88,10 +95,11 @@ export default function AdminLogin() {
         position: position.trim() || undefined,
       });
 
+      const registeredAdmin = normalizeAdminSession(res.data?.admin);
       if (res.data?.ok) {
         alert(res.data.message || '가입 신청이 완료되었습니다.');
-        if (res.data.isFirstSuper && res.data.admin) {
-          saveAdminSession(res.data.admin);
+        if (res.data.isFirstSuper && registeredAdmin) {
+          saveAdminSession(registeredAdmin);
           navigate('/admin/main');
           window.scrollTo(0, 0);
           return;

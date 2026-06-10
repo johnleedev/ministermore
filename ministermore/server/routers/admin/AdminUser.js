@@ -566,6 +566,30 @@ router.post('/set-super', async (req, res) => {
   }
 });
 
+/** GET /adminuser/stats — 사이트 회원 요약 (총 회원 수, 오늘 가입) */
+router.get('/stats', async (req, res) => {
+  try {
+    const [totalRows, todayRows] = await Promise.all([
+      queryCommon('SELECT COUNT(*) AS totalUsers FROM `user`'),
+      queryCommon(
+        `SELECT COUNT(*) AS todaySignups
+           FROM \`user\`
+          WHERE logisterDate IS NOT NULL
+            AND DATE(logisterDate) = CURDATE()`
+      ),
+    ]);
+
+    return res.status(200).json({
+      ok: true,
+      totalUsers: Number(totalRows[0]?.totalUsers ?? 0),
+      todaySignups: Number(todayRows[0]?.todaySignups ?? 0),
+    });
+  } catch (error) {
+    console.error('adminuser /stats error:', error);
+    return res.status(500).json({ ok: false, message: 'failed to fetch user stats' });
+  }
+});
+
 /** GET /adminuser/list — 사이트 회원(common.user) 목록 */
 router.get('/list', async (req, res) => {
   try {

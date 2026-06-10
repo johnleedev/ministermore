@@ -1,0 +1,136 @@
+.service-page {
+  padding: 32px 24px 64px;
+  max-width: 800px;
+
+  &__back {
+    font-size: 14px;
+    color: var(--text-gray);
+    margin-bottom: 20px;
+    padding: 0;
+
+    &:hover {
+      color: var(--primary);
+    }
+  }
+
+  &__header {
+    margin-bottom: 28px;
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    p {
+      margin: 0;
+      font-size: 15px;
+      color: var(--text-gray);
+    }
+  }
+
+  &__toolbar {
+    margin-bottom: 20px;
+  }
+
+  &__primary-btn {
+    padding: 12px 20px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--primary-dark);
+    }
+  }
+
+  &__ghost-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text-dark);
+    background: #fff;
+
+    &:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+
+    strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+  }
+
+  &__meta {
+    font-size: 13px;
+    color: var(--text-gray);
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 560px;
+    padding: 24px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    span {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    input,
+    textarea {
+      font-family: inherit;
+      font-size: 15px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      resize: vertical;
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+      }
+    }
+  }
+}

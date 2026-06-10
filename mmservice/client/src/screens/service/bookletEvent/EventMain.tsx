@@ -29,7 +29,7 @@ type HeroStat = { strong: string; span: string };
 
 type EventMainVariant = {
   id: EventMainTabId;
-  /** `/event?id=…&preview=1` 샘플 링크에 사용 */
+  /** `/booklet-event?id=…&preview=1` 샘플 링크에 사용 */
   sampleBookletId: number;
   label: string;
   image: string;
@@ -506,7 +506,7 @@ export default function EventMain() {
   );
 
   const openSample = useCallback(() => {
-    const url = `${window.location.origin}/event?id=${variant.sampleBookletId}&preview=1`;
+    const url = `${window.location.origin}/booklet-event?id=${variant.sampleBookletId}&preview=1`;
     window.open(url, "_blank");
   }, [variant.sampleBookletId]);
 
