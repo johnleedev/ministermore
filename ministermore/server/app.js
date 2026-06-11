@@ -21,6 +21,9 @@ app.use('/inquiry', InquiryRouter);
 app.use('/pushnotifi', PushNotificationRouter);
 app.use('/appcontrol', AppControlRouter);
 
+const ApiKakaonotifiRouter = require('./routers/api/KakaoNotifi');
+app.use('/apikakaonotifi', ApiKakaonotifiRouter);
+
 // const HolyssumRouter = require('./routers/holyssum/holyssum');
 // app.use('/holyssum', HolyssumRouter);
 

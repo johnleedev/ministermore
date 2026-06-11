@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './Board.scss';
 import '../recruit/common/RecruitList.scss';
 import MainURL from '../../MainURL';
@@ -13,6 +13,14 @@ import { recoilLoginState } from '../../RecoilStore';
 import '../ForListPage.scss';
 import type { CommunityBoardConfig, CommunityPost } from './BoardTypes';
 import { isBoardNoticePost, parseBoardListPayload } from './boardListUtils';
+import type { BoardListLocationState, BoardReturnState } from './boardNavigation';
+import {
+  boardReturnShouldRestoreScroll,
+  clearBoardListRestore,
+  resolveInitialBoardReturn,
+  restoreScroll,
+  saveBoardListRestore,
+} from './boardNavigation';
 import {
   MdOutlineCalendarToday,
   MdOutlineCategory,
@@ -33,17 +41,34 @@ const getViewsRoute = (config: CommunityBoardConfig) => config.viewsRoute ?? `${
 export default function BoardList({ config }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const initialRestoreRef = useRef<BoardReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialBoardReturn(
+      location.state as BoardListLocationState | null,
+      config.listPath,
+    );
+  }
+  const initialRestore = initialRestoreRef.current;
+
   const isLogin = useRecoilValue(recoilLoginState);
   const hasRegion = Boolean(config.regionOptions?.length);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialRestore?.currentPage ?? 1);
   const [noticeList, setNoticeList] = useState<CommunityPost[]>([]);
   const [list, setList] = useState<CommunityPost[]>([]);
   const [listAllLength, setListAllLength] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   /** null = 해당 행에서 「전체」 선택 */
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeRegion, setActiveRegion] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(
+    initialRestore?.activeCategory ?? null,
+  );
+  const [activeRegion, setActiveRegion] = useState<string | null>(initialRestore?.activeRegion ?? null);
+  const pendingScrollYRef = useRef<number | null>(
+    initialRestore && boardReturnShouldRestoreScroll(initialRestore)
+      ? (initialRestore.scrollY ?? 0)
+      : null,
+  );
+  const hasInitializedRef = useRef(false);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(listAllLength / itemsPerPage);
@@ -90,12 +115,26 @@ export default function BoardList({ config }: Props) {
         setListAllLength(0);
       } finally {
         setIsLoading(false);
+        if (pendingScrollYRef.current !== null) {
+          restoreScroll(pendingScrollYRef.current);
+          pendingScrollYRef.current = null;
+          clearBoardListRestore(config.listPath);
+          navigate(config.listPath, { replace: true, state: {} });
+        }
       }
     },
-    [config.apiBase, listRoute, searchRoute],
+    [config.apiBase, config.listPath, listRoute, searchRoute, navigate],
   );
 
   useEffect(() => {
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      if (initialRestore && pendingScrollYRef.current === null) {
+        clearBoardListRestore(config.listPath);
+        navigate(config.listPath, { replace: true, state: {} });
+      }
+    }
+
     const categories = activeCategory ? [activeCategory] : [];
     const regions = activeRegion ? [activeRegion] : [];
     void fetchDatas(currentPage, categories, regions);
@@ -125,8 +164,17 @@ export default function BoardList({ config }: Props) {
         sort: config.sort,
       })
       .then(() => {
+        const boardReturn: BoardReturnState = {
+          currentPage,
+          scrollY: window.scrollY,
+          activeCategory,
+          activeRegion,
+        };
+        saveBoardListRestore(config.listPath, boardReturn);
         window.scrollTo(0, 0);
-        navigate(config.detailPath, { state: { data: post, sort: config.sort, menuNum: 1 } });
+        navigate(config.detailPath, {
+          state: { data: post, sort: config.sort, menuNum: 1, boardReturn },
+        });
       })
       .catch((error) => {
         console.error(error);
@@ -142,6 +190,7 @@ export default function BoardList({ config }: Props) {
   };
 
   const handleCategorySelect = (item: string) => {
+    clearBoardListRestore(config.listPath);
     if (item === '전체') {
       setActiveCategory(null);
     } else {
@@ -153,6 +202,7 @@ export default function BoardList({ config }: Props) {
   const displayList = [...noticeList, ...list];
 
   const handleRegionSelect = (item: string) => {
+    clearBoardListRestore(config.listPath);
     if (item === '전체') {
       setActiveRegion(null);
     } else {
@@ -347,7 +397,14 @@ export default function BoardList({ config }: Props) {
               </div>
             )}
 
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => {
+                clearBoardListRestore(config.listPath);
+                setCurrentPage(page);
+              }}
+            />
           </div>
         </div>
       </div>

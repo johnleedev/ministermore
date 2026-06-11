@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './PraiseMain.scss';
 import '../../ForListPage.scss';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -7,11 +7,34 @@ import MainURL from '../../../MainURL';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { themesList } from '../../../DefaultData';
 import { MdOutlineKeyboardDoubleArrowDown } from "react-icons/md";
+import type { PraiseListLocationState, PraiseReturnState } from './praiseNavigation';
+import {
+  PRAISE_LIST_PATH,
+  clearPraiseListRestore,
+  praiseReturnHasThemeFilters,
+  praiseReturnHasUnifiedFilters,
+  praiseReturnShouldRestoreScroll,
+  resolveInitialPraiseReturn,
+  restoreScroll,
+  savePraiseListRestore,
+} from './praiseNavigation';
 
 export default function PraiseMain (props:any) {
 
   let navigate = useNavigate();
   let location = useLocation();
+  const initialRestoreRef = useRef<PraiseReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialPraiseReturn(location.state as PraiseListLocationState | null);
+  }
+  const initialRestore = initialRestoreRef.current;
+  const pendingScrollYRef = useRef<number | null>(
+    initialRestore && praiseReturnShouldRestoreScroll(initialRestore)
+      ? (initialRestore.scrollY ?? 0)
+      : null,
+  );
+  const skipNextUrlEffectRef = useRef(Boolean(initialRestore));
+  const hasRestoredRef = useRef(false);
 
   interface ListProps {
     id : number,
@@ -20,16 +43,16 @@ export default function PraiseMain (props:any) {
   }
   
   const [listView, setListView] = useState<ListProps[]>([]);
-  const [searchWord, setSearchWord] = useState('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchWord, setSearchWord] = useState(initialRestore?.searchWord ?? '');
+  const [currentPage, setCurrentPage] = useState<number>(initialRestore?.currentPage ?? 1);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>(initialRestore?.selectedThemes ?? []);
+  const [isSearching, setIsSearching] = useState(initialRestore?.isSearching ?? false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [sortFilter, setSortFilter] = useState<string>('');
-  const [keyFilter, setKeyFilter] = useState<string>('');
-  const [tempoFilter, setTempoFilter] = useState<string>('');
+  const [sortFilter, setSortFilter] = useState<string>(initialRestore?.sortFilter ?? '');
+  const [keyFilter, setKeyFilter] = useState<string>(initialRestore?.keyFilter ?? '');
+  const [tempoFilter, setTempoFilter] = useState<string>(initialRestore?.tempoFilter ?? '');
 
   const PAGE_SIZE = 15;
 
@@ -80,8 +103,131 @@ export default function PraiseMain (props:any) {
     fetchPosts(nextPage, true);
   };
 
+  const finishRestore = () => {
+    if (pendingScrollYRef.current !== null) {
+      restoreScroll(pendingScrollYRef.current);
+      pendingScrollYRef.current = null;
+    }
+    clearPraiseListRestore();
+    navigate(PRAISE_LIST_PATH, { replace: true, state: {} });
+  };
+
+  const restoreListPages = async (targetPage: number) => {
+    setIsLoading(true);
+    try {
+      let allItems: ListProps[] = [];
+      let lastPageHasMore = true;
+
+      for (let page = 1; page <= targetPage; page++) {
+        const res = await axios.get(`${MainURL}/worshipsongs/getsongs/${page}`);
+        const resultData = res.data?.resultData;
+
+        if (resultData && Array.isArray(resultData)) {
+          const newItems = [...resultData];
+          allItems = [...allItems, ...newItems];
+          lastPageHasMore = newItems.length >= PAGE_SIZE;
+        } else {
+          lastPageHasMore = false;
+          break;
+        }
+      }
+
+      setListView(allItems);
+      setHasMore(lastPageHasMore);
+      setCurrentPage(targetPage);
+    } catch (error) {
+      console.error(error);
+      setListView([]);
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const buildReturnState = (): PraiseReturnState => ({
+    scrollY: window.scrollY,
+    currentPage,
+    isSearching,
+    searchWord,
+    sortFilter,
+    keyFilter,
+    tempoFilter,
+    selectedThemes,
+  });
+
+  const openPraiseDetail = (id: number) => {
+    const returnState = buildReturnState();
+    savePraiseListRestore(returnState);
+    window.scrollTo(0, 0);
+    navigate(`/worship/detail?id=${id}`, { state: { praiseReturn: returnState } });
+  };
+
+  useEffect(() => {
+    if (!initialRestore || hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    const restored = initialRestore;
+
+    if (praiseReturnHasThemeFilters(restored)) {
+      void (async () => {
+        setIsSearching(true);
+        setIsLoading(true);
+        const res = await axios.post(`${MainURL}/worshipsongs/getsongssearchtheme`, {
+          theme: restored.selectedThemes,
+        });
+        if (res.data.resultData) {
+          setListView([...res.data.resultData]);
+          setHasMore(false);
+        } else {
+          setListView([]);
+          setHasMore(false);
+        }
+        setIsLoading(false);
+        finishRestore();
+      })();
+      return;
+    }
+
+    if (praiseReturnHasUnifiedFilters(restored)) {
+      void (async () => {
+        setIsSearching(true);
+        setIsLoading(true);
+        const res = await axios.post(`${MainURL}/worshipsongs/getsongsfilter`, {
+          word: restored.searchWord || '',
+          stateSort: restored.sortFilter || '',
+          keySort: restored.keyFilter || '',
+          tempoSort: normalizeTempo(restored.tempoFilter || ''),
+        });
+        if (res.data.resultData) {
+          setListView([...res.data.resultData]);
+          setHasMore(false);
+        } else {
+          setListView([]);
+          setHasMore(false);
+        }
+        setIsLoading(false);
+        finishRestore();
+      })();
+      return;
+    }
+
+    if (praiseReturnShouldRestoreScroll(restored)) {
+      void restoreListPages(restored.currentPage ?? 1).then(finishRestore);
+      return;
+    }
+
+    clearPraiseListRestore();
+    navigate(PRAISE_LIST_PATH, { replace: true, state: {} });
+    fetchPosts(1);
+  }, []);
+
   // URL 파라미터에서 검색 조건 복원
   useEffect(() => {
+    if (skipNextUrlEffectRef.current) {
+      skipNextUrlEffectRef.current = false;
+      return;
+    }
+
     const searchParams = new URLSearchParams(location.search);
     const savedSearchWord = searchParams.get('searchWord');
     const savedThemes = searchParams.get('themes');
@@ -234,6 +380,7 @@ export default function PraiseMain (props:any) {
               </div>
               <div className="btn reset"
                 onClick={()=>{
+                  clearPraiseListRestore();
                   setSearchWord('');
                   setListView([]);
                   setSelectedThemes([]);
@@ -272,6 +419,7 @@ export default function PraiseMain (props:any) {
                           const isRemoving = prevTheme.includes(item);
                           
                           if (isRemoving) {
+                            clearPraiseListRestore();
                             setIsSearching(false);
                             setListView([]);
                             setCurrentPage(1);
@@ -354,10 +502,7 @@ export default function PraiseMain (props:any) {
                         <div 
                           key={item.id} 
                           className="praise__item"
-                          onClick={() => {
-                            navigate(`/worship/detail?id=${item.id}`);
-                            window.scrollTo(0, 0);
-                          }}
+                          onClick={() => openPraiseDetail(item.id)}
                           style={{ cursor: 'pointer' }}
                         >
                           {/* PC 레이아웃 (한 줄) */}

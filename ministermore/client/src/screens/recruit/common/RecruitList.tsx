@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../../ForListPage.scss';
 import './RecruitList.scss';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -20,6 +20,15 @@ import {
   renderPreview50,
   safeJsonParse,
 } from './recruitUtils';
+import type { RecruitListLocationState, RecruitReturnState } from './recruitNavigation';
+import {
+  clearRecruitListRestore,
+  recruitReturnHasFilters,
+  recruitReturnShouldRestoreScroll,
+  resolveInitialRecruitReturn,
+  restoreScroll,
+  saveRecruitListRestore,
+} from './recruitNavigation';
 
 type PayEntry = {
   sort: string;
@@ -42,7 +51,14 @@ type ApplyTime = {
 export default function RecruitList({ config }: { config: RecruitBoardConfig }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [restoredFromRouterState, setRestoredFromRouterState] = useState(false);
+  const initialRestoreRef = useRef<RecruitReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialRecruitReturn(
+      location.state as RecruitListLocationState | null,
+      config.listPath,
+    );
+  }
+  const initialRestore = initialRestoreRef.current;
 
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
@@ -56,17 +72,40 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
   const [listSort, setListSort] = useState('크롤링');
   const [listView, setListView] = useState<RecruitListItem[]>([]);
   const [searchResult, setSearchResult] = useState<RecruitListItem[] | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(initialRestore?.currentPage ?? 1);
   const [listAllLength, setListAllLength] = useState<number>(0);
   const [listAllLengthOrigin, setListAllLengthOrigin] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [activeTab, setActiveTab] = useState<RecruitFilterTab>(config.filterTabs[0]);
-  const [searchWord, setSearchWord] = useState('');
-  const [selectedSort, setSelectedSort] = useState<string[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string[]>([]);
-  const [selectedReligiousbody, setSelectedReligiousbody] = useState<string[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchWord, setSearchWord] = useState(initialRestore?.searchWord ?? '');
+  const [selectedSort, setSelectedSort] = useState<string[]>(
+    hasSortTab ? initialRestore?.selectedSort ?? [] : [],
+  );
+  const [selectedLocation, setSelectedLocation] = useState<string[]>(
+    hasLocationTab ? initialRestore?.selectedLocation ?? [] : [],
+  );
+  const [selectedReligiousbody, setSelectedReligiousbody] = useState<string[]>(
+    hasReligiousbodyTab ? initialRestore?.selectedReligiousbody ?? [] : [],
+  );
+  const [isSearching, setIsSearching] = useState(
+    Boolean(
+      initialRestore &&
+        recruitReturnHasFilters(initialRestore, hasSortTab, hasLocationTab, hasReligiousbodyTab),
+    ),
+  );
+  const pendingScrollYRef = useRef<number | null>(
+    initialRestore && recruitReturnShouldRestoreScroll(initialRestore)
+      ? (initialRestore.scrollY ?? 0)
+      : null,
+  );
+  const hasInitializedRef = useRef(false);
+  const skipInitialFetchRef = useRef(
+    Boolean(
+      initialRestore &&
+        recruitReturnHasFilters(initialRestore, hasSortTab, hasLocationTab, hasReligiousbodyTab),
+    ),
+  );
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil((searchResult ? searchResult.length : listAllLength) / itemsPerPage);
@@ -98,6 +137,15 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
     ...(hasReligiousbodyTab ? selectedReligiousbody : []),
   ];
 
+  const finishRestore = () => {
+    if (pendingScrollYRef.current !== null) {
+      restoreScroll(pendingScrollYRef.current);
+      pendingScrollYRef.current = null;
+    }
+    clearRecruitListRestore(config.listPath);
+    navigate(config.listPath, { replace: true, state: {} });
+  };
+
   const fetchPosts = async () => {
     if (searchResult) return;
     setIsLoading(true);
@@ -112,45 +160,53 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
       console.error(error);
     } finally {
       setIsLoading(false);
+      if (pendingScrollYRef.current !== null) {
+        finishRestore();
+      }
     }
   };
 
   useEffect(() => {
-    fetchPosts();
-  }, [refresh, currentPage, listSort]);
-
-  useEffect(() => {
-    if (restoredFromRouterState) return;
-    const state: { recruitState?: {
-      searchWord?: string;
-      selectedSort?: string[];
-      selectedLocation?: string[];
-      selectedReligiousbody?: string[];
-      currentPage?: number;
-    } } = (location && location.state) || {};
-    const recruitState = state?.recruitState;
-    if (recruitState) {
-      if (hasSortTab) setSelectedSort(recruitState.selectedSort || []);
-      if (hasLocationTab) setSelectedLocation(recruitState.selectedLocation || []);
-      if (hasReligiousbodyTab) setSelectedReligiousbody(recruitState.selectedReligiousbody || []);
-      setSearchWord(recruitState.searchWord || '');
-      setCurrentPage(recruitState.currentPage || 1);
-      const hasFilters =
-        (recruitState.searchWord && recruitState.searchWord.trim()) ||
-        (hasSortTab && recruitState.selectedSort && recruitState.selectedSort.length) ||
-        (hasLocationTab && recruitState.selectedLocation && recruitState.selectedLocation.length) ||
-        (hasReligiousbodyTab && recruitState.selectedReligiousbody && recruitState.selectedReligiousbody.length);
-      if (hasFilters) {
-        performUnifiedSearch({
-          searchWord: recruitState.searchWord || '',
-          selectedSort: hasSortTab ? recruitState.selectedSort || [] : [],
-          selectedLocation: hasLocationTab ? recruitState.selectedLocation || [] : [],
-          selectedReligiousbody: hasReligiousbodyTab ? recruitState.selectedReligiousbody || [] : [],
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const restored = initialRestore;
+      if (
+        restored &&
+        recruitReturnHasFilters(restored, hasSortTab, hasLocationTab, hasReligiousbodyTab)
+      ) {
+        skipInitialFetchRef.current = false;
+        void performUnifiedSearch(
+          {
+            searchWord: restored.searchWord || '',
+            selectedSort: hasSortTab ? restored.selectedSort || [] : [],
+            selectedLocation: hasLocationTab ? restored.selectedLocation || [] : [],
+            selectedReligiousbody: hasReligiousbodyTab ? restored.selectedReligiousbody || [] : [],
+          },
+          restored.currentPage ?? 1,
+        ).then(() => {
+          if (pendingScrollYRef.current !== null) {
+            finishRestore();
+          } else if (restored) {
+            clearRecruitListRestore(config.listPath);
+            navigate(config.listPath, { replace: true, state: {} });
+          }
         });
+        return;
       }
-      setRestoredFromRouterState(true);
+
+      if (restored && pendingScrollYRef.current === null) {
+        clearRecruitListRestore(config.listPath);
+        navigate(config.listPath, { replace: true, state: {} });
+      }
     }
-  }, [location, restoredFromRouterState]);
+
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false;
+      return;
+    }
+
+    void fetchPosts();
+  }, [refresh, currentPage, listSort]);
 
   const handleSelect = (item: string, type: RecruitFilterTab) => {
     let selected: string[];
@@ -176,6 +232,7 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
   };
 
   const handleClearSearch = () => {
+    clearRecruitListRestore(config.listPath);
     setSearchResult(null);
     setCurrentPage(1);
     if (hasSortTab) setSelectedSort([]);
@@ -224,17 +281,21 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
     }
   };
 
-  const performUnifiedSearch = async ({
-    searchWord: sw,
-    selectedSort: ss,
-    selectedLocation: sl,
-    selectedReligiousbody: sr,
-  }: {
-    searchWord: string;
-    selectedSort: string[];
-    selectedLocation: string[];
-    selectedReligiousbody: string[];
-  }) => {
+  const performUnifiedSearch = async (
+    {
+      searchWord: sw,
+      selectedSort: ss,
+      selectedLocation: sl,
+      selectedReligiousbody: sr,
+    }: {
+      searchWord: string;
+      selectedSort: string[];
+      selectedLocation: string[];
+      selectedReligiousbody: string[];
+    },
+    targetPage = 1,
+  ) => {
+    setIsSearching(true);
     const res = await axios.post(`${MainURL}/${config.apiBase}/recruitsearchunified`, {
       searchWord: sw || '',
       sort: ss,
@@ -246,11 +307,11 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
       const sorted = filtered.sort((a, b) => Number(b.id) - Number(a.id));
       setSearchResult(sorted);
       setListAllLength(sorted.length);
-      setCurrentPage(1);
+      setCurrentPage(targetPage);
     } else {
       setSearchResult([]);
       setListAllLength(0);
-      setCurrentPage(1);
+      setCurrentPage(targetPage);
     }
   };
 
@@ -337,15 +398,17 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
     const date = `${yyyy}-${mm}-${dd}`;
     axios.post(`${MainURL}/admin/countup`, { date, type: 'recruitview' });
 
-    const recruitState = {
+    const recruitState: RecruitReturnState = {
       searchWord,
       selectedSort: hasSortTab ? selectedSort : [],
       selectedLocation: hasLocationTab ? selectedLocation : [],
       selectedReligiousbody: hasReligiousbodyTab ? selectedReligiousbody : [],
       currentPage,
+      scrollY: window.scrollY,
     };
-    navigate(`${config.detailPath}?id=${itemId}`, { state: { recruitState } });
+    saveRecruitListRestore(config.listPath, recruitState);
     window.scrollTo(0, 0);
+    navigate(`${config.detailPath}?id=${itemId}`, { state: { recruitState } });
   };
 
   const renderHighlighted = (text: string) =>
@@ -697,7 +760,10 @@ export default function RecruitList({ config }: { config: RecruitBoardConfig }) 
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={(page) => {
+                clearRecruitListRestore(config.listPath);
+                setCurrentPage(page);
+              }}
               onAfterChange={() => window.scrollTo(0, 500)}
             />
           </div>

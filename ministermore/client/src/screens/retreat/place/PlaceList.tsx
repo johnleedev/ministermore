@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
@@ -10,8 +10,14 @@ import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
 import PlaceListMap from './PlaceListMap';
 import { getFirstImage } from './placeImage';
-import type { PlaceListLocationState, PlaceListViewMode } from './placeNavigation';
-import { PLACE_LIST_PATH } from './placeNavigation';
+import type { PlaceListLocationState, PlaceListViewMode, PlaceReturnState } from './placeNavigation';
+import {
+  PLACE_LIST_PATH,
+  clearPlaceListRestore,
+  loadPlaceListRestore,
+  savePlaceListRestore,
+  shouldRestorePlaceList,
+} from './placeNavigation';
 import './Place.scss';
 
 type ViewMode = PlaceListViewMode;
@@ -38,25 +44,47 @@ const regionRoutes: Record<string, string> = {
 };
 
 const PAGE_SIZE = 9;
+const RESTORE_TTL_MS = 10 * 60 * 1000;
+
+const restoreScroll = (scrollY: number) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+    });
+  });
+};
+
+const resolveInitialPlaceReturn = (locationState: PlaceListLocationState | null): PlaceReturnState | null => {
+  const fromRouter = locationState?.placeReturn;
+  if (fromRouter) return fromRouter;
+  if (shouldRestorePlaceList()) return loadPlaceListRestore(RESTORE_TTL_MS);
+  return null;
+};
 
 export default function PlaceList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const placeReturn = (location.state as PlaceListLocationState | null)?.placeReturn;
+  const initialRestoreRef = useRef<PlaceReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialPlaceReturn(location.state as PlaceListLocationState | null);
+  }
+  const initialRestore = initialRestoreRef.current;
+
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
-  const [viewMode, setViewMode] = useState<ViewMode>(placeReturn?.viewMode ?? 'list');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialRestore?.viewMode ?? 'list');
   const [list, setList] = useState<PlaceItem[]>([]);
-  const [selectRegion, setSelectRegion] = useState(placeReturn?.region ?? 'all');
-  const [searchWord, setSearchWord] = useState(placeReturn?.searchWord ?? '');
+  const [selectRegion, setSelectRegion] = useState(initialRestore?.region ?? 'all');
+  const [searchWord, setSearchWord] = useState(initialRestore?.searchWord ?? '');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialRestore?.currentPage ?? 1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [isSearching, setIsSearching] = useState(placeReturn?.isSearching ?? false);
+  const [isSearching, setIsSearching] = useState(initialRestore?.isSearching ?? false);
   const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
+  const hasInitializedRef = useRef(false);
 
   const fetchPosts = async (page: number, append = false) => {
     if (append) {
@@ -101,12 +129,58 @@ export default function PlaceList() {
   };
 
   const resetListState = () => {
+    clearPlaceListRestore();
     setList([]);
     setCurrentPage(1);
     setHasMore(true);
     setIsSearching(false);
     setIsResdataFalse(false);
     setTotalCount(0);
+  };
+
+  const restoreListPages = async (targetPage: number, scrollY: number) => {
+    setIsLoading(true);
+    try {
+      let allItems: PlaceItem[] = [];
+      let count = 0;
+      let lastPageHasMore = true;
+
+      for (let page = 1; page <= targetPage; page++) {
+        const res = await axios.post(`${MainURL}/retreat/getdataplace`, {
+          region: selectRegion,
+          sort: 'all',
+          page,
+          pageSize: PAGE_SIZE,
+        });
+
+        if (res.data.data) {
+          const newItems = [...res.data.data] as PlaceItem[];
+          allItems = [...allItems, ...newItems];
+          count = res.data.count ?? 0;
+          lastPageHasMore = newItems.length >= PAGE_SIZE;
+        } else {
+          lastPageHasMore = false;
+          if (page === 1) {
+            count = res.data.count ?? 0;
+          }
+          break;
+        }
+      }
+
+      setList(allItems);
+      setTotalCount(count);
+      setHasMore(lastPageHasMore);
+      setIsResdataFalse(allItems.length === 0);
+      setCurrentPage(targetPage);
+      restoreScroll(scrollY);
+    } catch (error) {
+      console.error(error);
+      setList([]);
+      setIsResdataFalse(true);
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const runSearch = async (word: string) => {
@@ -146,18 +220,46 @@ export default function PlaceList() {
   };
 
   useEffect(() => {
-    const restored = (location.state as PlaceListLocationState | null)?.placeReturn;
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const restored = initialRestore;
 
-    const restoredSearchWord = restored?.searchWord?.trim() ?? '';
-    if (restored?.isSearching && restoredSearchWord.length >= 2) {
-      void runSearch(restoredSearchWord);
-      navigate(PLACE_LIST_PATH, { replace: true, state: {} });
-      return;
-    }
+      const restoredSearchWord = restored?.searchWord?.trim() ?? '';
+      if (restored?.isSearching && restoredSearchWord.length >= 2) {
+        void runSearch(restoredSearchWord).then(() => {
+          if (restored.scrollY) {
+            restoreScroll(restored.scrollY);
+          }
+        });
+        clearPlaceListRestore();
+        navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+        return;
+      }
 
-    if (restored?.viewMode === 'map') {
-      navigate(PLACE_LIST_PATH, { replace: true, state: {} });
-      return;
+      if (restored?.viewMode === 'map') {
+        clearPlaceListRestore();
+        navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+        resetListState();
+        fetchPosts(1);
+        return;
+      }
+
+      const shouldRestoreList =
+        restored && ((restored.scrollY ?? 0) > 0 || (restored.currentPage ?? 1) > 1);
+
+      if (shouldRestoreList) {
+        const targetPage = restored.currentPage ?? 1;
+        const scrollY = restored.scrollY ?? 0;
+        setCurrentPage(targetPage);
+        void restoreListPages(targetPage, scrollY);
+        clearPlaceListRestore();
+        navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+        return;
+      }
+
+      if (restored) {
+        navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+      }
     }
 
     resetListState();
@@ -250,18 +352,20 @@ export default function PlaceList() {
       return;
     }
 
+    const returnState: PlaceReturnState = {
+      viewMode,
+      region: selectRegion,
+      searchWord,
+      isSearching,
+      scrollY: window.scrollY,
+      currentPage,
+    };
+    savePlaceListRestore(returnState);
     window.scrollTo(0, 0);
     navigate(`/retreat/place/detail?id=${id}`, {
-      state: {
-        placeReturn: {
-          viewMode,
-          region: selectRegion,
-          searchWord,
-          isSearching,
-        },
-      },
+      state: { placeReturn: returnState },
     });
-  }, [isLogin, userData.grade, navigate, viewMode, selectRegion, searchWord, isSearching]);
+  }, [isLogin, userData.grade, navigate, viewMode, selectRegion, searchWord, isSearching, currentPage]);
 
   const handleMapMarkerClick = useCallback(
     (id: number) => {

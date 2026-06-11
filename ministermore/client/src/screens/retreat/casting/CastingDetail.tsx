@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MainURL from '../../../MainURL';
+import type { CastingDetailLocationState } from './castingNavigation';
+import { CASTING_LIST_PATH } from './castingNavigation';
 import '../place/Place.scss';
 import './Casting.scss';
 
@@ -29,9 +31,20 @@ const getImages = (images: CastingDetailItem['images']) => {
 
 export default function CastingDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const castingReturn = (location.state as CastingDetailLocationState | null)?.castingReturn;
   const url = new URL(window.location.href);
   const id = url.searchParams.get('id');
   const [detailData, setDetailData] = useState<CastingDetailItem>();
+
+  const goBackToList = () => {
+    if (castingReturn) {
+      navigate(CASTING_LIST_PATH, { state: { castingReturn } });
+      return;
+    }
+
+    navigate(CASTING_LIST_PATH);
+  };
 
   const images = getImages(detailData?.images || null);
 
@@ -85,7 +98,7 @@ export default function CastingDetail() {
           <div className="subpage__main__title">
             <h3>{detailData.name}</h3>
             <div className="place__detail-actions">
-              <button className="btn btn--secondary" type="button" onClick={() => navigate('/retreat/casting')}>
+              <button className="btn btn--secondary" type="button" onClick={goBackToList}>
                 목록으로
               </button>
               <button className="btn btn--primary" type="button" onClick={handleCopy}>
@@ -139,14 +152,7 @@ export default function CastingDetail() {
                 >
                   Top
                 </button>
-                <button
-                  className="btn btn--primary"
-                  type="button"
-                  onClick={() => {
-                    window.scrollTo({ top: 0, behavior: 'auto' });
-                    navigate('/retreat/casting');
-                  }}
-                >
+                <button className="btn btn--primary" type="button" onClick={goBackToList}>
                   목록으로
                 </button>
               </div>

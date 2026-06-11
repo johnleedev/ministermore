@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import { MdOutlineAccessTime, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { FaPen } from 'react-icons/fa6';
@@ -9,6 +9,14 @@ import DateFormmating from '../../../components/DateFormmating';
 import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState } from '../../../RecoilStore';
+import type { ReviewListLocationState, ReviewReturnState } from './reviewNavigation';
+import {
+  REVIEW_LIST_PATH,
+  clearReviewListRestore,
+  loadReviewListRestore,
+  saveReviewListRestore,
+  shouldRestoreReviewList,
+} from './reviewNavigation';
 import './Review.scss';
 import '../../ForListPage.scss';
 
@@ -24,6 +32,23 @@ interface ReviewPost {
   images: string | null;
 }
 
+const RESTORE_TTL_MS = 10 * 60 * 1000;
+
+const restoreScroll = (scrollY: number) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+    });
+  });
+};
+
+const resolveInitialReviewReturn = (locationState: ReviewListLocationState | null): ReviewReturnState | null => {
+  const fromRouter = locationState?.reviewReturn;
+  if (fromRouter) return fromRouter;
+  if (shouldRestoreReviewList()) return loadReviewListRestore(RESTORE_TTL_MS);
+  return null;
+};
+
 const parseImages = (images: ReviewPost['images']) => {
   if (!images) return [];
 
@@ -37,11 +62,24 @@ const parseImages = (images: ReviewPost['images']) => {
 
 export default function ReviewList() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialRestoreRef = useRef<ReviewReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialReviewReturn(location.state as ReviewListLocationState | null);
+  }
+  const initialRestore = initialRestoreRef.current;
+
   const isLogin = useRecoilValue(recoilLoginState);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialRestore?.currentPage ?? 1);
   const [list, setList] = useState<ReviewPost[]>([]);
   const [listAllLength, setListAllLength] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const pendingScrollYRef = useRef<number | null>(
+    initialRestore && ((initialRestore.scrollY ?? 0) > 0 || (initialRestore.currentPage ?? 1) > 1)
+      ? (initialRestore.scrollY ?? 0)
+      : null,
+  );
+  const hasInitializedRef = useRef(false);
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(listAllLength / itemsPerPage);
@@ -60,11 +98,25 @@ export default function ReviewList() {
       setListAllLength(0);
     } finally {
       setIsLoading(false);
+      if (pendingScrollYRef.current !== null) {
+        restoreScroll(pendingScrollYRef.current);
+        pendingScrollYRef.current = null;
+        clearReviewListRestore();
+        navigate(REVIEW_LIST_PATH, { replace: true, state: {} });
+      }
     }
   };
 
   useEffect(() => {
-    fetchDatas();
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      if (initialRestore && pendingScrollYRef.current === null) {
+        clearReviewListRestore();
+        navigate(REVIEW_LIST_PATH, { replace: true, state: {} });
+      }
+    }
+
+    void fetchDatas();
   }, [currentPage]);
 
   const renderPreview = (content: string) => {
@@ -96,6 +148,7 @@ export default function ReviewList() {
 
   const changePage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
+    clearReviewListRestore();
     setCurrentPage(newPage);
   };
 
@@ -103,8 +156,15 @@ export default function ReviewList() {
     await axios.post(`${MainURL}/retreatreview/postsviews`, {
       postId: post.id,
     });
+    const returnState: ReviewReturnState = {
+      currentPage,
+      scrollY: window.scrollY,
+    };
+    saveReviewListRestore(returnState);
     window.scrollTo(0, 0);
-    navigate(`/retreat/review/detail?id=${post.id}`);
+    navigate(`/retreat/review/detail?id=${post.id}`, {
+      state: { reviewReturn: returnState },
+    });
   };
 
   const openReviewPost = () => {
