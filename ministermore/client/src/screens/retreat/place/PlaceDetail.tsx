@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { Swiper as SwiperType } from 'swiper';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { A11y } from 'swiper/modules';
 import 'swiper/css';
 import MainURL from '../../../MainURL';
+import type { PlaceDetailLocationState } from './placeNavigation';
+import { PLACE_LIST_PATH } from './placeNavigation';
 import './Place.scss';
 
 interface PlaceDetailData {
@@ -37,6 +39,8 @@ export default function PlaceDetail() {
   const url = new URL(window.location.href);
   const id = url.searchParams.get('id');
   const navigate = useNavigate();
+  const location = useLocation();
+  const placeReturn = (location.state as PlaceDetailLocationState | null)?.placeReturn;
   const mapElement = useRef<HTMLDivElement | null>(null);
   const thumbnailSwiperRef = useRef<SwiperType | null>(null);
   const { naver } = window;
@@ -126,6 +130,16 @@ export default function PlaceDetail() {
     }
   };
 
+  const goBackToList = () => {
+    window.scrollTo(0, 0);
+    if (placeReturn) {
+      navigate(PLACE_LIST_PATH, { state: { placeReturn } });
+      return;
+    }
+
+    navigate(PLACE_LIST_PATH);
+  };
+
   const handleCopy = () => {
     navigator.clipboard
       .writeText(url.href)
@@ -144,7 +158,7 @@ export default function PlaceDetail() {
           <div className="subpage__main__title">
             <h3>{detailData?.placeName || '수련회장소'}</h3>
             <div className="place__detail-actions">
-              <button className="btn btn--secondary" type="button" onClick={() => navigate(-1)}>
+              <button className="btn btn--secondary" type="button" onClick={goBackToList}>
                 목록으로
               </button>
               {/* <button className="btn btn--primary" type="button" onClick={handleCopy}>
@@ -278,14 +292,7 @@ export default function PlaceDetail() {
                 >
                   Top
                 </button>
-                <button
-                  className="btn btn--primary"
-                  type="button"
-                  onClick={() => {
-                    window.scrollTo({ top: 0, behavior: 'auto' });
-                    navigate(-1);
-                  }}
-                >
+                <button className="btn btn--primary" type="button" onClick={goBackToList}>
                   목록으로
                 </button>
               </div>

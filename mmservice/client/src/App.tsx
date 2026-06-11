@@ -7,8 +7,9 @@ import AppShell from './components/AppShell';
 import ServiceRouter from './screens/service/ServiceRouter';
 import MainRollbook from './screens/rollbook/MainRollbook';
 import MainLogin from './screens/login/MainLogin';
-import RetreatManage from './screens/retreat/RetreatManage';
-import RetreatEdit from './screens/retreat/RetreatEdit';
+import RetreatManage from './screens/retreat/pages/RetreatManage';
+import RetreatEdit from './screens/retreat/pages/RetreatEdit';
+import RetreatView from './screens/retreat/pages/RetreatView';
 import ChurchAppManage from './screens/church-app/ChurchAppManage';
 import AttendanceManage from './screens/attendance/AttendanceManage';
 import IntroManage from './screens/intro/IntroManage';
@@ -27,6 +28,7 @@ function App() {
               <Route path="/" element={<Main />} />
               <Route path="/retreat" element={<RetreatManage />} />
               <Route path="/retreat/edit/:bookletId" element={<RetreatEdit />} />
+              <Route path="/retreat/view" element={<RetreatView />} />
               <Route path="/church-app" element={<ChurchAppManage />} />
               <Route path="/attendance" element={<AttendanceManage />} />
               <Route path="/intro" element={<IntroManage />} />

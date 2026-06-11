@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { fetchRetreatRequests } from '../../api/retreatApi';
-import type { RetreatRequestRow } from './types';
+import { fetchRetreatAnswers } from '../../../api/retreatApi';
+import { formatCustomAnswerValue } from '../lib/retreatRequestForm';
+import type { RetreatAnswerRow } from '../lib/types';
+import type { RetreatCustomQuestion } from '../lib/retreatRequestForm';
 
 type RetreatApplicantsModalProps = {
   bookletId: number;
@@ -22,7 +24,8 @@ export default function RetreatApplicantsModal({
   title,
   onClose,
 }: RetreatApplicantsModalProps) {
-  const [rows, setRows] = useState<RetreatRequestRow[]>([]);
+  const [rows, setRows] = useState<RetreatAnswerRow[]>([]);
+  const [customQuestions, setCustomQuestions] = useState<RetreatCustomQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,9 +34,12 @@ export default function RetreatApplicantsModal({
     setLoading(true);
     setError(null);
 
-    fetchRetreatRequests(bookletId, userAccount)
-      .then((list) => {
-        if (!cancelled) setRows(list);
+    fetchRetreatAnswers(bookletId, userAccount)
+      .then((data) => {
+        if (!cancelled) {
+          setRows(data.list);
+          setCustomQuestions(data.customQuestions);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -51,7 +57,7 @@ export default function RetreatApplicantsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+      <div className="flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">참가 신청자 명단</h2>
@@ -74,25 +80,41 @@ export default function RetreatApplicantsModal({
           ) : null}
 
           {!loading && !error && rows.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">이름</th>
-                    <th className="px-4 py-3 font-semibold">연락처</th>
-                    <th className="px-4 py-3 font-semibold">소속</th>
-                    <th className="px-4 py-3 font-semibold">신청일</th>
-                    <th className="px-4 py-3 font-semibold">메모</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">이름</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">연락처</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">소속</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">건의/기도제목</th>
+                    {customQuestions.map((question) => (
+                      <th key={question.id} className="px-4 py-3 font-semibold whitespace-nowrap">
+                        {question.label}
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">신청일</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="px-4 py-3 font-medium text-slate-900">{row.userName}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.userPhone}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.userGroup || '-'}</td>
-                      <td className="px-4 py-3 text-slate-500">{formatDate(row.created_at)}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.note || '-'}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">
+                        {row.userName}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{row.userPhone}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                        {row.userGroup || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 min-w-[160px]">{row.note || '-'}</td>
+                      {customQuestions.map((question) => (
+                        <td key={`${row.id}-${question.id}`} className="px-4 py-3 text-slate-600 min-w-[140px]">
+                          {formatCustomAnswerValue(row.customAnswers?.[question.id])}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                        {formatDate(row.created_at)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -226,7 +226,7 @@ export default function Header() {
 
                 <button type="button" className="service-admin__mobile-notify" aria-label="알림">
                   🔔 알림
-                  <span className="service-admin__badge" />
+                  <span className="service-admin__notify-dot" />
                 </button>
 
                 <ul className="service-admin__mobile-nav">

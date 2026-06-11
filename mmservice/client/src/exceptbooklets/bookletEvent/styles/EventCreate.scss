@@ -950,6 +950,109 @@ $site-header-height: 150px; // Header.tsx 영역 높이 (대략)
     line-height: 1.5;
   }
 
+  .template-event-worship--style-retreat {
+    .template-event-worship__card--retreat {
+      padding: 12px 14px;
+    }
+
+    .template-event-worship__retreat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .template-event-worship__retreat-time {
+      flex-shrink: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: #0a2a5e;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+
+    .template-event-worship__retreat-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      flex-shrink: 1;
+      min-width: 0;
+      margin-left: auto;
+    }
+
+    .template-event-worship__retreat-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      min-width: 0;
+      text-align: right;
+    }
+
+    .template-event-worship__retreat-title {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      color: #2db8dd;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+
+    .template-event-worship__retreat-sub {
+      display: block;
+      font-size: 15px;
+      font-weight: 500;
+      color: #94a3b8;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+
+    .template-event-worship__retreat-toggle {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin-top: 2px;
+      padding: 0;
+      color: #6b7c93;
+      background: #f0f4f8;
+      border: 1px solid #e5ecf4;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+      &:hover {
+        color: #2db8dd;
+        border-color: #2db8dd;
+        background: #eff8fb;
+      }
+    }
+
+    .template-event-worship__retreat-toggle-icon {
+      transition: transform 0.2s ease;
+    }
+
+    .template-event-worship__retreat-toggle-icon--open {
+      transform: rotate(180deg);
+    }
+
+    .template-event-worship__retreat-detail {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e5ecf4;
+      font-size: 15px;
+      font-weight: 500;
+      color: #475569;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: keep-all;
+    }
+  }
+
   .template-event-worship--empty .template-event-program__empty,
   .template-event-worship--loading .template-event-program__hint {
     margin: 0;

@@ -39,6 +39,13 @@ export interface TemplateEventNoticeProps {
   onOpenProgramTab?: () => void;
   /** EventCreate: 소개 탭 미저장 시 더보기 비활성 */
   programMoreDisabled?: boolean;
+  /** 수련회 등 — 소개 탭 행사 안내와 프로그램 사이 안내 문구 */
+  applyNote?: string;
+  applyNoteLabel?: string;
+  /** 편집 미리보기: 내용 없어도 안내 섹션 표시 */
+  alwaysShowApplyNote?: boolean;
+  /** 수련회 미리보기: 행사 → 수련회, 행사 안내 → 개요 */
+  variant?: 'event' | 'retreat';
 }
 
 export default function TemplateNotice({
@@ -47,13 +54,24 @@ export default function TemplateNotice({
   program = [],
   onOpenProgramTab,
   programMoreDisabled = false,
+  applyNote,
+  applyNoteLabel = '수련회 안내',
+  alwaysShowApplyNote = false,
+  variant = 'event',
 }: TemplateEventNoticeProps) {
   const programRows = (program || []).filter(programRowHasPreview);
+  const applyNoteText = (applyNote || '').trim();
+  const showApplyNoteSection = alwaysShowApplyNote || !!applyNoteText;
+  const isRetreat = variant === 'retreat';
+  const welcomeSub = isRetreat ? '수련회' : '행사';
+  const eventNameLabel = isRetreat ? '수련회명' : '행사명';
+  const infoSectionLabel = isRetreat ? '개요' : '행사 안내';
+  const footerFallback = isRetreat ? '수련회' : '행사';
   return (
     <>
       <div className="notice-create__preview-welcome" id="event-embed-info">
-        <p className="notice-create__preview-welcome-sub">행사</p>
-        <h2 className="notice-create__preview-welcome-title">{postData?.eventName || '행사명'}</h2>
+        <p className="notice-create__preview-welcome-sub">{welcomeSub}</p>
+        <h2 className="notice-create__preview-welcome-title">{postData?.eventName || eventNameLabel}</h2>
         <p className="notice-create__preview-welcome-desc">
           {postData?.date && postData?.place ? (
             <>
@@ -72,11 +90,11 @@ export default function TemplateNotice({
       <div className="notice-create__preview-section-panel">
         <div className="notice-create__preview-section-label">
           <span className="notice-create__preview-chip-icon">📋</span>
-          행사 안내
+          {infoSectionLabel}
         </div>
         <div className="notice-create__preview-worship-list notice-create__preview-worship-list--event-info">
           {[
-            { label: '행사명', value: postData?.eventName },
+            { label: eventNameLabel, value: postData?.eventName },
             { label: '일시', value: postData?.date },
             { label: '장소', value: postData?.place },
             { label: '주소', value: postData?.address },
@@ -93,6 +111,20 @@ export default function TemplateNotice({
             ))}
         </div>
       </div>
+
+      {showApplyNoteSection ? (
+        <div className="notice-create__preview-section-panel">
+          <div className="notice-create__preview-section-label">
+            <span className="notice-create__preview-chip-icon">✍️</span>
+            {applyNoteLabel}
+          </div>
+          {applyNoteText ? (
+            <p className="notice-create__preview-section-note">{applyNoteText}</p>
+          ) : (
+            <p className="notice-create__preview-worship-empty">수련회 안내를 입력해 주세요</p>
+          )}
+        </div>
+      ) : null}
 
       <div className="notice-create__preview-section-panel notice-create__preview-section-panel--event-program">
         <div className="notice-create__preview-section-label">
@@ -188,7 +220,7 @@ export default function TemplateNotice({
             {postData?.quiry && `${postData.quiry}`}
             {postData?.quiry && postData?.address && ' | '}
             {postData?.address}
-            <br />© {new Date().getFullYear()} {postData?.eventName || '행사'} All Rights Reserved.
+            <br />© {new Date().getFullYear()} {postData?.eventName || footerFallback} All Rights Reserved.
           </p>
         </div>
       ) : null}

@@ -26,6 +26,7 @@ export type RetreatInfoForm = {
   visibleTabs: string;
   applyNote: string;
   eventGreeting: string;
+  imageMain: string;
 };
 
 export type RetreatProgramRow = {
@@ -47,6 +48,34 @@ export type RetreatRequestRow = {
   userGroup: string | null;
   note: string | null;
   created_at: string;
+};
+
+export type { RetreatCustomQuestion, RetreatCustomAnswers } from './retreatRequestForm';
+
+export type RetreatAnswerRow = {
+  id: number;
+  bookletId: string;
+  userName: string;
+  userPhone: string;
+  userGroup: string | null;
+  note: string | null;
+  customAnswers: Record<string, string | string[]>;
+  created_at: string;
+};
+
+export type RetreatAnswersResponse = {
+  customQuestions: import('./retreatRequestForm').RetreatCustomQuestion[];
+  list: RetreatAnswerRow[];
+};
+
+export type RetreatPublicDetail = {
+  main: {
+    id: number;
+    orderTitle: string | null;
+    link: string | null;
+  };
+  info: (RetreatInfoForm & { id?: number; bookletId?: string }) | null;
+  programs: Array<RetreatProgramRow & { showDateTime?: boolean | number }>;
 };
 
 export type RetreatDetail = {

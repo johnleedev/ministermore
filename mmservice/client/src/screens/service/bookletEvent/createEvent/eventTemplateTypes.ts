@@ -138,11 +138,11 @@ export function parseEventBookletTypeId(v: unknown): EventBookletTypeId | null {
 }
 
 /** 순서 탭 표시 형식 — MySQL `eventOrder.orderStyle`(행마다 동일 값) */
-export type EventOrderStyleId = 'schedule' | 'worship' | 'concert';
+export type EventOrderStyleId = 'schedule' | 'worship' | 'concert' | 'retreat';
 
 export function parseEventOrderStyleId(v: unknown): EventOrderStyleId {
   const s = v == null ? '' : String(v).trim();
-  if (s === 'schedule' || s === 'worship' || s === 'concert') return s;
+  if (s === 'schedule' || s === 'worship' || s === 'concert' || s === 'retreat') return s;
   return 'worship';
 }
 

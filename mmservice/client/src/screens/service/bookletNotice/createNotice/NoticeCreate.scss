@@ -355,6 +355,16 @@ $site-header-height: 150px; // Header.tsx 영역 높이 (대략)
   margin: 0 0 16px 0;
 }
 
+.notice-create__preview-section-note {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
 // 소개 탭: 담임 사진(가로 화면의 ½) + 이름
 .notice-create__preview-pastor-snippet {
   display: flex;

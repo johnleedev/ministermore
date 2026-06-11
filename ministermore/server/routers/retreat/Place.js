@@ -76,6 +76,94 @@ router.post('/geocode', async (req, res) => {
   }
 });
 
+// 리스트/지도용 마커 좌표 일괄 조회 (DB address 기준 지오코딩)
+router.post('/getdataplacemarkers', async (req, res) => {
+  const { ids, region = 'all' } = req.body;
+
+  const numericIds = Array.isArray(ids)
+    ? ids.map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id) && id > 0)
+    : [];
+
+  let query = '';
+  let values = [];
+
+  if (numericIds.length > 0) {
+    const placeholders = numericIds.map(() => '?').join(', ');
+    query = `
+      SELECT id, placeName, address, location, sort, images
+      FROM dataplace
+      WHERE ${VISIBLE_WHERE}
+        AND id IN (${placeholders});
+    `;
+    values = numericIds;
+  } else {
+    const where = [VISIBLE_WHERE];
+    values = [];
+
+    if (region !== 'all') {
+      where.push('region = ?');
+      values.push(region);
+    }
+
+    query = `
+      SELECT id, placeName, address, location, sort, images
+      FROM dataplace
+      WHERE ${where.join(' AND ')}
+      ORDER BY id DESC;
+    `;
+  }
+
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      retreatdb.query(query, values, (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      });
+    });
+
+    const markers = [];
+    const concurrency = 4;
+
+    for (let i = 0; i < rows.length; i += concurrency) {
+      const chunk = rows.slice(i, i + concurrency);
+      const chunkMarkers = await Promise.all(
+        chunk.map(async (row) => {
+          const queries = [row.address, row.location, `${row.location || ''} ${row.placeName || ''}`.trim()]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter(Boolean);
+
+          let coords = null;
+          for (const queryText of queries) {
+            coords = await geocodeAddress(queryText);
+            if (coords) break;
+          }
+
+          if (!coords) return null;
+
+          return {
+            id: row.id,
+            lat: coords.latitude,
+            lng: coords.longitude,
+            title: row.placeName,
+            location: row.location,
+            sort: row.sort,
+            images: row.images,
+          };
+        }),
+      );
+
+      chunkMarkers.forEach((marker) => {
+        if (marker) markers.push(marker);
+      });
+    }
+
+    res.json({ success: true, markers });
+  } catch (error) {
+    console.error('마커 좌표 조회 오류:', error);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
 const VISIBLE_WHERE = `(isView = 'true' OR isView = '1' OR isView = 1)`;
 
 // 장소 데이터 리스트 보내기 (페이지네이션)
@@ -101,7 +189,7 @@ router.post('/getdataplace', async (req, res) => {
   const whereClause = `WHERE ${where.join(' AND ')}`;
   const countQuery = `SELECT COUNT(*) AS totalCount FROM dataplace ${whereClause};`;
   const dataQuery = `
-    SELECT id, isView, placeName, sort, size, region, location, images
+    SELECT id, isView, placeName, sort, size, region, location, address, images
     FROM dataplace ${whereClause}
     ORDER BY id DESC
     LIMIT ? OFFSET ?;
@@ -154,7 +242,7 @@ router.post('/getdataplacesearch', async (req, res)=>{
 
   const query =
    `SELECT
-    id, isView, placeName, sort, size, region, location, images
+    id, isView, placeName, sort, size, region, location, address, images
     FROM dataplace
     WHERE (placeName LIKE ?
     OR address LIKE ?)

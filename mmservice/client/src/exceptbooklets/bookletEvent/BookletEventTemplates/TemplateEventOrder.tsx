@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   parseEventOrderStyleId,
   type EventOrderStyleId,
@@ -53,8 +54,70 @@ function rowHasContent(row: EventOrderItem, style: EventOrderStyleId): boolean {
   );
 }
 
+function RetreatOrderRow({ row }: { row: EventOrderItem }) {
+  const [open, setOpen] = useState(false);
+  const time = row.charger?.trim() || '';
+  const title = row.title?.trim() || '';
+  const sub = row.subTitle?.trim() || '';
+  const detail = row.notice?.trim() || '';
+  const hasDetail = !!detail;
+
+  return (
+    <li className="template-event-worship__item">
+      <div
+        className={`template-event-worship__card template-event-worship__card--retreat${
+          open ? ' template-event-worship__card--retreat-open' : ''
+        }`}
+      >
+        <div className="template-event-worship__retreat-row">
+          <span className="template-event-worship__retreat-time">{time || '—'}</span>
+          <div className="template-event-worship__retreat-main">
+            {hasDetail ? (
+              <button
+                type="button"
+                className="template-event-worship__retreat-toggle"
+                aria-expanded={open}
+                aria-label={open ? '상세내용 접기' : '상세내용 펼치기'}
+                onClick={() => setOpen((prev) => !prev)}
+              >
+                <svg
+                  className={`template-event-worship__retreat-toggle-icon${
+                    open ? ' template-event-worship__retreat-toggle-icon--open' : ''
+                  }`}
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            ) : null}
+            <div className="template-event-worship__retreat-text">
+              {title ? (
+                <span className="template-event-worship__retreat-title">{title}</span>
+              ) : null}
+              {sub ? (
+                <span className="template-event-worship__retreat-sub">{sub}</span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        {hasDetail && open ? (
+          <div className="template-event-worship__retreat-detail">{detail}</div>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 function resolveOrderStyle(rows: EventOrderItem[] | undefined, prop?: EventOrderStyleId): EventOrderStyleId {
-  if (prop === 'schedule' || prop === 'worship' || prop === 'concert') return prop;
+  if (prop === 'schedule' || prop === 'worship' || prop === 'concert' || prop === 'retreat') return prop;
   const fromRow = rows?.find((r) => r.orderStyle != null && String(r.orderStyle).trim() !== '');
   return parseEventOrderStyleId(fromRow?.orderStyle);
 }
@@ -76,7 +139,9 @@ export default function TemplateEventOrder({ rows, loading = false, orderStyle: 
       ? 'template-event-worship--style-schedule'
       : orderStyle === 'concert'
         ? 'template-event-worship--style-concert'
-        : 'template-event-worship--style-worship';
+        : orderStyle === 'retreat'
+          ? 'template-event-worship--style-retreat'
+          : 'template-event-worship--style-worship';
 
   if (list.length === 0) {
     return (
@@ -108,6 +173,9 @@ export default function TemplateEventOrder({ rows, loading = false, orderStyle: 
                 </div>
               </li>
             );
+          }
+          if (orderStyle === 'retreat') {
+            return <RetreatOrderRow key={row.id ?? i} row={row} />;
           }
           if (orderStyle === 'concert') {
             const t = row.title?.trim() || '';

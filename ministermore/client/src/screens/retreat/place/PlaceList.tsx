@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import { MdOutlineKeyboardDoubleArrowDown } from 'react-icons/md';
 import MainURL from '../../../MainURL';
@@ -8,7 +8,13 @@ import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
+import PlaceListMap from './PlaceListMap';
+import { getFirstImage } from './placeImage';
+import type { PlaceListLocationState, PlaceListViewMode } from './placeNavigation';
+import { PLACE_LIST_PATH } from './placeNavigation';
 import './Place.scss';
+
+type ViewMode = PlaceListViewMode;
 
 interface PlaceItem {
   id: number;
@@ -17,6 +23,7 @@ interface PlaceItem {
   sort: string;
   region: string;
   location: string;
+  address?: string;
   size: string;
   images: string | string[] | null;
 }
@@ -32,32 +39,23 @@ const regionRoutes: Record<string, string> = {
 
 const PAGE_SIZE = 9;
 
-const getFirstImage = (images: PlaceItem['images']) => {
-  if (!images) return '';
-  if (Array.isArray(images)) return images[0] || '';
-
-  try {
-    const parsed = JSON.parse(images);
-    return Array.isArray(parsed) ? parsed[0] || '' : '';
-  } catch {
-    return images;
-  }
-};
-
 export default function PlaceList() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const placeReturn = (location.state as PlaceListLocationState | null)?.placeReturn;
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
+  const [viewMode, setViewMode] = useState<ViewMode>(placeReturn?.viewMode ?? 'list');
   const [list, setList] = useState<PlaceItem[]>([]);
-  const [selectRegion, setSelectRegion] = useState('all');
-  const [searchWord, setSearchWord] = useState('');
+  const [selectRegion, setSelectRegion] = useState(placeReturn?.region ?? 'all');
+  const [searchWord, setSearchWord] = useState(placeReturn?.searchWord ?? '');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isSearching, setIsSearching] = useState(placeReturn?.isSearching ?? false);
   const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
 
   const fetchPosts = async (page: number, append = false) => {
@@ -111,7 +109,57 @@ export default function PlaceList() {
     setTotalCount(0);
   };
 
+  const runSearch = async (word: string) => {
+    const trimmed = word.trim();
+    if (trimmed.length < 2) return;
+
+    setIsSearching(true);
+    setIsLoading(true);
+    setHasMore(false);
+    setCurrentPage(1);
+
+    try {
+      const res = await axios.post(`${MainURL}/retreat/getdataplacesearch`, {
+        region: selectRegion,
+        word: trimmed,
+      });
+
+      if (res.data.data) {
+        const visible = (res.data.data as PlaceItem[]).filter(
+          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true',
+        );
+        setList(visible);
+        setTotalCount(visible.length);
+        setIsResdataFalse(false);
+      } else {
+        setList([]);
+        setTotalCount(0);
+        setIsResdataFalse(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setList([]);
+      setIsResdataFalse(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
+    const restored = (location.state as PlaceListLocationState | null)?.placeReturn;
+
+    const restoredSearchWord = restored?.searchWord?.trim() ?? '';
+    if (restored?.isSearching && restoredSearchWord.length >= 2) {
+      void runSearch(restoredSearchWord);
+      navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+      return;
+    }
+
+    if (restored?.viewMode === 'map') {
+      navigate(PLACE_LIST_PATH, { replace: true, state: {} });
+      return;
+    }
+
     resetListState();
     fetchPosts(1);
   }, [selectRegion]);
@@ -182,36 +230,7 @@ export default function PlaceList() {
       return;
     }
 
-    setIsSearching(true);
-    setIsLoading(true);
-    setHasMore(false);
-    setCurrentPage(1);
-
-    try {
-      const res = await axios.post(`${MainURL}/retreat/getdataplacesearch`, {
-        region: selectRegion,
-        word: searchWord.trim(),
-      });
-
-      if (res.data.data) {
-        const visible = (res.data.data as PlaceItem[]).filter(
-          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true'
-        );
-        setList(visible);
-        setTotalCount(visible.length);
-        setIsResdataFalse(false);
-      } else {
-        setList([]);
-        setTotalCount(0);
-        setIsResdataFalse(true);
-      }
-    } catch (error) {
-      console.error(error);
-      setList([]);
-      setIsResdataFalse(true);
-    } finally {
-      setIsLoading(false);
-    }
+    await runSearch(searchWord);
   };
 
   const resetSearch = () => {
@@ -220,7 +239,7 @@ export default function PlaceList() {
     fetchPosts(1);
   };
 
-  const openPlaceDetail = (id: number) => {
+  const openPlaceDetail = useCallback((id: number) => {
     if (!isLogin) {
       alert('로그인이 필요합니다.');
       return;
@@ -232,8 +251,24 @@ export default function PlaceList() {
     }
 
     window.scrollTo(0, 0);
-    navigate(`/retreat/place/detail?id=${id}`);
-  };
+    navigate(`/retreat/place/detail?id=${id}`, {
+      state: {
+        placeReturn: {
+          viewMode,
+          region: selectRegion,
+          searchWord,
+          isSearching,
+        },
+      },
+    });
+  }, [isLogin, userData.grade, navigate, viewMode, selectRegion, searchWord, isSearching]);
+
+  const handleMapMarkerClick = useCallback(
+    (id: number) => {
+      openPlaceDetail(id);
+    },
+    [openPlaceDetail],
+  );
 
   const openPlaceRequest = () => {
     if (!isLogin) {
@@ -322,75 +357,114 @@ export default function PlaceList() {
             </div>
           </div>
 
-          <div className="place__region-tabs">
+          <div className="place__view-tabs">
             <button
               type="button"
-              className={selectRegion === 'all' ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
-              onClick={() => setSelectRegion('all')}
+              className={viewMode === 'list' ? 'place__view-tab place__view-tab--on' : 'place__view-tab'}
+              onClick={() => setViewMode('list')}
             >
-              전체
+              목록으로 보기
             </button>
-            {Object.keys(regionRoutes).map((region) => (
-              <button
-                type="button"
-                key={region}
-                className={selectRegion === region ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
-                onClick={() => setSelectRegion(region)}
-              >
-                {region}
-              </button>
-            ))}
+            <button
+              type="button"
+              className={viewMode === 'map' ? 'place__view-tab place__view-tab--on' : 'place__view-tab'}
+              onClick={() => setViewMode('map')}
+            >
+              지도에서 보기
+            </button>
           </div>
 
-          <div className="subpage__main__search">
-            <div className="subpage__main__search__box">
-              <div className="search__label">
-                <span>장소 검색</span>
-                <p>장소명 또는 주소를 입력해주세요.</p>
-              </div>
-              <div className="search__control">
-                <input
-                  className="inputdefault width"
-                  type="text"
-                  placeholder="예: 가평, 수련원, 교회명"
-                  value={searchWord}
-                  onChange={(e) => setSearchWord(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleWordSearching();
-                  }}
-                />
-                <button className="btn btn--primary" type="button" onClick={handleWordSearching}>
-                  검색
+          {viewMode === 'list' && (
+            <>
+              <div className="place__region-tabs">
+                <button
+                  type="button"
+                  className={selectRegion === 'all' ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
+                  onClick={() => setSelectRegion('all')}
+                >
+                  전체
                 </button>
-                <button className="btn btn--secondary" type="button" onClick={resetSearch}>
-                  초기화
-                </button>
+                {Object.keys(regionRoutes).map((region) => (
+                  <button
+                    type="button"
+                    key={region}
+                    className={selectRegion === region ? 'place__region-tab place__region-tab--on' : 'place__region-tab'}
+                    onClick={() => setSelectRegion(region)}
+                  >
+                    {region}
+                  </button>
+                ))}
               </div>
-            </div>
-          </div>
 
-          <div className="subpage__main__content">
-            <div className="main__content">
-              {isLoading ? (
-                <div className="list-loading">
-                  <Loading />
-                </div>
-              ) : hasResults && !isResdataFalse ? (
-                <div className="place__wrap--category" data-aos="fade-up">
-                  <div className="place__title__row">
-                    <div className="place__title">{listTitle}</div>
-                    <div className="place__link">총{totalCount}개</div>
+              <div className="subpage__main__search">
+                <div className="subpage__main__search__box">
+                  <div className="search__label">
+                    <span>장소 검색</span>
+                    <p>장소명 또는 주소를 입력해주세요.</p>
                   </div>
-                  <div className="place__wrap--item">{list.map(renderPlaceCard)}</div>
-                  {renderLoadMoreButton()}
+                  <div className="search__control">
+                    <input
+                      className="inputdefault width"
+                      type="text"
+                      placeholder="예: 가평, 수련원, 교회명"
+                      value={searchWord}
+                      onChange={(e) => setSearchWord(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleWordSearching();
+                      }}
+                    />
+                    <button className="btn btn--primary" type="button" onClick={handleWordSearching}>
+                      검색
+                    </button>
+                    <button className="btn btn--secondary" type="button" onClick={resetSearch}>
+                      초기화
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="place__wrap--category" data-aos="fade-up">
-                  <div className="place__title">검색 결과가 없습니다.</div>
+              </div>
+            </>
+          )}
+
+          {viewMode === 'map' ? (
+            isLoading ? (
+              <div className="place__map-section">
+                <div className="place__map-loading">
+                  <Loading />
+                  <p className="place__map-loading__text">수련회 목록과 지도를 불러오는 중입니다</p>
                 </div>
-              )}
+              </div>
+            ) : (
+              <PlaceListMap
+                region="all"
+                places={list}
+                isSearching={false}
+                onMarkerClick={handleMapMarkerClick}
+              />
+            )
+          ) : (
+            <div className="subpage__main__content">
+              <div className="main__content">
+                {isLoading ? (
+                  <div className="list-loading">
+                    <Loading />
+                  </div>
+                ) : hasResults && !isResdataFalse ? (
+                  <div className="place__wrap--category" data-aos="fade-up">
+                    <div className="place__title__row">
+                      <div className="place__title">{listTitle}</div>
+                      <div className="place__link">총{totalCount}개</div>
+                    </div>
+                    <div className="place__wrap--item">{list.map(renderPlaceCard)}</div>
+                    {renderLoadMoreButton()}
+                  </div>
+                ) : (
+                  <div className="place__wrap--category" data-aos="fade-up">
+                    <div className="place__title">검색 결과가 없습니다.</div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
       <ScrollToTopButton />

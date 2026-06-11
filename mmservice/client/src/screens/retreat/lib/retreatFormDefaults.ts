@@ -14,6 +14,7 @@ export const EMPTY_RETREAT_INFO: RetreatInfoForm = {
   visibleTabs: 'info,program,apply',
   applyNote: '',
   eventGreeting: '',
+  imageMain: '',
 };
 
 export function createEmptyProgramRow(order = 0): RetreatProgramRow {
@@ -66,5 +67,6 @@ export function mapInfoToForm(
     visibleTabs: info.visibleTabs ?? 'info,program,apply',
     applyNote: info.applyNote ?? '',
     eventGreeting: info.eventGreeting ?? '',
+    imageMain: info.imageMain ?? '',
   };
 }

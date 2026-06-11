@@ -38,6 +38,7 @@
     "react-dropzone": "^14.2.3",
     "react-icons": "^5.4.0",
     "react-kakao-maps-sdk": "^1.1.27",
+    "react-naver-maps": "^0.1.5",
     "react-router-dom": "^6.23.0",
     "react-scripts": "5.0.1",
     "react-select": "^5.8.0",
