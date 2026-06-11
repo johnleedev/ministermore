@@ -9,13 +9,21 @@ router.use(bodyParser.json({ limit: '50mb' })); // 제한 크기 증가
 router.use(bodyParser.urlencoded({ limit: '50mb', extended: true })); // 제한 크기 증가
 const multer  = require('multer')
 var fs = require("fs");
-const nodemailer = require('nodemailer');
-const { navermail } = require('../common/naver_mail');
+const { navermail, createNaverTransporter } = require('../common/naver_mail');
 const crypto = require('crypto');
 
-const EMAIL_ACTION_SECRET = process.env.EMAIL_ACTION_SECRET || navermail.NAVER_PASS;
+const EMAIL_ACTION_SECRET = process.env.EMAIL_ACTION_SECRET || 'ministermore-email-action-v1';
 const EMAIL_ACTION_BASE_URL = process.env.EMAIL_ACTION_BASE_URL || 'https://ministermore.co.kr/recruitwork';
 const EMAIL_ACTION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+
+const decodeEmailActionTokenString = (token) => {
+  const normalized = String(token).replace(/ /g, '+');
+  try {
+    return Buffer.from(normalized, 'base64url').toString('utf8');
+  } catch (error) {
+    return Buffer.from(normalized, 'base64').toString('utf8');
+  }
+};
 
 const createEmailActionToken = (action, payload) => {
   const data = {
@@ -26,20 +34,28 @@ const createEmailActionToken = (action, payload) => {
   const json = JSON.stringify(data);
   const signature = crypto.createHmac('sha256', EMAIL_ACTION_SECRET).update(json).digest('hex');
   const combined = `${json}::${signature}`;
-  return Buffer.from(combined).toString('base64');
+  return Buffer.from(combined, 'utf8').toString('base64url');
 };
 
 const verifyEmailActionToken = (token) => {
   try {
-    const decoded = Buffer.from(token, 'base64').toString('utf8');
-    const [json, signature] = decoded.split('::');
+    const decoded = decodeEmailActionTokenString(token);
+    const separatorIndex = decoded.indexOf('::');
+    if (separatorIndex === -1) {
+      return null;
+    }
+
+    const json = decoded.slice(0, separatorIndex);
+    const signature = decoded.slice(separatorIndex + 2);
     if (!json || !signature) {
       return null;
     }
+
     const expected = crypto.createHmac('sha256', EMAIL_ACTION_SECRET).update(json).digest('hex');
     if (expected !== signature) {
       return null;
     }
+
     const data = JSON.parse(json);
     if (!data || !data.action || !data.ts) {
       return null;
@@ -52,6 +68,57 @@ const verifyEmailActionToken = (token) => {
     console.error('Email action token verification failed:', error);
     return null;
   }
+};
+
+const extractEmailAddress = (item) => {
+  if (typeof item.email === 'string' && item.email.trim()) {
+    return item.email.trim();
+  }
+
+  if (!item.inquiry) {
+    return '';
+  }
+
+  try {
+    const inquiryCopy = typeof item.inquiry === 'string' ? JSON.parse(item.inquiry) : item.inquiry;
+    return typeof inquiryCopy?.email === 'string' ? inquiryCopy.email.trim() : '';
+  } catch (error) {
+    return '';
+  }
+};
+
+const deleteRecruitMinisterByEmail = async (email) => {
+  const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+  if (!normalizedEmail) {
+    return 0;
+  }
+
+  const deleteResult = await new Promise((resolve, reject) => {
+    recruitdb.query(
+      `DELETE FROM recruitMinister
+       WHERE JSON_UNQUOTE(JSON_EXTRACT(inquiry, '$.email')) = ?`,
+      [normalizedEmail],
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+  });
+
+  return deleteResult.affectedRows || 0;
+};
+
+const buildEmailActionLinks = (item, emailAddress) => {
+  const deleteToken = createEmailActionToken('delete', { email: emailAddress });
+  const denyToken = createEmailActionToken('deny', {
+    church: item.church || '',
+    email: emailAddress,
+  });
+
+  return {
+    deleteLink: `${EMAIL_ACTION_BASE_URL}/emailaction/delete?token=${encodeURIComponent(deleteToken)}`,
+    denyLink: `${EMAIL_ACTION_BASE_URL}/emailaction/deny?token=${encodeURIComponent(denyToken)}`,
+  };
 };
 
 const sendEmailActionResponse = (res, title, message) => {
@@ -83,22 +150,6 @@ const sendEmailActionResponse = (res, title, message) => {
 
 const escapeQuotes = (str) => str.replaceAll('è', '\è').replaceAll("'", "\\\'").replaceAll('"', '\\\"').replaceAll('\\n', '\\\\n');
 
-
-
-router.get('/getrecruitdataall', async (req, res) => {
-  const dataQuery = `
-    SELECT * FROM recruitMinister
-  `;
-
-  recruitdb.query(dataQuery, (error, result) => {
-    if (error) return res.status(500).send({ error: 'Database query failed' });
-    if (result.length > 0) {
-      res.send(result);
-    } else {
-      res.send(false);
-    }
-  });
-});
 
 
 
@@ -1164,9 +1215,14 @@ router.get('/getrecruitdataall', async (req, res) => {
       });
     });
 
-    res.send({ resultData: dataResult });
+    res.send({
+      success: true,
+      resultData: dataResult,
+      totalCount: dataResult.length,
+    });
   } catch (error) {
-    res.status(500).send({ error: 'Database query failed' });
+    console.error('getrecruitdataall error:', error);
+    res.status(500).send({ success: false, message: 'Database query failed' });
   }
 });
 
@@ -1397,6 +1453,128 @@ router.post('/checkemailsentstatus', async (req, res) => {
   }
 });
 
+const buildRecruitNotificationHtml = (item, deleteLink, denyLink, options = {}) => {
+  const testBanner = options.isTest
+    ? `<div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+         <p style="margin: 0; color: #856404; font-size: 15px; font-weight: bold;">[테스트 발송]</p>
+         <p style="margin: 8px 0 0; color: #856404; font-size: 14px;">실제 수신자: ${options.originalEmail || '-'}</p>
+       </div>`
+    : '';
+
+  return `
+    <html lang="kr">
+    <body>
+      <div style="max-width: 1000px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background-color: #4a90e2; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: #fff; margin: 0; font-size: 24px;">사역자모아</h1>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+          ${testBanner}
+          <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">안녕하세요! '사역자모아'입니다. </h2>
+          <h2 style="color: #333; font-size: 20px; margin-bottom: 30px;">저희 구인구직 게시판에 귀하의 교회 채용 공고가 등록되었습니다.</h2>
+
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">저희 '사역자모아'는 사역자들의 처우개선과 사역의 질 향상을 목적으로 만든 게시판 사이트입니다.</h5>
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">그 중 첫번째로, 사역자 구인구직에 관하여 도움이 되고자 합니다.</h5>
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">채용 정보는, 각 신대원&총회 홈페이지에 오픈되어 있는 채용 공고를 가져와서 등록하고 있습니다.</h5>
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">사전에 허락을 구하지 않은 점, 사과의 말씀을 드리며,</h5>
+          <h5 style="color: #CC3D3D; font-size: 17px; margin-bottom: 10px;">공고 삭제 또는 향후 등재 거부를 원하시면 아래 버튼을 통해 언제든 직접 요청하실 수 있습니다.</h5>
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 20px;">다른 문의사항 있으시면, 답장 부탁드립니다.</h5>
+
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">등록된 사역자 채용 공고는, 사정상 원본과 동일한 구체적인 내용으로 등록되지 않았으며,</h5>
+          <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">대략적인 내용으로 등록되어 있음을 양해 부탁드립니다.</h5>
+          <h5 style="color: #CC3D3D; font-size: 17px; margin-bottom: 20px;">더 정확하고 구체적인 내용으로 공고를 등록하길 원하시면, '공고 등록'을 이용해주시기 바랍니다.</h5>
+          
+          <h4 style="color: #333; font-size: 18px; margin-bottom: 10px;">등록된 공고 내용은 아래와 같습니다.</h4>
+          <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>교회명:</strong> ${item.church}</p>
+            <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>공고 제목:</strong> ${item.title}</p>
+            <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>등록일:</strong> ${item.saveDate}</p>
+            <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>출처:</strong> ${item.source}</p>
+          </div>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://ministermore.co.kr/" style="display: inline-block; background-color: #4a90e2; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">공고 보러가기</a>
+          </div>
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${deleteLink}" style="display: inline-block; background-color: #e74c3c; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold;">공고 삭제 요청</a>
+          </div>
+          <div style="text-align: center; margin-top: 10px;">
+            <a href="${denyLink}" style="display: inline-block; background-color: #2ecc71; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold;">앞으로도 공고가 등록되지 않기를 원합니다</a>
+          </div>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="font-size: 14px; color: #666; text-align: center;">본 메일은 사역자모아에서 발송되었습니다.</p>
+            <p style="font-size: 14px; color: #666; text-align: center;">문의사항이 있으시면 yeplat@naver.com으로 연락주세요.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+router.post('/sendtestrecruitemail', async (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const item = req.body.item || {
+    id: 0,
+    title: '테스트 채용 공고',
+    church: '테스트 교회',
+    source: '사역자모아',
+    saveDate: today,
+    email: 'sample@example.com',
+  };
+
+  let originalEmail = typeof item.email === 'string' ? item.email.trim() : '';
+
+  if (!originalEmail && item.inquiry) {
+    try {
+      const inquiryCopy = JSON.parse(item.inquiry);
+      originalEmail = inquiryCopy.email || '';
+    } catch (parseError) {
+      return res.status(400).json({ success: false, message: 'inquiry 파싱 실패' });
+    }
+  }
+  const emailRule = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+
+  if (!emailRule.test(originalEmail)) {
+    return res.status(400).json({ success: false, message: '유효하지 않은 이메일' });
+  }
+
+  let transporter;
+  try {
+    transporter = createNaverTransporter();
+  } catch (transporterError) {
+    return res.status(500).json({
+      success: false,
+      message: `이메일 서버 연결 실패: ${transporterError.message}`,
+    });
+  }
+
+  try {
+    const { deleteLink, denyLink } = buildEmailActionLinks(item, originalEmail);
+
+    await transporter.sendMail({
+      from: navermail.NAVER_FROM,
+      to: originalEmail,
+      subject: '[사역자모아]에 귀하의 교회 채용 공고가 등록되었습니다',
+      html: buildRecruitNotificationHtml(item, deleteLink, denyLink),
+    });
+
+    res.json({
+      success: true,
+      message: `테스트 메일이 ${originalEmail} 으로 발송되었습니다.`,
+      email: originalEmail,
+    });
+  } catch (error) {
+    console.error('테스트 이메일 발송 오류:', error);
+    const authHint = error.code === 'EAUTH'
+      ? ' 네이버 메일 SMTP 앱 비밀번호를 확인하고, 서버에 NAVER_SMTP_USER / NAVER_SMTP_PASS 환경변수를 설정해주세요.'
+      : '';
+    res.status(500).json({
+      success: false,
+      message: `테스트 이메일 발송 실패: ${error.message}${authHint}`,
+    });
+  }
+});
+
 // 일괄 이메일 발송
 router.post('/sendbulkrecruitemail', async function(req, res) {
   console.log('일괄 이메일 발송 요청 받음');
@@ -1411,15 +1589,7 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
 
   let transporter;
   try {
-    transporter = nodemailer.createTransport({
-      service: 'naver',
-      host: 'smtp.naver.com',
-      port: 465,
-      auth: {
-        user: navermail.NAVER_USER,
-        pass: navermail.NAVER_PASS,
-      },
-    });
+    transporter = createNaverTransporter();
     console.log('이메일 transporter 생성 완료');
   } catch (transporterError) {
     console.error('이메일 transporter 생성 실패:', transporterError);
@@ -1444,19 +1614,7 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
       let emailAddress = '';
       
       try {
-        // inquiry 파싱
-        let inquiryCopy;
-        try {
-          inquiryCopy = JSON.parse(item.inquiry);
-        } catch (parseError) {
-          failCount++;
-          results.push({ id: item.id, success: false, message: 'inquiry 파싱 실패' });
-          continue;
-        }
-
-        
-        const emailAddress = inquiryCopy.email;
-
+        const emailAddress = extractEmailAddress(item);
         const emailRule = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i
 
         if (!emailRule.test(emailAddress)) {
@@ -1465,13 +1623,10 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
           continue;
         }
 
-        // 토큰 생성
-        let deleteToken, denyToken, deleteLink, denyLink;
+        let deleteLink;
+        let denyLink;
         try {
-          deleteToken = createEmailActionToken('delete', { id: item.id, email: emailAddress });
-          denyToken = createEmailActionToken('deny', { church: item.church, email: emailAddress });
-          deleteLink = `${EMAIL_ACTION_BASE_URL}/emailaction/delete?token=${encodeURIComponent(deleteToken)}`;
-          denyLink = `${EMAIL_ACTION_BASE_URL}/emailaction/deny?token=${encodeURIComponent(denyToken)}`;
+          ({ deleteLink, denyLink } = buildEmailActionLinks(item, emailAddress));
         } catch (tokenError) {
           failCount++;
           results.push({ id: item.id, success: false, message: `토큰 생성 실패: ${tokenError.message}` });
@@ -1481,56 +1636,10 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
         // 이메일 발송
         try {
           await transporter.sendMail({
-            from: 'yeplat@naver.com',
+            from: navermail.NAVER_FROM,
             to: emailAddress,
             subject: '[사역자모아]에 귀하의 교회 채용 공고가 등록되었습니다',
-            html: `
-              <html lang="kr">
-              <body>
-                <div style="max-width: 1000px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-                  <div style="background-color: #4a90e2; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: #fff; margin: 0; font-size: 24px;">사역자모아</h1>
-                  </div>
-                  <div style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
-                    <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">안녕하세요! '사역자모아'입니다. </h2>
-                    <h2 style="color: #333; font-size: 20px; margin-bottom: 30px;">저희 구인구직 게시판에 귀하의 교회 채용 공고가 등록되었습니다.</h2>
-
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">저희 '사역자모아'는 사역자들의 처우개선과 사역의 질 향상을 목적으로 만든 게시판 사이트입니다.</h5>
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">그 중 첫번째로, 사역자 구인구직에 관하여 도움이 되고자 합니다.</h5>
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">채용 정보는, 각 신대원&총회 홈페이지에 오픈되어 있는 채용 공고를 가져와서 등록하고 있습니다.</h5>
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">사전에 허락을 구하지 않은 점, 사과의 말씀을 드리며,</h5>
-                    <h5 style="color: #CC3D3D; font-size: 17px; margin-bottom: 10px;">공고 삭제 또는 향후 등재 거부를 원하시면 아래 버튼을 통해 언제든 직접 요청하실 수 있습니다.</h5>
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 20px;">다른 문의사항 있으시면, 답장 부탁드립니다.</h5>
-
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">등록된 사역자 채용 공고는, 사정상 원본과 동일한 구체적인 내용으로 등록되지 않았으며,</h5>
-                    <h5 style="color: #333; font-size: 17px; margin-bottom: 5px;">대략적인 내용으로 등록되어 있음을 양해 부탁드립니다.</h5>
-                    <h5 style="color: #CC3D3D; font-size: 17px; margin-bottom: 20px;">더 정확하고 구체적인 내용으로 공고를 등록하길 원하시면, '공고 등록'을 이용해주시기 바랍니다.</h5>
-                    
-                    <h4 style="color: #333; font-size: 18px; margin-bottom: 10px;">등록된 공고 내용은 아래와 같습니다.</h4>
-                    <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                      <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>교회명:</strong> ${item.church}</p>
-                      <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>공고 제목:</strong> ${item.title}</p>
-                      <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>등록일:</strong> ${item.saveDate}</p>
-                      <p style="font-size: 16px; color: #333; margin: 10px 0;"><strong>출처:</strong> ${item.source}</p>
-                    </div>
-                    <div style="text-align: center; margin-top: 30px;">
-                      <a href="https://ministermore.co.kr/" style="display: inline-block; background-color: #4a90e2; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">공고 보러가기</a>
-                    </div>
-                    <div style="text-align: center; margin-top: 20px;">
-                      <a href="${deleteLink}" style="display: inline-block; background-color: #e74c3c; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold;">공고 삭제 요청</a>
-                    </div>
-                    <div style="text-align: center; margin-top: 10px;">
-                      <a href="${denyLink}" style="display: inline-block; background-color: #2ecc71; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold;">앞으로도 공고가 등록되지 않기를 원합니다</a>
-                    </div>
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-                      <p style="font-size: 14px; color: #666; text-align: center;">본 메일은 사역자모아에서 발송되었습니다.</p>
-                      <p style="font-size: 14px; color: #666; text-align: center;">문의사항이 있으시면 yeplat@naver.com으로 연락주세요.</p>
-                    </div>
-                  </div>
-                </div>
-              </body>
-              </html>
-            `
+            html: buildRecruitNotificationHtml(item, deleteLink, denyLink),
           });
           emailSent = true;
         } catch (sendError) {
@@ -1545,7 +1654,7 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
         if (emailSent) {
           try {
             await new Promise((resolve, reject) => {
-              recruitdb.query(`UPDATE recruitMinister SET isSentEmail = 'true' WHERE id = ?`, [item.id], (error, result) => {
+              recruitdb.query(`UPDATE emails SET isSentEmail = 'true' WHERE id = ?`, [item.id], (error, result) => {
                 if (error) return reject(error);
                 resolve(result);
               });
@@ -1637,23 +1746,22 @@ router.get('/emailaction/delete', async (req, res) => {
     return sendEmailActionResponse(res, '요청 실패', '유효하지 않은 토큰입니다.');
   }
 
-  const { id } = data.payload || {};
-  if (!id) {
+  const { email } = data.payload || {};
+  if (!email) {
     return sendEmailActionResponse(res, '요청 실패', '필수 정보가 누락되었습니다.');
   }
 
   try {
-    const deleteResult = await new Promise((resolve, reject) => {
-      recruitdb.query(`DELETE FROM recruitMinister WHERE id = ?`, [id], (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      });
-    });
+    const deletedCount = await deleteRecruitMinisterByEmail(email);
 
-    if (deleteResult.affectedRows > 0) {
-      return sendEmailActionResponse(res, '삭제 완료', '요청하신 공고가 성공적으로 삭제되었습니다.');
+    if (deletedCount > 0) {
+      return sendEmailActionResponse(
+        res,
+        '삭제 완료',
+        `해당 이메일(${email})로 등록된 공고 ${deletedCount}건이 삭제되었습니다.`
+      );
     }
-    return sendEmailActionResponse(res, '이미 처리되었습니다', '해당 공고는 이미 삭제되었거나 존재하지 않습니다.');
+    return sendEmailActionResponse(res, '이미 처리되었습니다', '해당 이메일로 등록된 공고가 없거나 이미 삭제되었습니다.');
   } catch (error) {
     console.error('Email action delete error:', error);
     return sendEmailActionResponse(res, '처리 실패', '요청을 처리하는 중 오류가 발생했습니다.');
@@ -1672,7 +1780,7 @@ router.get('/emailaction/deny', async (req, res) => {
   }
 
   const { church, email } = data.payload || {};
-  if (!church || !email) {
+  if (!email) {
     return sendEmailActionResponse(res, '요청 실패', '필수 정보가 누락되었습니다.');
   }
 
@@ -1681,7 +1789,7 @@ router.get('/emailaction/deny', async (req, res) => {
       recruitdb.query(
         `INSERT INTO saveDenyList (church, email) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE email = VALUES(email)`,
-        [church, email],
+        [church || '', email],
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
@@ -1693,6 +1801,104 @@ router.get('/emailaction/deny', async (req, res) => {
   } catch (error) {
     console.error('Email action deny error:', error);
     return sendEmailActionResponse(res, '처리 실패', '요청을 처리하는 중 오류가 발생했습니다.');
+  }
+});
+
+
+router.get('/getemailsall', async (req, res) => {
+  const dataQuery = `
+    SELECT * FROM emails
+    ORDER BY id DESC
+  `;
+
+  try {
+    const dataResult = await new Promise((resolve, reject) => {
+      recruitdb.query(dataQuery, (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      });
+    });
+
+    res.send({
+      success: true,
+      resultData: dataResult,
+      totalCount: dataResult.length,
+    });
+  } catch (error) {
+    console.error('getemailsall error:', error);
+    res.status(500).send({ success: false, message: 'Database query failed' });
+  }
+});
+
+
+router.post('/bulkinsertemails', async (req, res) => {
+  const { list } = req.body;
+
+  if (!Array.isArray(list)) {
+    return res.status(400).json({ success: false, message: 'list required' });
+  }
+
+  try {
+    let insertedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    for (const item of list) {
+      const church = item.church || '';
+      const email = typeof item.email === 'string' ? item.email.trim() : '';
+      const date = item.date || '';
+      const isSentEmail = item.isSentEmail || '';
+      const postId = item.post_id ?? item.postId ?? item.id ?? null;
+
+      if (!email) {
+        skippedCount++;
+        continue;
+      }
+
+      const duplicateResult = await new Promise((resolve, reject) => {
+        recruitdb.query(
+          'SELECT COUNT(*) AS count FROM emails WHERE email = ?',
+          [email],
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+      });
+
+      if (duplicateResult[0].count > 0) {
+        skippedCount++;
+        continue;
+      }
+
+      try {
+        await new Promise((resolve, reject) => {
+          recruitdb.query(
+            'INSERT INTO emails (church, email, date, isSentEmail, post_id) VALUES (?, ?, ?, ?, ?)',
+            [church, email, date, isSentEmail, postId],
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+        });
+        insertedCount++;
+      } catch (insertError) {
+        errors.push({ email, message: insertError.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `저장 완료: ${insertedCount}건 저장, ${skippedCount}건 건너뜀`,
+      insertedCount,
+      skippedCount,
+      totalCount: list.length,
+      errors,
+    });
+  } catch (error) {
+    console.error('bulkinsertemails error:', error);
+    res.status(500).json({ success: false, message: 'DB error' });
   }
 });
 

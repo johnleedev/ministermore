@@ -84,6 +84,31 @@ interface NewsBySource {
   [key: string]: NewsProps[];
 }
 
+interface PlaceItem {
+  id: number;
+  isView: string | boolean | number | null;
+  placeName: string;
+  sort: string;
+  region: string;
+  location: string;
+  size: string;
+  images: string | string[] | null;
+}
+
+const MAIN_RECRUIT_DISPLAY_COUNT = 9;
+const MAIN_PLACE_PAGE_SIZE = 6;
+
+const getFirstPlaceImage = (images: PlaceItem['images']) => {
+  if (!images) return '';
+  if (Array.isArray(images)) return images[0] || '';
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed[0] || '' : '';
+  } catch {
+    return images;
+  }
+};
+
 
 
 export default function Main(props:any) {
@@ -93,6 +118,8 @@ export default function Main(props:any) {
 	const userData = useRecoilValue(recoilUserData);
   const [recruitList, setRecruitList] = useState<RecruitProps[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [placeList, setPlaceList] = useState<PlaceItem[]>([]);
+  const [isPlaceLoading, setIsPlaceLoading] = useState<boolean>(true);
   const [newsBySource, setNewsBySource] = useState<NewsBySource>({});
   const [isNewsLoading, setIsNewsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'denomination' | 'school'>('denomination');
@@ -146,19 +173,54 @@ export default function Main(props:any) {
   
   
 
-  // 채용공고 최신 10개 가져오기
+  // 채용공고 최신 9개 가져오기
   const fetchRecruitList = async () => {
     try {
       setIsLoading(true);
       const res = await axios.get(`${MainURL}/recruitminister/getrecruitformain`);
       if (res.data.resultData) {
-        setRecruitList(res.data.resultData); // 최신 10개만
+        setRecruitList((res.data.resultData as RecruitProps[]).slice(0, MAIN_RECRUIT_DISPLAY_COUNT));
       }
     } catch (error) {
       console.log(error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchPlaceList = async () => {
+    try {
+      setIsPlaceLoading(true);
+      const res = await axios.post(`${MainURL}/retreat/getdataplace`, {
+        region: 'all',
+        sort: 'all',
+        page: 1,
+        pageSize: MAIN_PLACE_PAGE_SIZE,
+      });
+      if (res.data.data) {
+        setPlaceList(res.data.data as PlaceItem[]);
+      } else {
+        setPlaceList([]);
+      }
+    } catch (error) {
+      console.log(error);
+      setPlaceList([]);
+    } finally {
+      setIsPlaceLoading(false);
+    }
+  };
+
+  const openPlaceDetail = (id: number) => {
+    if (!isLogin) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (userData.grade === '일반회원') {
+      alert('등업이 필요합니다. 등업신청 게시판에서 신청해주세요');
+      return;
+    }
+    window.scrollTo(0, 0);
+    navigate(`/retreat/place/detail?id=${id}`);
   };
 
   // 글자수 제한
@@ -258,6 +320,7 @@ export default function Main(props:any) {
 
   useEffect(()=>{
     fetchRecruitList();
+    fetchPlaceList();
     fetchNews();
   }, []);
 
@@ -347,7 +410,7 @@ export default function Main(props:any) {
           </div>
           
           <div className="main__recruit__section">
-            <div className="main__recruit__list">
+            <div className="main__recruit__list main__card__grid">
               {isLoading ? (
                 <div className="main__recruit__loading">
                   <p>채용공고를 불러오는 중...</p>
@@ -357,15 +420,14 @@ export default function Main(props:any) {
                   <p>현재 등록된 채용공고가 없습니다.</p>
                 </div>
               ) : (
-                recruitList.map((item, index) => {
+                recruitList.slice(0, MAIN_RECRUIT_DISPLAY_COUNT).map((item) => {
                   const part = item.part ? JSON.parse(item.part) : [{sort: '전임', content: ''}];
                   const pay = item.pay ? JSON.parse(item.pay) : [{sort: '전임', paySort: 'select', selectCost: '', inputCost: ''}];
-                  const applytime = item.applytime ? JSON.parse(item.applytime) : {startDay: '', endDay: '', daySort: ''};
 
                   return (
-                    <div
-                      key={index} 
-                      className="main__recruit__item"
+                    <article
+                      key={item.id}
+                      className="main__recruit__item main__card"
                       onClick={() => {
                         countUp('recruitview');
                         navigate(`/recruit/recruitministerdetail?id=${item.id}`);
@@ -402,7 +464,7 @@ export default function Main(props:any) {
                               <span>{pay[0].inputCost}</span>
                             ) : (
                               <span>
-                                {pay[0].selectCost === '' && pay[0].inputCost !== '' 
+                                {pay[0].selectCost === '' && pay[0].inputCost !== ''
                                   ? `${pay[0].sort}: ${pay[0].inputCost}`
                                   : `${pay[0].sort}: ${pay[0].paySort} ${pay[0].selectCost}`
                                 }
@@ -411,13 +473,68 @@ export default function Main(props:any) {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </article>
                   );
                 })
               )}
             </div>
           </div>
-     
+
+          <div className="main__recruit__header main__place__header">
+            <h2>수련회 장소</h2>
+            <button
+              className="main__recruit__more"
+              onClick={() => {
+                window.scrollTo(0, 0);
+                navigate('/retreat/place');
+              }}
+            >
+              더보기 <FaArrowRight />
+            </button>
+          </div>
+
+          <div className="main__place__section">
+            <div className="main__place__list main__card__grid">
+              {isPlaceLoading ? (
+                <div className="main__place__loading">
+                  <p>수련회 장소를 불러오는 중...</p>
+                </div>
+              ) : placeList.length === 0 ? (
+                <div className="main__place__empty">
+                  <p>현재 등록된 수련회 장소가 없습니다.</p>
+                </div>
+              ) : (
+                placeList.map((place) => {
+                  const firstImage = getFirstPlaceImage(place.images);
+                  return (
+                    <article
+                      key={place.id}
+                      className="main__place__item main__card"
+                      onClick={() => openPlaceDetail(place.id)}
+                    >
+                      <div className="main__place__img">
+                        <span className="main__place__location">{place.location}</span>
+                        {firstImage ? (
+                          <img
+                            src={`${MainURL}/images/retreat/placeimage/${firstImage}`}
+                            alt={place.placeName}
+                          />
+                        ) : (
+                          <div className="main__place__noimg">등록된 사진이 없습니다.</div>
+                        )}
+                      </div>
+                      <div className="main__place__body">
+                        <h3 className="main__place__name">{place.placeName}</h3>
+                        <p className="main__place__meta">종류: {place.sort}</p>
+                        <p className="main__place__meta">규모: {place.size}</p>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           <a className="kakaoBtnBox"
             href='http://pf.kakao.com/_Xzwrn' target='_blank'
           >
