@@ -886,6 +886,29 @@
     }
   }
 
+  &__apply-default-notice {
+    margin: 0 0 12px;
+    padding: 16px 18px;
+    border: 1.5px solid #93c5fd;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+  }
+
+  &__apply-default-notice__text {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.55;
+    color: #1e3a8a;
+    letter-spacing: -0.01em;
+
+    strong {
+      font-weight: 800;
+      color: #1d4ed8;
+    }
+  }
+
   &__action-bar {
     position: absolute;
     bottom: 0;
@@ -1167,6 +1190,18 @@
           background: var(--navy-pale);
         }
       }
+    }
+  }
+
+  &--standalone-preview {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    background: #fff;
+
+    .retreat-edit__preview-inner {
+      zoom: 1;
     }
   }
 

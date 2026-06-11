@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import PaymentAPIURL from '../service/payment/paymentApi';
+import MainURL from '../../MainURL';
+import CopyTextButton from '../../components/CopyTextButton';
 import Loading from '../../components/Loading';
 
 export type PaymentListItem = {
@@ -9,10 +10,14 @@ export type PaymentListItem = {
   serviceType: string;
   userAccount: string | null;
   churchName: string | null;
+  passwd: string | null;
+  ownerpw: string | null;
   ordererName: string | null;
   ordererPhone: string | null;
   orderTitle: string | null;
   orderName: string | null;
+  supplyAmount?: number | null;
+  vatAmount?: number | null;
   totalAmount: number | null;
   portonePaymentId: string | null;
   portoneTxId?: string | null;
@@ -62,8 +67,16 @@ function paymentKindLabel(kind: string) {
   return PAYMENT_KIND_LABELS[kind] || kind || '-';
 }
 
+function paymentStatusLabel(status: string | null | undefined) {
+  const s = String(status || '').trim().toUpperCase();
+  if (s === 'PAID') return '결제완료';
+  if (s === 'PENDING') return '결제대기';
+  if (s === 'FAILED') return '결제실패';
+  return status || '-';
+}
+
 type Props = {
-  userAccount: string | undefined;
+  userAccount: string;
 };
 
 export default function ServicePaymentList({ userAccount }: Props) {
@@ -71,50 +84,37 @@ export default function ServicePaymentList({ userAccount }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!userAccount) {
+  const fetchPayments = useCallback(async () => {
+    const account = userAccount.trim();
+    if (!account) {
       setRows([]);
       return;
     }
 
-    let cancelled = false;
-    const fetchPayments = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await axios.get(`${PaymentAPIURL}/payment/my/list`, {
-          params: { userAccount },
-        });
-        if (cancelled) return;
-        if (res.data?.ok && Array.isArray(res.data.rows)) {
-          setRows(res.data.rows);
-        } else {
-          setRows([]);
-          setError(res.data?.message || '결제 목록을 불러오지 못했습니다.');
-        }
-      } catch (e) {
-        if (cancelled) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`${MainURL}/payment/my/list`, {
+        params: { userAccount: account, limit: 100 },
+      });
+      if (res.data?.ok && Array.isArray(res.data.rows)) {
+        setRows(res.data.rows);
+      } else {
         setRows([]);
-        setError('결제 목록을 불러오지 못했습니다.');
-        console.error('결제 목록 조회 실패:', e);
-      } finally {
-        if (!cancelled) setLoading(false);
+        setError(res.data?.message || '결제 목록을 불러오지 못했습니다.');
       }
-    };
-
-    fetchPayments();
-    return () => {
-      cancelled = true;
-    };
+    } catch (e) {
+      setRows([]);
+      setError('결제 목록을 불러오지 못했습니다.');
+      console.error('결제 목록 조회 실패:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [userAccount]);
 
-  if (!userAccount) {
-    return (
-      <div className="noPosts">
-        <p>로그인 후 결제 내역을 확인할 수 있습니다.</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    void fetchPayments();
+  }, [fetchPayments]);
 
   if (loading) {
     return (
@@ -128,6 +128,9 @@ export default function ServicePaymentList({ userAccount }: Props) {
     return (
       <div className="noPosts">
         <p>{error}</p>
+        <button type="button" className="service-manage__retry-btn" onClick={() => void fetchPayments()}>
+          다시 시도
+        </button>
       </div>
     );
   }
@@ -141,7 +144,7 @@ export default function ServicePaymentList({ userAccount }: Props) {
   }
 
   return (
-    <div className="postingList">
+    <div className="postingList service-payment-list">
       {rows.map((item) => {
         const displayTitle =
           item.orderTitle?.trim() ||
@@ -174,9 +177,21 @@ export default function ServicePaymentList({ userAccount }: Props) {
                 <span className="infoLabel">결제금액:</span>
                 <span className="infoValue">{formatAmount(item.totalAmount)}</span>
               </div>
+              {item.supplyAmount != null ? (
+                <div className="infoRow">
+                  <span className="infoLabel">공급가액:</span>
+                  <span className="infoValue">{formatAmount(item.supplyAmount)}</span>
+                </div>
+              ) : null}
+              {item.vatAmount != null ? (
+                <div className="infoRow">
+                  <span className="infoLabel">부가세:</span>
+                  <span className="infoValue">{formatAmount(item.vatAmount)}</span>
+                </div>
+              ) : null}
               <div className="infoRow">
                 <span className="infoLabel">결제상태:</span>
-                <span className="infoValue">{item.paymentStatus || '-'}</span>
+                <span className="infoValue">{paymentStatusLabel(item.paymentStatus)}</span>
               </div>
               {item.paymentKind === 'billing' && item.plan ? (
                 <div className="infoRow">
@@ -190,10 +205,37 @@ export default function ServicePaymentList({ userAccount }: Props) {
                   <span className="infoValue">{item.churchName}</span>
                 </div>
               ) : null}
+              {item.passwd ? (
+                <div className="infoRow service-payment-list__copy-row">
+                  <span className="infoLabel">비밀번호:</span>
+                  <span className="infoValue service-payment-list__copy-value">
+                    <span className="service-payment-list__mono">{item.passwd}</span>
+                    <CopyTextButton text={item.passwd} />
+                  </span>
+                </div>
+              ) : null}
+              {item.ownerpw ? (
+                <div className="infoRow service-payment-list__copy-row">
+                  <span className="infoLabel">관리자 비밀번호:</span>
+                  <span className="infoValue service-payment-list__copy-value">
+                    <span className="service-payment-list__mono">{item.ownerpw}</span>
+                    <CopyTextButton text={item.ownerpw} />
+                  </span>
+                </div>
+              ) : null}
+              {item.ownerpw ? (
+                <p className="service-payment-list__ownerpw-warn">관리자 비번은 공유하지 마세요.</p>
+              ) : null}
               {item.ordererName ? (
                 <div className="infoRow">
                   <span className="infoLabel">주문자:</span>
                   <span className="infoValue">{item.ordererName}</span>
+                </div>
+              ) : null}
+              {item.ordererPhone ? (
+                <div className="infoRow">
+                  <span className="infoLabel">연락처:</span>
+                  <span className="infoValue">{item.ordererPhone}</span>
                 </div>
               ) : null}
               {item.portonePaymentId ? (

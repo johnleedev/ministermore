@@ -1,0 +1,125 @@
+/* RetreatEdit 미리보기 + BookletRetreat 공개 전단지 공용 스타일 */
+.retreat-edit {
+  --navy: #0a2a5e;
+  --navy-700: #103877;
+  --navy-pale: #e8eef8;
+  --bg-2: #f0f4f8;
+  --border: #e5ecf4;
+  --text: #0a2a5e;
+  --muted: #6b7c93;
+  --hover-bg: #eef2f8;
+
+  &__preview-inner {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__preview-hero {
+    width: 100%;
+    position: relative;
+    height: 700px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+    &--no-image {
+      background: var(--bg-2);
+    }
+
+    .main-hero-carousel__dots {
+      bottom: 72px;
+    }
+
+    .main-hero-carousel__view-full {
+      font-size: 13px;
+      padding: 8px 16px;
+    }
+  }
+
+  &__preview-hero-blank {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  &__preview-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__preview-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+
+    &.on {
+      color: var(--navy);
+      border-bottom-color: var(--navy);
+    }
+  }
+
+  &__preview-body {
+    font-size: 12px;
+
+    .notice-create__preview-body,
+    .event-create__preview-program-tab,
+    .event-create__preview-worship,
+    .event-create__preview-apply {
+      min-height: auto;
+    }
+
+    .template-event-worship--style-retreat {
+      .template-event-worship__retreat-title {
+        color: var(--navy);
+      }
+
+      .template-event-worship__retreat-toggle {
+        &:hover {
+          color: var(--navy);
+          border-color: var(--navy);
+          background: var(--navy-pale);
+        }
+      }
+    }
+  }
+
+  &__preview-order-day {
+    margin-bottom: 20px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__preview-order-date {
+    margin: 0 0 12px;
+    padding: 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+}

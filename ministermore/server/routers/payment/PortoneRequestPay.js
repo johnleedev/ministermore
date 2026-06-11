@@ -22,6 +22,7 @@ const {
 const { PORTONE_API_SECRET, PORTONE_STORE_ID } = require('./portonedata');
 const { safeInsertOneTimePayment } = require('./paymentRecordService');
 const { notifyMmserviceSubscription } = require('./mmserviceWebhook');
+const { notifyMmserviceRetreatProvision } = require('./mmserviceRetreatProvision');
 
 /** `totalAmount` 미전달 시에만 사용 (구 클라이언트 호환). 가능하면 요청 본문 `totalAmount`로 검증하세요. */
 const FALLBACK_EXPECTED_AMOUNT_KRW = parseInt(
@@ -108,6 +109,9 @@ function ensureEventMainPortoneColumns() {
           ['portonePaidAmount', 'INT NULL'],
           ['portoneOrderName', 'VARCHAR(255) NULL'],
           ['portonePaidAt', 'VARCHAR(64) NULL'],
+          ['churchName', 'VARCHAR(120) NULL'],
+          ['passwd', 'VARCHAR(32) NULL'],
+          ['ownerpw', 'VARCHAR(64) NULL'],
         ];
         let i = 0;
         function next() {
@@ -142,6 +146,9 @@ function insertEventMainWithPayment(bookletdbConn, body) {
     portonePaidAmount,
     portoneOrderName,
     portonePaidAt,
+    churchName,
+    passwd,
+    ownerpw,
   } = body;
 
   const bookletTypeStr = normalizeBookletTypeForBilling(bookletType);
@@ -171,8 +178,9 @@ function insertEventMainWithPayment(bookletdbConn, body) {
       bookletdbConn.query(
         `INSERT INTO eventMain (
           userAccount, ordererName, ordererPhone, orderTitle, eventBookletType,
-          portonePaymentId, portoneTxId, portonePaidAmount, portoneOrderName, portonePaidAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          portonePaymentId, portoneTxId, portonePaidAmount, portoneOrderName, portonePaidAt,
+          churchName, passwd, ownerpw
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userAccount || '',
           ordererName || '',
@@ -184,6 +192,9 @@ function insertEventMainWithPayment(bookletdbConn, body) {
           typeof portonePaidAmount === 'number' ? portonePaidAmount : null,
           portoneOrderName != null ? String(portoneOrderName).slice(0, 255) : null,
           portonePaidAt != null ? String(portonePaidAt).slice(0, 64) : null,
+          churchName != null ? String(churchName).trim().slice(0, 120) : null,
+          passwd != null ? String(passwd).trim().slice(0, 32) : null,
+          ownerpw != null ? String(ownerpw).trim().slice(0, 64) : null,
         ],
         (err, result) => {
           if (err) return reject(err);
@@ -213,6 +224,9 @@ router.post('/event/complete-browser', async (req, res) => {
     bookletType,
     visibleTabs,
     totalAmount: totalAmountBody,
+    churchName,
+    passwd,
+    ownerpw,
   } = req.body ?? {};
 
   const pid = paymentId != null ? String(paymentId).trim() : '';
@@ -310,6 +324,18 @@ router.post('/event/complete-browser', async (req, res) => {
     const ordererNameNorm = ordererName != null ? String(ordererName).trim() : '';
     const ordererPhoneNorm = ordererPhone != null ? String(ordererPhone).replace(/\s/g, '') : '';
     const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
+    const churchNameNorm = churchName != null ? String(churchName).trim() : '';
+    const passwdNorm = passwd != null ? String(passwd).trim() : '';
+    const ownerpwNorm = ownerpw != null ? String(ownerpw).trim() : '';
+
+    if (bookletType === 'retreat') {
+      if (!churchNameNorm || !passwdNorm || !ownerpwNorm) {
+        return res.status(400).json({
+          ok: false,
+          message: '교회 이름, 비밀번호, 관리자 비밀번호가 필요합니다.',
+        });
+      }
+    }
 
     let eventMainId;
     try {
@@ -325,6 +351,9 @@ router.post('/event/complete-browser', async (req, res) => {
         portonePaidAmount: portoneTotal,
         portoneOrderName: orderNameResolved,
         portonePaidAt: paidAtResolved,
+        churchName: churchNameNorm,
+        passwd: passwdNorm,
+        ownerpw: ownerpwNorm,
       });
     } catch (dbErr) {
       if (dbErr && dbErr.code === 'DUPLICATE_PORTONE' && dbErr.existingId != null) {
@@ -348,13 +377,21 @@ router.post('/event/complete-browser', async (req, res) => {
 
     const eventCustomData = { bookletType, visibleTabs: visibleTabsJson };
 
+    const supplyAmount = Math.round(portoneTotal / 1.1);
+    const vatAmount = portoneTotal - supplyAmount;
+
     await safeInsertOneTimePayment({
       serviceType: recordServiceType,
       userAccount: userAccountNorm,
+      churchName: churchNameNorm || null,
+      passwd: bookletType === 'retreat' ? passwdNorm || null : null,
+      ownerpw: bookletType === 'retreat' ? ownerpwNorm || null : null,
       ordererName: ordererNameNorm,
       ordererPhone: ordererPhoneNorm,
       orderTitle: orderTitleNorm,
       orderName: orderNameResolved,
+      supplyAmount,
+      vatAmount,
       totalAmount: portoneTotal,
       portonePaymentId: pid,
       portoneTxId: txId != null ? String(txId) : null,
@@ -363,6 +400,7 @@ router.post('/event/complete-browser', async (req, res) => {
       resourceType: 'eventMain',
       resourceId: String(eventMainId),
       customData: eventCustomData,
+      memo: `eventMainId=${eventMainId}`,
     });
 
     await notifyMmserviceSubscription({
@@ -370,6 +408,20 @@ router.post('/event/complete-browser', async (req, res) => {
       subscriptionServiceType: req.body?.serviceType ?? req.body?.subscriptionServiceType,
       customData: eventCustomData,
     });
+
+    if (bookletType === 'retreat') {
+      await notifyMmserviceRetreatProvision({
+        eventMainId,
+        userAccount: userAccountNorm,
+        orderTitle: orderTitleNorm,
+        ordererName: ordererNameNorm,
+        ordererPhone: ordererPhoneNorm,
+        churchName: churchNameNorm,
+        passwd: passwdNorm,
+        ownerpw: ownerpwNorm,
+        visibleTabs: visibleTabsJson,
+      });
+    }
 
     return res.json({
       ok: true,

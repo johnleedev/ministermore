@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import MainURL from '../../MainURL';
-import ServiceAPIURL from '../../ServiceAPIURL';
 import { serviceFieldLabelKo } from './serviceAdminFieldLabels';
 import './ServiceApplyList.scss';
 
 type ServiceApplyRow = {
   id: number;
+  paymentKind?: 'billing' | 'oneTime';
   serviceType: string;
   orderName: string | null;
   userAccount: string | null;
@@ -29,6 +29,7 @@ const FILTER_TABS: { value: string; label: string }[] = [
   { value: '', label: '전체' },
   { value: 'bookletNotice', label: '모바일소개전단지' },
   { value: 'bookletEvent', label: '모바일행사전단지' },
+  { value: 'bookletRetreat', label: '수련회전단지' },
   { value: 'homeinapp', label: '홈인앱' },
   { value: 'churchapp', label: '교회앱' },
 ];
@@ -100,7 +101,7 @@ export default function ServiceApplyList() {
     setLoading(true);
     setRows([]);
     try {
-      const res = await axios.get<{ ok: boolean; rows?: ServiceApplyRow[] }>(`${ServiceAPIURL}/serviceapply/list`, {
+      const res = await axios.get<{ ok: boolean; rows?: ServiceApplyRow[] }>(`${MainURL}/serviceapply/list`, {
         params: {
           limit: 200,
           serviceType: serviceType || undefined,
@@ -120,8 +121,9 @@ export default function ServiceApplyList() {
     if (!window.confirm(`이 행을 영구 삭제하시겠습니까?\n(${label})`)) return;
     setDeletingId(row.id);
     try {
-      const res = await axios.post<{ ok: boolean; message?: string }>(`${ServiceAPIURL}/serviceapply/delete`, {
+      const res = await axios.post<{ ok: boolean; message?: string }>(`${MainURL}/serviceapply/delete`, {
         id: row.id,
+        paymentKind: row.paymentKind || 'oneTime',
       });
       if (!res.data?.ok) {
         alert(res.data?.message || '삭제에 실패했습니다.');
@@ -155,7 +157,7 @@ export default function ServiceApplyList() {
   return (
     <div className="service-detail-overview service-detail-overview--apply-list">
       <p className="service-detail-overview__hint">
-        서비스 결제·신청(serviceApply) 내역입니다. 행을 클릭하면 금액·결제 정보·메모·삭제 등 상세를 모달에서 확인할 수
+        서비스 결제·신청(oneTimePayment / billingPayment) 내역입니다. 행을 클릭하면 금액·결제 정보·메모·삭제 등 상세를 모달에서 확인할 수
         있습니다. (최대 200건)
       </p>
 

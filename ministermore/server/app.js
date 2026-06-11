@@ -88,9 +88,11 @@ app.use('/adminuser', AdminUserRouter);
 const PortoneBillingRouter = require('./routers/payment/PortoneBilling');
 const PortoneRequestPayRouter = require('./routers/payment/PortoneRequestPay');
 const PaymentRecordRouter = require('./routers/payment/PaymentRecord');
+const ServiceApplyRouter = require('./routers/service/serviceapply');
 app.use('/paymentbilling', PortoneBillingRouter);
 app.use('/paymentrequestpay', PortoneRequestPayRouter);
 app.use('/payment', PaymentRecordRouter);
+app.use('/serviceapply', ServiceApplyRouter);
 
 app.use(express.static('build'));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

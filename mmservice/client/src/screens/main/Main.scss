@@ -249,6 +249,12 @@
     box-shadow: var(--shadow-sm);
   }
 
+  &__hero-eyebrow--login-required {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fcd34d;
+  }
+
   &__hero-inner h1 {
     font-size: 36px;
     font-weight: 800;
@@ -271,6 +277,90 @@
 
     &--error {
       color: #c62828;
+    }
+  }
+
+  &__login {
+    max-width: 520px;
+    margin: 32px auto 0;
+    padding: 24px;
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+  }
+
+  &__login-lead {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  &__login-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+
+      &:focus {
+        outline: none;
+        border-color: var(--blue-light);
+        box-shadow: 0 0 0 3px rgba(46, 91, 186, 0.12);
+      }
+    }
+  }
+
+  &__login-error {
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #c62828;
+    text-align: center;
+  }
+
+  /* .service-admin button { background: none } 보다 우선 (로그인 버튼 항상 표시) */
+  &__login &__login-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--blue);
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: var(--navy-700);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
   }
 
@@ -324,46 +414,99 @@
       transition: opacity 0.25s;
     }
 
-    &:hover:not(&--locked) {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-      border-color: transparent;
-    }
-
-    &:hover:not(&--locked)::before {
-      opacity: 1;
-    }
-
-    &:hover:not(&--locked) .service-admin__card-icon {
-      background: linear-gradient(135deg, var(--navy-700), var(--blue));
-      color: #fff;
-      transform: scale(1.05);
-    }
-
-    &:hover:not(&--locked) .service-admin__card-cta {
-      gap: 12px;
-    }
-
     &:focus-visible {
       box-shadow: 0 0 0 3px rgba(46, 91, 186, 0.35);
     }
 
-    &--locked {
-      cursor: pointer;
-      opacity: 0.92;
+    &--active {
+      border: 2px solid rgba(46, 91, 186, 0.42);
+      background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%);
+      box-shadow:
+        0 8px 24px rgba(46, 91, 186, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
-      &::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: rgba(255, 255, 255, 0.28);
-        pointer-events: none;
+      &::before {
+        opacity: 1;
+        height: 5px;
+      }
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 14px 36px rgba(46, 91, 186, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        border-color: rgba(46, 91, 186, 0.65);
+      }
+
+      .service-admin__card-icon {
+        background: linear-gradient(135deg, var(--navy-700), var(--blue));
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(46, 91, 186, 0.28);
+      }
+
+      .service-admin__card-title {
+        color: var(--navy);
       }
 
       .service-admin__card-cta {
-        color: var(--muted);
+        color: var(--navy-700);
+      }
+
+      &:hover .service-admin__card-icon {
+        transform: scale(1.05);
+      }
+
+      &:hover .service-admin__card-cta {
+        gap: 12px;
       }
     }
+
+    &--locked {
+      border: 1.5px dashed #b8c4d4;
+      background: #eef2f7;
+      box-shadow: none;
+
+      &::before {
+        display: none;
+      }
+
+      &:hover {
+        border-color: #94a3b8;
+        background: #e8edf4;
+      }
+
+      .service-admin__card-icon {
+        background: #dde3ec;
+        color: #8b9bb0;
+      }
+
+      .service-admin__card-title {
+        color: #64748b;
+      }
+
+      .service-admin__card-desc {
+        color: #94a3b8;
+      }
+
+      .service-admin__card-cta {
+        color: #64748b;
+      }
+    }
+  }
+
+  &__card-status {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 2;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   &__card-icon {
@@ -416,6 +559,18 @@
     font-weight: 600;
     line-height: 1.2;
     white-space: nowrap;
+
+    &--success {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    &--locked {
+      background: #fff;
+      color: #64748b;
+      border: 1px dashed #94a3b8;
+    }
 
     &--gray {
       background: #edf1f7;

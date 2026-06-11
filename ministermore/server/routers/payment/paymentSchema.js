@@ -73,13 +73,31 @@ CREATE TABLE IF NOT EXISTS oneTimePayment (
   KEY idx_onetime_createdAt (createdAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+async function ensurePaymentAuthColumns() {
+  const alters = [
+    ['billingPayment', 'passwd', 'VARCHAR(32) NULL'],
+    ['billingPayment', 'ownerpw', 'VARCHAR(64) NULL'],
+    ['oneTimePayment', 'passwd', 'VARCHAR(32) NULL'],
+    ['oneTimePayment', 'ownerpw', 'VARCHAR(64) NULL'],
+  ];
+  for (const [table, col, def] of alters) {
+    try {
+      await queryAsync(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    } catch (err) {
+      if (err && err.code !== 'ER_DUP_FIELDNAME') throw err;
+    }
+  }
+}
+
 async function ensurePaymentTables() {
   if (ensured) return;
   await queryAsync(CREATE_BILLING_TABLE);
   await queryAsync(CREATE_ONETIME_TABLE);
+  await ensurePaymentAuthColumns();
   ensured = true;
 }
 
 module.exports = {
   ensurePaymentTables,
+  ensurePaymentAuthColumns,
 };

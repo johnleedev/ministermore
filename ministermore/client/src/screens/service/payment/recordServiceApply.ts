@@ -1,11 +1,13 @@
 import axios from 'axios';
-import ServiceAPIURL from '../../../ServiceAPIURL';
+import MainURL from '../../../MainURL';
 
 export type ServiceApplyRecordPayload = {
   serviceType: string;
   orderName: string;
   userAccount: string;
   churchName?: string | null;
+  passwd?: string | null;
+  ownerpw?: string | null;
   ordererName: string;
   ordererPhone: string;
   amount?: number;
@@ -19,7 +21,7 @@ export type ServiceApplyRecordPayload = {
 
 export async function recordServiceApply(payload: ServiceApplyRecordPayload): Promise<boolean> {
   try {
-    const res = await axios.post<{ ok?: boolean }>(`${ServiceAPIURL}/serviceapply/record`, payload);
+    const res = await axios.post<{ ok?: boolean }>(`${MainURL}/serviceapply/record`, payload);
     return !!res.data?.ok;
   } catch (err) {
     console.error('failed to record service apply:', err);

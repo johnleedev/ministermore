@@ -43,6 +43,9 @@ async function fetchPaidRetreatEventMains(userAccount) {
        m.orderTitle,
        m.ordererName,
        m.ordererPhone,
+       m.churchName,
+       m.passwd,
+       m.ownerpw,
        m.link,
        m.created_at,
        m.updated_at,
@@ -80,13 +83,17 @@ async function upsertRetreatMainFromEvent(row) {
     str(row.ordererName),
     str(row.ordererPhone),
     row.link != null ? String(row.link) : null,
+    str(row.churchName) || null,
+    str(row.passwd) || null,
+    str(row.ownerpw) || null,
   ];
 
   if (existing.length === 0) {
     await queryRetreatResultAsync(
       `INSERT INTO retreatMain (
-         id, userAccount, orderTitle, ordererName, ordererPhone, link, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         id, userAccount, orderTitle, ordererName, ordererPhone, link,
+         churchName, passwd, ownerpw, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         values[0],
@@ -94,6 +101,9 @@ async function upsertRetreatMainFromEvent(row) {
         values[2],
         values[3],
         values[4],
+        values[5],
+        values[6],
+        values[7],
         row.created_at || new Date(),
         row.updated_at || row.created_at || new Date(),
       ],
@@ -103,10 +113,66 @@ async function upsertRetreatMainFromEvent(row) {
 
   await queryRetreatResultAsync(
     `UPDATE retreatMain
-     SET userAccount = ?, orderTitle = ?, ordererName = ?, ordererPhone = ?, link = ?
+     SET userAccount = ?, orderTitle = ?, ordererName = ?, ordererPhone = ?, link = ?,
+         churchName = COALESCE(?, churchName),
+         passwd = COALESCE(?, passwd),
+         ownerpw = COALESCE(?, ownerpw)
      WHERE id = ?`,
     [...values, id],
   );
+}
+
+/**
+ * 결제 직후 mmservice 프로비저닝 — retreatMain / retreatInfo 생성·갱신
+ */
+async function provisionRetreatFromPayment(payload) {
+  const id = Number(payload?.eventMainId);
+  if (!Number.isFinite(id) || id < 1) {
+    throw new Error('eventMainId가 필요합니다.');
+  }
+
+  const churchName = str(payload.churchName);
+  const passwd = str(payload.passwd);
+  const ownerpw = str(payload.ownerpw);
+  if (!churchName || !passwd || !ownerpw) {
+    throw new Error('교회 이름, 비밀번호, 관리자 비밀번호가 필요합니다.');
+  }
+
+  const userAccount = str(payload.userAccount);
+  const orderTitle = str(payload.orderTitle);
+  const ordererName = str(payload.ordererName);
+  const ordererPhone = str(payload.ordererPhone);
+  const visibleTabs = payload.visibleTabs != null ? String(payload.visibleTabs) : '';
+
+  const existing = await queryRetreatAsync('SELECT id FROM retreatMain WHERE id = ? LIMIT 1', [id]);
+  const now = new Date();
+
+  if (existing.length === 0) {
+    await queryRetreatResultAsync(
+      `INSERT INTO retreatMain (
+         id, userAccount, orderTitle, ordererName, ordererPhone, link,
+         churchName, passwd, ownerpw, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
+      [id, userAccount, orderTitle, ordererName, ordererPhone, churchName, passwd, ownerpw, now, now],
+    );
+  } else {
+    await queryRetreatResultAsync(
+      `UPDATE retreatMain
+       SET userAccount = ?, orderTitle = ?, ordererName = ?, ordererPhone = ?,
+           churchName = ?, passwd = ?, ownerpw = ?, updated_at = ?
+       WHERE id = ?`,
+      [userAccount, orderTitle, ordererName, ordererPhone, churchName, passwd, ownerpw, now, id],
+    );
+  }
+
+  await upsertRetreatInfoFromEvent({
+    id,
+    userAccount,
+    programType: 'concert',
+    visibleTabs,
+  });
+
+  return { id, churchName };
 }
 
 /**
@@ -159,4 +225,5 @@ async function syncRetreatBookletsFromPayments(userAccount) {
 
 module.exports = {
   syncRetreatBookletsFromPayments,
+  provisionRetreatFromPayment,
 };

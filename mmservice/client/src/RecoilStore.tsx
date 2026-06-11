@@ -34,6 +34,28 @@ export const recoilUserData = atom({
   effects_UNSTABLE: [persistAtom]
 });
 
+export type RetreatAuthRole = 'user' | 'admin' | '';
+
+export type RetreatAuthState = {
+  loggedIn: boolean;
+  churchName: string;
+  passwd: string;
+  ownerpw: string;
+  role: RetreatAuthRole;
+};
+
+export const recoilRetreatAuth = atom<RetreatAuthState>({
+  key: 'retreatAuth',
+  default: {
+    loggedIn: false,
+    churchName: '',
+    passwd: '',
+    ownerpw: '',
+    role: '',
+  },
+  effects_UNSTABLE: [persistAtom],
+});
+
 
 export const recoilKaKaoLoginData = atom({
   key: "kakaoLoginData",

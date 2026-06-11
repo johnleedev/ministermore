@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -10,7 +12,9 @@ const {
   ensureRetreatAnswerTable,
   ensureRetreatInfoColumns,
 } = require('./retreatSchema');
-const { syncRetreatBookletsFromPayments } = require('./retreatSync');
+const { provisionRetreatFromPayment } = require('./retreatSync');
+
+const WEBHOOK_API_KEY = process.env.MMSERVICE_WEBHOOK_API_KEY || '';
 
 const router = express.Router();
 router.use(cors());
@@ -82,9 +86,42 @@ function queryResultAsync(sql, params = []) {
   });
 }
 
+function str(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+function verifyApiKey(req) {
+  if (!WEBHOOK_API_KEY) {
+    console.error('[RetreatRouter] MMSERVICE_WEBHOOK_API_KEY 미설정');
+    return false;
+  }
+  const incoming = req.headers['x-api-key'];
+  return typeof incoming === 'string' && incoming === WEBHOOK_API_KEY;
+}
+
+function parseRetreatAuth(source) {
+  const src = source || {};
+  return {
+    churchName: str(src.churchName),
+    passwd: str(src.passwd),
+    ownerpw: src.ownerpw != null ? str(src.ownerpw) : '',
+  };
+}
+
+function parseRetreatAuthFromRequest(req) {
+  return parseRetreatAuth({ ...req.query, ...req.body });
+}
+
+function sanitizeRetreatMain(row) {
+  if (!row) return null;
+  const { passwd, ownerpw, ...rest } = row;
+  return rest;
+}
+
 async function findRetreatMainById(bookletId) {
   const rows = await queryAsync(
-    `SELECT id, userAccount, orderTitle, ordererName, ordererPhone, link, created_at, updated_at
+    `SELECT id, userAccount, orderTitle, ordererName, ordererPhone, link,
+            churchName, passwd, ownerpw, created_at, updated_at
      FROM retreatMain WHERE id = ? LIMIT 1`,
     [bookletId],
   );
@@ -132,15 +169,14 @@ function normalizeCustomAnswers(raw) {
   return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
 }
 
-async function assertOwner(bookletId, userAccount) {
-  const account = String(userAccount || '').trim();
-  if (!account) {
-    const err = new Error('userAccount가 필요합니다.');
+async function assertOwner(bookletId, authInput) {
+  const auth = parseRetreatAuth(authInput);
+
+  if (!auth.churchName || !auth.passwd) {
+    const err = new Error('교회 이름과 비밀번호가 필요합니다.');
     err.status = 400;
     throw err;
   }
-
-  await syncRetreatBookletsFromPayments(account);
 
   const main = await findRetreatMainById(bookletId);
   if (!main) {
@@ -148,23 +184,89 @@ async function assertOwner(bookletId, userAccount) {
     err.status = 404;
     throw err;
   }
-  if (String(main.userAccount || '').trim().toLowerCase() !== account.toLowerCase()) {
+  if (str(main.churchName).toLowerCase() !== auth.churchName.toLowerCase()) {
     const err = new Error('접근 권한이 없습니다.');
+    err.status = 403;
+    throw err;
+  }
+  if (str(main.passwd) !== auth.passwd) {
+    const err = new Error('접근 권한이 없습니다.');
+    err.status = 403;
+    throw err;
+  }
+  if (auth.ownerpw && str(main.ownerpw) !== auth.ownerpw) {
+    const err = new Error('관리자 비밀번호가 올바르지 않습니다.');
     err.status = 403;
     throw err;
   }
   return main;
 }
 
-/** GET /api/retreat/list?userAccount= */
-router.get('/list', async (req, res) => {
+/** POST /api/retreat/provision-from-payment — 결제 완료 프로비저닝 (x-api-key) */
+router.post('/provision-from-payment', async (req, res) => {
+  if (!verifyApiKey(req)) {
+    return res.status(401).json({ ok: false, message: 'Unauthorized' });
+  }
+
   try {
-    const userAccount = String(req.query.userAccount || '').trim();
-    if (!userAccount) {
-      return res.status(400).json({ ok: false, message: 'userAccount가 필요합니다.' });
+    const result = await provisionRetreatFromPayment(req.body || {});
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('POST /api/retreat/provision-from-payment', err);
+    return res.status(500).json({ ok: false, message: err?.message || '프로비저닝에 실패했습니다.' });
+  }
+});
+
+/** POST /api/retreat/login — 교회 이름·비밀번호 로그인 */
+router.post('/login', async (req, res) => {
+  try {
+    const auth = parseRetreatAuth(req.body);
+    if (!auth.churchName || !auth.passwd) {
+      return res.status(400).json({ ok: false, message: '교회 이름과 비밀번호를 입력해 주세요.' });
     }
 
-    await syncRetreatBookletsFromPayments(userAccount);
+    const rows = await queryAsync(
+      `SELECT id, churchName, passwd, ownerpw
+       FROM retreatMain
+       WHERE LOWER(TRIM(churchName)) = LOWER(TRIM(?)) AND passwd = ?
+       LIMIT 1`,
+      [auth.churchName, auth.passwd],
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ ok: false, message: '교회 이름 또는 비밀번호가 올바르지 않습니다.' });
+    }
+
+    const row = rows[0];
+    if (auth.ownerpw) {
+      if (str(row.ownerpw) !== auth.ownerpw) {
+        return res.status(401).json({ ok: false, message: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      return res.json({
+        ok: true,
+        role: 'admin',
+        churchName: str(row.churchName),
+      });
+    }
+
+    return res.json({
+      ok: true,
+      role: 'user',
+      churchName: str(row.churchName),
+    });
+  } catch (err) {
+    console.error('POST /api/retreat/login', err);
+    return res.status(500).json({ ok: false, message: '로그인에 실패했습니다.' });
+  }
+});
+
+/** GET /api/retreat/list?churchName=&passwd= */
+router.get('/list', async (req, res) => {
+  try {
+    const auth = parseRetreatAuthFromRequest(req);
+    if (!auth.churchName || !auth.passwd) {
+      return res.status(400).json({ ok: false, message: '교회 이름과 비밀번호가 필요합니다.' });
+    }
 
     const rows = await queryAsync(
       `SELECT
@@ -173,6 +275,7 @@ router.get('/list', async (req, res) => {
          m.orderTitle,
          m.ordererName,
          m.ordererPhone,
+         m.churchName,
          m.link,
          m.created_at,
          m.updated_at,
@@ -181,9 +284,9 @@ router.get('/list', async (req, res) => {
          i.bookletId AS infoBookletId
        FROM retreatMain m
        LEFT JOIN retreatInfo i ON CAST(m.id AS CHAR) = i.bookletId
-       WHERE LOWER(TRIM(m.userAccount)) = LOWER(TRIM(?))
+       WHERE LOWER(TRIM(m.churchName)) = LOWER(TRIM(?)) AND m.passwd = ?
        ORDER BY m.created_at DESC, m.id DESC`,
-      [userAccount],
+      [auth.churchName, auth.passwd],
     );
 
     const list = rows.map((row) => ({
@@ -192,6 +295,7 @@ router.get('/list', async (req, res) => {
       orderTitle: row.orderTitle,
       ordererName: row.ordererName,
       ordererPhone: row.ordererPhone,
+      churchName: row.churchName,
       link: row.link,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -207,16 +311,16 @@ router.get('/list', async (req, res) => {
   }
 });
 
-/** GET /api/retreat/detail/:bookletId?userAccount= */
+/** GET /api/retreat/detail/:bookletId?churchName=&passwd= */
 router.get('/detail/:bookletId', async (req, res) => {
   try {
     const bookletId = parseInt(String(req.params.bookletId), 10);
-    const userAccount = String(req.query.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     if (!bookletId) {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(bookletId, userAccount);
+    await assertOwner(bookletId, auth);
     await ensureRetreatInfoColumns();
 
     const infoRows = await queryAsync(
@@ -231,7 +335,7 @@ router.get('/detail/:bookletId', async (req, res) => {
       [String(bookletId)],
     );
 
-    const main = await findRetreatMainById(bookletId);
+    const main = sanitizeRetreatMain(await findRetreatMainById(bookletId));
 
     return res.json({
       ok: true,
@@ -249,13 +353,13 @@ router.get('/detail/:bookletId', async (req, res) => {
 /** POST /api/retreat/info — JSON 또는 multipart(메인 이미지) */
 router.post('/info', uploadRetreatInfo, async (req, res) => {
   try {
-    const userAccount = String(req.body?.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     const bookletId = parseInt(String(req.body?.bookletId), 10);
     if (!bookletId) {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(bookletId, userAccount);
+    await assertOwner(bookletId, auth);
     await ensureRetreatInfoColumns();
 
     const infoRaw = req.body?.info;
@@ -287,7 +391,7 @@ router.post('/info', uploadRetreatInfo, async (req, res) => {
       applyNote: info.applyNote ?? '',
       eventGreeting: info.eventGreeting ?? '',
       imageMain,
-      userAccount,
+      userAccount: auth.churchName,
     };
 
     const existing = await queryAsync(
@@ -360,7 +464,7 @@ router.post('/info', uploadRetreatInfo, async (req, res) => {
 /** POST /api/retreat/programs */
 router.post('/programs', async (req, res) => {
   try {
-    const userAccount = String(req.body?.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     const bookletId = parseInt(String(req.body?.bookletId), 10);
     const programs = Array.isArray(req.body?.programs) ? req.body.programs : [];
 
@@ -368,7 +472,7 @@ router.post('/programs', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(bookletId, userAccount);
+    await assertOwner(bookletId, auth);
 
     const bookletIdStr = String(bookletId);
     await queryResultAsync(`DELETE FROM retreatProgram WHERE bookletId = ?`, [bookletIdStr]);
@@ -410,7 +514,7 @@ router.get('/public/:bookletId', async (req, res) => {
 
     await ensureRetreatInfoColumns();
 
-    const main = await findRetreatMainById(bookletId);
+    const main = sanitizeRetreatMain(await findRetreatMainById(bookletId));
     if (!main) {
       return res.status(404).json({ ok: false, message: '수련회 전단지를 찾을 수 없습니다.' });
     }
@@ -445,7 +549,7 @@ router.post('/request-main', async (req, res) => {
   try {
     await ensureRetreatRequestMainTable();
 
-    const userAccount = String(req.body?.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     const bookletId = parseInt(String(req.body?.bookletId), 10);
     const customQuestions = normalizeCustomQuestions(req.body?.customQuestions);
 
@@ -453,7 +557,7 @@ router.post('/request-main', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(bookletId, userAccount);
+    await assertOwner(bookletId, auth);
 
     const bookletIdStr = String(bookletId);
     const questionsJson = JSON.stringify(customQuestions);
@@ -466,7 +570,7 @@ router.post('/request-main', async (req, res) => {
       const result = await queryResultAsync(
         `INSERT INTO retreatRequestMain (bookletId, userAccount, customQuestions)
          VALUES (?, ?, ?)`,
-        [bookletIdStr, userAccount, questionsJson],
+        [bookletIdStr, auth.churchName, questionsJson],
       );
       return res.json({ ok: true, id: result.insertId, action: 'insert', customQuestions });
     }
@@ -475,7 +579,7 @@ router.post('/request-main', async (req, res) => {
       `UPDATE retreatRequestMain
        SET customQuestions = ?, userAccount = ?
        WHERE bookletId = ?`,
-      [questionsJson, userAccount, bookletIdStr],
+      [questionsJson, auth.churchName, bookletIdStr],
     );
     return res.json({
       ok: true,
@@ -537,6 +641,8 @@ router.post('/answer', async (req, res) => {
     const userName = String(req.body?.userName || '').trim();
     const userPhone = String(req.body?.userPhone || '').trim();
     const userGroup = req.body?.userGroup != null ? String(req.body.userGroup).trim() : null;
+    const userGender = req.body?.userGender != null ? String(req.body.userGender).trim() : null;
+    const userAge = req.body?.userAge != null ? String(req.body.userAge).trim() : null;
     const note = req.body?.note != null ? String(req.body.note).trim() : null;
     const customAnswers = normalizeCustomAnswers(req.body?.customAnswers);
 
@@ -554,13 +660,15 @@ router.post('/answer', async (req, res) => {
 
     const result = await queryResultAsync(
       `INSERT INTO retreatAnswer (
-         bookletId, userName, userPhone, userGroup, note, customAnswers
-       ) VALUES (?, ?, ?, ?, ?, ?)`,
+         bookletId, userName, userPhone, userGroup, userGender, userAge, note, customAnswers
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         bookletId,
         userName,
         userPhone,
         userGroup,
+        userGender,
+        userAge,
         note,
         JSON.stringify(customAnswers),
       ],
@@ -573,19 +681,19 @@ router.post('/answer', async (req, res) => {
   }
 });
 
-/** GET /api/retreat/answers/:bookletId?userAccount= — 사역자용 신청자 명단 */
+/** GET /api/retreat/answers/:bookletId?churchName=&passwd= — 사역자용 신청자 명단 */
 router.get('/answers/:bookletId', async (req, res) => {
   try {
     await ensureRetreatAnswerTable();
     await ensureRetreatRequestMainTable();
 
     const bookletId = String(req.params.bookletId || '').trim();
-    const userAccount = String(req.query.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     if (!bookletId) {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(parseInt(bookletId, 10), userAccount);
+    await assertOwner(parseInt(bookletId, 10), auth);
 
     const mainRows = await queryAsync(
       `SELECT customQuestions FROM retreatRequestMain WHERE bookletId = ? LIMIT 1`,
@@ -596,7 +704,7 @@ router.get('/answers/:bookletId', async (req, res) => {
     );
 
     const rows = await queryAsync(
-      `SELECT id, bookletId, userName, userPhone, userGroup, note, customAnswers, created_at
+      `SELECT id, bookletId, userName, userPhone, userGroup, userGender, userAge, note, customAnswers, created_at
        FROM retreatAnswer
        WHERE bookletId = ?
        ORDER BY created_at DESC, id DESC`,
@@ -609,6 +717,8 @@ router.get('/answers/:bookletId', async (req, res) => {
       userName: row.userName,
       userPhone: row.userPhone,
       userGroup: row.userGroup,
+      userGender: row.userGender,
+      userAge: row.userAge,
       note: row.note,
       customAnswers: normalizeCustomAnswers(row.customAnswers),
       created_at: row.created_at,
@@ -622,18 +732,18 @@ router.get('/answers/:bookletId', async (req, res) => {
   }
 });
 
-/** GET /api/retreat/requests/:bookletId?userAccount= */
+/** GET /api/retreat/requests/:bookletId?churchName=&passwd= */
 router.get('/requests/:bookletId', async (req, res) => {
   try {
     await ensureRetreatRequestTable();
 
     const bookletId = String(req.params.bookletId || '').trim();
-    const userAccount = String(req.query.userAccount || '').trim();
+    const auth = parseRetreatAuthFromRequest(req);
     if (!bookletId) {
       return res.status(400).json({ ok: false, message: 'bookletId가 필요합니다.' });
     }
 
-    await assertOwner(parseInt(bookletId, 10), userAccount);
+    await assertOwner(parseInt(bookletId, 10), auth);
 
     const rows = await queryAsync(
       `SELECT id, bookletId, userName, userPhone, userGroup, note, created_at

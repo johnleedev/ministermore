@@ -14,6 +14,9 @@ export type UseOneTimePaymentConfig<TSuccess> = {
   ordererName: string;
   phoneDigits: string;
   memo: string;
+  churchName?: string;
+  passwd?: string;
+  ownerpw?: string;
   completePath: string;
   buildCompleteBody: () => Record<string, unknown>;
   validateBeforePay?: () => string | null;
@@ -72,6 +75,9 @@ export function useOneTimePayment<TSuccess extends { paymentId?: string }>(
         serviceType: config.recordServiceType,
         orderName: config.payment.orderName,
         userAccount: config.userAccount,
+        churchName: config.churchName?.trim() || undefined,
+        passwd: config.passwd?.trim() || undefined,
+        ownerpw: config.ownerpw?.trim() || undefined,
         ordererName: config.ordererName,
         ordererPhone: config.phoneDigits,
         amount: config.payment.supplyPrice,

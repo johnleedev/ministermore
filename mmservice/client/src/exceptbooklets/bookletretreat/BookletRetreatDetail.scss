@@ -1,0 +1,38 @@
+@import '../../screens/service/bookletNotice/createNotice/NoticeCreate.scss';
+@import '../../screens/retreat/components/RetreatApplyForm.scss';
+@import '../../screens/service/bookletEvent/createEvent/EventCreate.scss';
+
+/* RetreatEdit.scss 전체 대신 미리보기에 필요한 스타일만 포함 (100vh 편집기 레이아웃 제외) */
+@import '../../screens/retreat/pages/retreatPreviewStyles';
+
+.booklet-detail-page {
+  min-height: 100vh;
+  background: #fff;
+}
+
+.booklet-detail-page .retreat-edit--standalone-preview,
+.booklet-preview-phone-screen .retreat-edit--standalone-preview {
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  background: #fff;
+}
+
+.booklet-detail-page .retreat-edit--standalone-preview .retreat-edit__preview-inner,
+.booklet-preview-phone-screen .retreat-edit--standalone-preview .retreat-edit__preview-inner {
+  flex: none;
+  zoom: 1;
+  min-height: auto;
+  height: auto;
+  overflow: visible;
+}
+
+.booklet-preview-phone-screen .retreat-edit--standalone-preview {
+  height: 100%;
+}
+
+.booklet-preview-phone-screen .retreat-edit--standalone-preview .retreat-edit__preview-inner {
+  height: 100%;
+  overflow-y: auto;
+}

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
-import { FaChevronDown, FaCheck } from 'react-icons/fa';
 import { recoilUserData } from '../../../RecoilStore';
 import {
   PHONE_PREFIX_OPTIONS,
@@ -12,14 +11,10 @@ import {
   useOneTimePayment,
 } from '../payment';
 import {
-  type EventVisibleTabId,
-  EVENT_TAB_PICKER_DETAIL,
-  EVENT_TAB_PICKER_ORDER,
-  EVENT_VISIBLE_TAB_LABELS,
-  MAX_EVENT_VISIBLE_TAB_COUNT,
   orderVisibleTabIds,
   presetVisibleTabsForBookletType,
 } from '../bookletEvent/createEvent/eventTemplateTypes';
+import { generateRetreatPasswd } from './retreatPasswd';
 import './RetreatApplyPay.scss';
 
 const BOOKLET_TYPE = 'retreat' as const;
@@ -35,6 +30,9 @@ type RetreatPaymentSuccessState = {
   eventMainId: number;
   ordererName: string;
   ordererPhone: string;
+  churchName: string;
+  passwd: string;
+  ownerpw: string;
 };
 
 export default function RetreatApplyPay() {
@@ -42,12 +40,15 @@ export default function RetreatApplyPay() {
   const userData = useRecoilValue(recoilUserData);
   const userAccount = userData?.userAccount || '';
 
-  const [selectedTabSet, setSelectedTabSet] = useState<Set<EventVisibleTabId>>(
-    () => new Set(presetVisibleTabsForBookletType(BOOKLET_TYPE)),
+  const visibleTabsJson = useMemo(
+    () => JSON.stringify(orderVisibleTabIds(new Set(presetVisibleTabsForBookletType(BOOKLET_TYPE)))),
+    [],
   );
-  const [tabHelpOpen, setTabHelpOpen] = useState<Partial<Record<EventVisibleTabId, boolean>>>({});
   const [orderTitle, setOrderTitle] = useState('');
   const [memo, setMemo] = useState('');
+  const [churchName, setChurchName] = useState('');
+  const [passwd, setPasswd] = useState(() => generateRetreatPasswd());
+  const [ownerpw, setOwnerpw] = useState('');
   const [ordererName, setOrdererName] = useState('');
   const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
   const [phoneMid, setPhoneMid] = useState('');
@@ -70,15 +71,23 @@ export default function RetreatApplyPay() {
     userAccount,
     ordererName,
     phoneDigits: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+    churchName,
+    passwd,
+    ownerpw,
     memo,
     completePath: '/paymentrequestpay/event/complete-browser',
     validateBeforePay: () => {
       const titleTrim = orderTitle.trim();
       const nameTrim = ordererName.trim();
       const phoneDigits = digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast);
+      const churchTrim = churchName.trim();
+      const ownerTrim = ownerpw.trim();
       if (!titleTrim || !nameTrim || !phoneDigits) {
         return '타이틀, 이름, 전화번호를 모두 입력해 주세요.';
       }
+      if (!churchTrim) return '교회 이름을 입력해 주세요.';
+      if (!passwd.trim()) return '비밀번호가 생성되지 않았습니다. 다시 시도해 주세요.';
+      if (!ownerTrim) return '관리자 비밀번호를 입력해 주세요.';
       return null;
     },
     buildCompleteBody: () => ({
@@ -87,7 +96,10 @@ export default function RetreatApplyPay() {
       ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
       userAccount,
       bookletType: BOOKLET_TYPE,
-      visibleTabs: JSON.stringify(orderVisibleTabIds(selectedTabSet)),
+      visibleTabs: visibleTabsJson,
+      churchName: churchName.trim(),
+      passwd: passwd.trim(),
+      ownerpw: ownerpw.trim(),
     }),
     parseSuccess: (data) => {
       const d = data as { ok?: boolean; eventMainId?: number; paymentId?: string };
@@ -96,6 +108,9 @@ export default function RetreatApplyPay() {
         eventMainId: Number(d.eventMainId),
         ordererName: ordererName.trim(),
         ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        churchName: churchName.trim(),
+        passwd: passwd.trim(),
+        ownerpw: ownerpw.trim(),
         paymentId: d.paymentId,
       };
     },
@@ -106,6 +121,9 @@ export default function RetreatApplyPay() {
         eventMainId: Number(d.eventMainId),
         ordererName: ordererName.trim(),
         ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        churchName: churchName.trim(),
+        passwd: passwd.trim(),
+        ownerpw: ownerpw.trim(),
         paymentId: '',
       };
     },
@@ -120,11 +138,14 @@ export default function RetreatApplyPay() {
       eventMainId: paymentSuccessState.eventMainId,
       ordererName: paymentSuccessState.ordererName,
       ordererPhone: paymentSuccessState.ordererPhone,
-      visibleTabs: orderVisibleTabIds(selectedTabSet),
+      churchName: paymentSuccessState.churchName,
+      passwd: paymentSuccessState.passwd,
+      ownerpw: paymentSuccessState.ownerpw,
+      visibleTabs: JSON.parse(visibleTabsJson),
     };
     navigate('/service/bookletretreatpay/complete', { state: nextState, replace: true });
     window.scrollTo(0, 0);
-  }, [navigate, paymentSuccessState, selectedTabSet]);
+  }, [navigate, paymentSuccessState, visibleTabsJson]);
 
   useEffect(() => {
     if (!paymentSuccessState) return;
@@ -160,24 +181,6 @@ export default function RetreatApplyPay() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [closeAlert, retreatAlert, paymentSuccessState, finalizeSuccessfulPayment]);
 
-  const setTabIncluded = (id: EventVisibleTabId, include: boolean) => {
-    if (id === 'info') return;
-    setSelectedTabSet((prev) => {
-      const next = new Set(prev);
-      if (include) {
-        if (next.size >= MAX_EVENT_VISIBLE_TAB_COUNT && !next.has(id)) {
-          openErrorAlert('탭은 소개를 포함해 최대 4개까지 선택할 수 있습니다.', '탭 선택');
-          return prev;
-        }
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      next.add('info');
-      return next;
-    });
-  };
-
   return (
     <div className="event-template-select">
       <div className="event-template-select__body">
@@ -197,6 +200,80 @@ export default function RetreatApplyPay() {
                   value={orderTitle}
                   onChange={(e) => setOrderTitle(e.target.value)}
                 />
+              </div>
+            </div>
+
+            <h2 className="event-template-select__form-title">교회 접속 정보</h2>
+            <div className="event-template-select__form-block retreat-apply-pay__church-block">
+              <div className="event-template-select__form-row">
+                <label className="event-template-select__form-label" htmlFor="retreat-church-name">
+                  교회 이름
+                </label>
+                <div className="event-template-select__field-with-hint">
+                  <input
+                    id="retreat-church-name"
+                    type="text"
+                    className="event-template-select__input"
+                    placeholder="예) ○○교회"
+                    value={churchName}
+                    onChange={(e) => setChurchName(e.target.value)}
+                  />
+                  <p className="event-template-select__form-hint">
+                    서비스관리자 로그인에 사용됩니다.
+                  </p>
+                </div>
+              </div>
+              <div className="event-template-select__form-row">
+                <label className="event-template-select__form-label" htmlFor="retreat-passwd">
+                  비밀번호
+                </label>
+                <div className="event-template-select__field-with-hint">
+                  <div className="retreat-apply-pay__passwd-row">
+                    <input
+                      id="retreat-passwd"
+                      type="text"
+                      className="event-template-select__input retreat-apply-pay__passwd-input"
+                      value={passwd}
+                      readOnly
+                      aria-readonly
+                    />
+                    <button
+                      type="button"
+                      className="retreat-apply-pay__passwd-regen"
+                      onClick={() => setPasswd(generateRetreatPasswd())}
+                    >
+                      다시 생성
+                    </button>
+                  </div>
+                  <p className="event-template-select__form-hint">
+                    서비스관리자 로그인에 사용됩니다. 결제 완료 후 안내 화면에서 다시 확인할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+              <div className="event-template-select__form-row">
+                <label className="event-template-select__form-label" htmlFor="retreat-ownerpw">
+                  관리자비번
+                </label>
+                <div className="event-template-select__field-with-hint">
+                  <input
+                    id="retreat-ownerpw"
+                    type="password"
+                    className="event-template-select__input"
+                    placeholder="관리자 전용 비밀번호를 입력하세요 (최대8자리)"
+                    value={ownerpw}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+                      setOwnerpw(next);
+                    }}
+                    autoComplete="new-password"
+                    inputMode="text"
+                    maxLength={8}
+                    pattern="[A-Za-z0-9]*"
+                  />
+                  <p className="event-template-select__form-hint">
+                    관리자 로그인 시 추가로 필요합니다. 타인과 공유하지 마세요.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -291,139 +368,6 @@ export default function RetreatApplyPay() {
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="수련회 일정, 장소, 준비물 등 참고할 내용을 적어주세요."
                 />
-              </div>
-            </div>
-
-            <h2 className="event-template-select__form-title">탭 구성</h2>
-            <p className="event-template-select__form-desc">
-              수련회 전단지에 포함할 탭을 선택하세요. 소개는 필수이며, 제작 화면에서는 탭을 바꿀 수 없습니다.
-            </p>
-            <div className="event-template-select__type-tabs-preview">
-              <p className="event-template-select__tab-pick-hint">
-                소개는 필수입니다. 포함할 탭은 소개를 포함해 최대 4개까지 선택할 수 있습니다.
-              </p>
-              <div className="event-template-select__tab-pick-list" role="group" aria-label="전단지에 포함할 탭">
-                {EVENT_TAB_PICKER_ORDER.map((tabId) => {
-                  const included = selectedTabSet.has(tabId);
-                  const isInfo = tabId === 'info';
-                  const helpExpanded = !!tabHelpOpen[tabId];
-                  const helpId = `event-tab-pick-help-${tabId}`;
-                  return (
-                    <div key={tabId} className="event-template-select__tab-pick-item">
-                      <div className="event-template-select__tab-pick-row">
-                        <div className="event-template-select__tab-pick-title-wrap">
-                          <span className="event-template-select__tab-pick-title">
-                            {EVENT_VISIBLE_TAB_LABELS[tabId]}
-                          </span>
-                          <button
-                            type="button"
-                            className="event-template-select__tab-pick-help-toggle"
-                            aria-expanded={helpExpanded}
-                            aria-controls={helpId}
-                            aria-label={`${EVENT_VISIBLE_TAB_LABELS[tabId]} 설명 ${helpExpanded ? '접기' : '펼치기'}`}
-                            onClick={() =>
-                              setTabHelpOpen((prev) => ({
-                                ...prev,
-                                [tabId]: !prev[tabId],
-                              }))
-                            }
-                          >
-                            <FaChevronDown
-                              className={`event-template-select__tab-pick-help-chevron${helpExpanded ? ' is-open' : ''}`}
-                              aria-hidden
-                            />
-                          </button>
-                        </div>
-                        <div
-                          className="event-template-select__tab-pick-radios"
-                          role="radiogroup"
-                          aria-label={`${EVENT_VISIBLE_TAB_LABELS[tabId]} 포함 여부`}
-                        >
-                          <label className="event-template-select__tab-pick-radio-label">
-                            <input
-                              type="radio"
-                              className="event-template-select__tab-pick-radio"
-                              name={`event-tab-pick-${tabId}`}
-                              checked={included}
-                              disabled={isInfo}
-                              onChange={() => setTabIncluded(tabId, true)}
-                            />
-                            <span>포함</span>
-                          </label>
-                          <label
-                            className={`event-template-select__tab-pick-radio-label${isInfo ? ' event-template-select__tab-pick-radio-label--disabled' : ''}`}
-                          >
-                            <input
-                              type="radio"
-                              className="event-template-select__tab-pick-radio"
-                              name={`event-tab-pick-${tabId}`}
-                              checked={!included}
-                              disabled={isInfo}
-                              onChange={() => setTabIncluded(tabId, false)}
-                            />
-                            <span>제외</span>
-                          </label>
-                        </div>
-                      </div>
-                      {helpExpanded ? (
-                        <div className="event-template-select__tab-pick-detail" id={helpId}>
-                          {EVENT_TAB_PICKER_DETAIL[tabId]}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <h2 className="event-template-select__form-title">서비스 안내</h2>
-            <div className="event-template-select__plan-features">
-              <div className="event-template-select__plan-feature-col">
-                <p className="event-template-select__plan-feature-heading">제작</p>
-                <ul className="event-template-select__plan-feature-list">
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>기간·장소·프로그램·준비물 안내 구성</span>
-                  </li>
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>모바일 미리보기와 동일한 편집</span>
-                  </li>
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>지도·문의 버튼 연결</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="event-template-select__plan-feature-col">
-                <p className="event-template-select__plan-feature-heading">결제</p>
-                <ul className="event-template-select__plan-feature-list">
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>포트원 결제 창에서 안전하게 카드 결제</span>
-                  </li>
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>부가세 포함 금액으로 결제</span>
-                  </li>
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>결제 완료 후 서비스관리자에서 제작</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="event-template-select__plan-feature-col">
-                <p className="event-template-select__plan-feature-heading">안내</p>
-                <ul className="event-template-select__plan-feature-list">
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>결제 후 3개월 동안 이용 가능</span>
-                  </li>
-                  <li>
-                    <FaCheck aria-hidden />
-                    <span>타이틀·주문자·탭 구성은 결제 시 함께 저장</span>
-                  </li>
-                </ul>
               </div>
             </div>
           </section>

@@ -39,6 +39,8 @@ const CREATE_RETREAT_ANSWER_SQL = `
     userName varchar(50) NOT NULL COMMENT '기본정보: 이름',
     userPhone varchar(50) NOT NULL COMMENT '기본정보: 연락처',
     userGroup varchar(100) DEFAULT NULL COMMENT '기본정보: 소속부서',
+    userGender varchar(20) DEFAULT NULL COMMENT '기본정보: 성별',
+    userAge varchar(20) DEFAULT NULL COMMENT '기본정보: 나이',
     note text COMMENT '기본정보: 건의/기도제목',
     customAnswers json DEFAULT NULL COMMENT '커스텀 질문에 대해 성도가 입력한 답변 데이터 (JSON 객체)',
     created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,6 +89,21 @@ async function ensureRetreatAnswerColumns() {
       await queryAsync('ALTER TABLE retreatAnswer DROP COLUMN `userChurch`');
     } catch (err) {
       console.error('ALTER retreatAnswer DROP userChurch:', err.message);
+    }
+  }
+
+  const needed = [
+    ['userGender', 'varchar(20) DEFAULT NULL COMMENT \'기본정보: 성별\''],
+    ['userAge', 'varchar(20) DEFAULT NULL COMMENT \'기본정보: 나이\''],
+  ];
+
+  for (const [name, def] of needed) {
+    if (have.has(name)) continue;
+    try {
+      await queryAsync(`ALTER TABLE retreatAnswer ADD COLUMN \`${name}\` ${def}`);
+      have.add(name);
+    } catch (err) {
+      console.error(`ALTER retreatAnswer ADD ${name}:`, err.message);
     }
   }
 }

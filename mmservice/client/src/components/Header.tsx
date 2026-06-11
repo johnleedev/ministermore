@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useRecoilState, useRecoilValue } from 'recoil';
-import { recoilLoginPath, recoilLoginState, recoilUserData } from '../RecoilStore';
+import { useRecoilState } from 'recoil';
+import { recoilRetreatAuth } from '../RecoilStore';
 import logoPng from '../images/logopng.png';
 import {
   SERVICE_ADMIN_NAV_ITEMS,
@@ -15,20 +15,22 @@ import './Header.scss';
 export default function Header() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const isLogin = useRecoilValue(recoilLoginState);
-  const loginPath = useRecoilValue(recoilLoginPath);
-  const [userData, setUserData] = useRecoilState(recoilUserData);
+  const [retreatAuth, setRetreatAuth] = useRecoilState(recoilRetreatAuth);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const isLogin = retreatAuth.loggedIn;
+
   const displayName = useMemo(() => {
-    if (userData?.userNickName) return `${userData.userNickName}님`;
-    return '게스트';
-  }, [userData?.userNickName]);
+    if (!isLogin || !retreatAuth.churchName) return '';
+    const roleLabel = retreatAuth.role === 'admin' ? ' (관리자)' : '';
+    return `${retreatAuth.churchName}${roleLabel}`;
+  }, [isLogin, retreatAuth.churchName, retreatAuth.role]);
 
   const avatarInitial = useMemo(() => {
-    const name = userData?.userNickName?.trim();
-    return name ? name.charAt(0) : 'G';
-  }, [userData?.userNickName]);
+    if (!isLogin) return '';
+    const name = retreatAuth.churchName?.trim();
+    return name ? name.charAt(0) : '';
+  }, [isLogin, retreatAuth.churchName]);
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -39,20 +41,16 @@ export default function Header() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    setUserData({
-      userAccount: '',
-      userNickName: '',
-      userSort: '',
-      userDetail: '',
-      grade: '',
-      authInstitution: '',
-      authChurch: '',
-      authDepartment: '',
-      authGroup: '',
+    setRetreatAuth({
+      loggedIn: false,
+      churchName: '',
+      passwd: '',
+      ownerpw: '',
+      role: '',
     });
     closeMenu();
-    window.location.replace(loginPath || '/login');
+    navigate('/');
+    window.scrollTo(0, 0);
   };
 
   const goTo = (path: string) => {
@@ -157,10 +155,12 @@ export default function Header() {
           </ul>
 
           <div className="service-admin__nav-right service-admin__nav-right--desktop">
-            <div className="service-admin__user-info">
-              <div className="service-admin__avatar">{avatarInitial}</div>
-              <span className="service-admin__user-name">{displayName}</span>
-            </div>
+            {isLogin && displayName ? (
+              <div className="service-admin__user-info">
+                <div className="service-admin__avatar">{avatarInitial}</div>
+                <span className="service-admin__user-name">{displayName}</span>
+              </div>
+            ) : null}
             {isLogin ? (
               <button type="button" className="service-admin__logout-btn" onClick={handleLogout}>
                 로그아웃
@@ -169,7 +169,7 @@ export default function Header() {
               <button
                 type="button"
                 className="service-admin__logout-btn"
-                onClick={() => navigate('/login')}
+                onClick={() => goTo('/')}
               >
                 로그인
               </button>
@@ -201,10 +201,12 @@ export default function Header() {
             <div className="service-admin__mobile-panel">
               <div className="service-admin__mobile-panel-inner">
                 <div className="service-admin__mobile-user">
-                  <div className="service-admin__user-info">
-                    <div className="service-admin__avatar">{avatarInitial}</div>
-                    <span className="service-admin__user-name">{displayName}</span>
-                  </div>
+                  {isLogin && displayName ? (
+                    <div className="service-admin__user-info">
+                      <div className="service-admin__avatar">{avatarInitial}</div>
+                      <span className="service-admin__user-name">{displayName}</span>
+                    </div>
+                  ) : null}
                   {isLogin ? (
                     <button
                       type="button"
@@ -217,7 +219,7 @@ export default function Header() {
                     <button
                       type="button"
                       className="service-admin__logout-btn"
-                      onClick={() => goTo('/login')}
+                      onClick={() => goTo('/')}
                     >
                       로그인
                     </button>

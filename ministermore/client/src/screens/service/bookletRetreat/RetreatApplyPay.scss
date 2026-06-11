@@ -1,1 +1,47 @@
 @import '../bookletEvent/createEvent/EventApplyPay.scss';
+
+.retreat-apply-pay__church-block {
+  .event-template-select__form-row {
+    align-items: flex-start;
+    min-height: 0;
+  }
+
+  .event-template-select__form-label {
+    line-height: 44px;
+    padding-top: 0;
+  }
+
+  .event-template-select__field-with-hint {
+    width: 100%;
+  }
+}
+
+.retreat-apply-pay__passwd-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.retreat-apply-pay__passwd-input {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.retreat-apply-pay__passwd-regen {
+  flex-shrink: 0;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #dbeafe;
+  }
+}

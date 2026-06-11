@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { fetchRetreatAnswers } from '../../../api/retreatApi';
+import { fetchRetreatAnswers, type RetreatAuthParams } from '../../../api/retreatApi';
 import { formatCustomAnswerValue } from '../lib/retreatRequestForm';
 import type { RetreatAnswerRow } from '../lib/types';
 import type { RetreatCustomQuestion } from '../lib/retreatRequestForm';
 
 type RetreatApplicantsModalProps = {
   bookletId: number;
-  userAccount: string;
+  auth: RetreatAuthParams;
   title: string;
   onClose: () => void;
 };
@@ -20,7 +20,7 @@ function formatDate(value: string | null) {
 
 export default function RetreatApplicantsModal({
   bookletId,
-  userAccount,
+  auth,
   title,
   onClose,
 }: RetreatApplicantsModalProps) {
@@ -34,7 +34,7 @@ export default function RetreatApplicantsModal({
     setLoading(true);
     setError(null);
 
-    fetchRetreatAnswers(bookletId, userAccount)
+    fetchRetreatAnswers(bookletId, auth)
       .then((data) => {
         if (!cancelled) {
           setRows(data.list);
@@ -53,7 +53,7 @@ export default function RetreatApplicantsModal({
     return () => {
       cancelled = true;
     };
-  }, [bookletId, userAccount]);
+  }, [bookletId, auth.churchName, auth.passwd, auth.ownerpw]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

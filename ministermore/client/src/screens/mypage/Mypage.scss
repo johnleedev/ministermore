@@ -22,6 +22,57 @@
   background: #fff;
 }
 
+.service-manage__lead {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.service-manage__login-link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.service-payment-list__mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.service-payment-list__copy-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.service-payment-list__copy-row {
+  align-items: center;
+}
+
+.service-payment-list__ownerpw-warn {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.service-manage__retry-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
 .mypage {
   padding-top: 50px;
 

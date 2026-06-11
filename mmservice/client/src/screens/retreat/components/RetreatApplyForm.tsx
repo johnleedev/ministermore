@@ -15,6 +15,8 @@ type FormState = {
   userName: string;
   userPhone: string;
   userGroup: string;
+  userGender: string;
+  userAge: string;
   note: string;
   customAnswers: Record<string, string | string[]>;
 };
@@ -23,9 +25,13 @@ const EMPTY_FORM: FormState = {
   userName: '',
   userPhone: '',
   userGroup: '',
+  userGender: '',
+  userAge: '',
   note: '',
   customAnswers: {},
 };
+
+const GENDER_OPTIONS = ['남성', '여성'] as const;
 
 export default function RetreatApplyForm({
   bookletId,
@@ -91,6 +97,8 @@ export default function RetreatApplyForm({
         userName: form.userName.trim(),
         userPhone: form.userPhone.trim(),
         userGroup: form.userGroup.trim() || undefined,
+        userGender: form.userGender.trim() || undefined,
+        userAge: form.userAge.trim() || undefined,
         note: form.note.trim() || undefined,
         customAnswers: form.customAnswers,
       });
@@ -223,6 +231,43 @@ export default function RetreatApplyForm({
           value={form.userGroup}
           onChange={(e) => updateBase('userGroup', e.target.value)}
           disabled={preview || submitting}
+        />
+      </div>
+
+      <div className="retreat-apply-form__field">
+        <span className="retreat-apply-form__label">성별</span>
+        <div className="retreat-apply-form__options">
+          {GENDER_OPTIONS.map((option) => (
+            <label key={option} className="retreat-apply-form__option">
+              <input
+                type="radio"
+                name="retreat-apply-gender"
+                value={option}
+                checked={form.userGender === option}
+                onChange={() => updateBase('userGender', option)}
+                disabled={preview || submitting}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="retreat-apply-form__field">
+        <label className="retreat-apply-form__label" htmlFor="retreat-apply-age">
+          나이
+        </label>
+        <input
+          id="retreat-apply-age"
+          type="number"
+          min={1}
+          max={120}
+          inputMode="numeric"
+          className="retreat-apply-form__input"
+          value={form.userAge}
+          onChange={(e) => updateBase('userAge', e.target.value)}
+          disabled={preview || submitting}
+          placeholder="예: 25"
         />
       </div>
 

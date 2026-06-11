@@ -1,5 +1,6 @@
 import axios from 'axios';
 import ServiceAPIURL from '../ServiceAPIURL';
+import type { RetreatAuthState } from '../RecoilStore';
 import {
   normalizeCustomQuestions,
   type RetreatCustomQuestion,
@@ -16,18 +17,48 @@ import type {
 
 const base = `${ServiceAPIURL}/api/retreat`;
 
-export async function fetchRetreatList(userAccount: string): Promise<RetreatListItem[]> {
-  const res = await axios.get(`${base}/list`, { params: { userAccount } });
+export type RetreatAuthParams = Pick<RetreatAuthState, 'churchName' | 'passwd' | 'ownerpw'>;
+
+function authParams(auth: RetreatAuthParams) {
+  const params: Record<string, string> = {
+    churchName: auth.churchName,
+    passwd: auth.passwd,
+  };
+  if (auth.ownerpw?.trim()) {
+    params.ownerpw = auth.ownerpw.trim();
+  }
+  return params;
+}
+
+function authBody(auth: RetreatAuthParams, extra: Record<string, unknown> = {}) {
+  return { ...authParams(auth), ...extra };
+}
+
+export async function loginRetreat(payload: {
+  churchName: string;
+  passwd: string;
+  ownerpw?: string;
+}): Promise<{ role: 'user' | 'admin'; churchName: string }> {
+  const res = await axios.post(`${base}/login`, payload);
+  if (!res.data?.ok) throw new Error(res.data?.message || '로그인에 실패했습니다.');
+  return {
+    role: res.data.role,
+    churchName: res.data.churchName,
+  };
+}
+
+export async function fetchRetreatList(auth: RetreatAuthParams): Promise<RetreatListItem[]> {
+  const res = await axios.get(`${base}/list`, { params: authParams(auth) });
   if (!res.data?.ok) throw new Error(res.data?.message || '목록을 불러오지 못했습니다.');
   return res.data.list ?? [];
 }
 
 export async function fetchRetreatDetail(
   bookletId: number,
-  userAccount: string,
+  auth: RetreatAuthParams,
 ): Promise<RetreatDetail> {
   const res = await axios.get(`${base}/detail/${bookletId}`, {
-    params: { userAccount },
+    params: authParams(auth),
   });
   if (!res.data?.ok) throw new Error(res.data?.message || '상세 정보를 불러오지 못했습니다.');
   return {
@@ -49,7 +80,7 @@ export async function fetchRetreatPublicDetail(bookletId: number): Promise<Retre
 
 export async function saveRetreatInfo(
   bookletId: number,
-  userAccount: string,
+  auth: RetreatAuthParams,
   info: RetreatInfoForm,
   options?: {
     imageMainName?: string;
@@ -60,7 +91,9 @@ export async function saveRetreatInfo(
   if (hasFiles) {
     const formData = new FormData();
     formData.append('bookletId', String(bookletId));
-    formData.append('userAccount', userAccount);
+    formData.append('churchName', auth.churchName);
+    formData.append('passwd', auth.passwd);
+    if (auth.ownerpw?.trim()) formData.append('ownerpw', auth.ownerpw.trim());
     formData.append('info', JSON.stringify(info));
     formData.append(
       'imageMainName',
@@ -76,26 +109,26 @@ export async function saveRetreatInfo(
     return { imageMain: res.data.imageMain };
   }
 
-  const res = await axios.post(`${base}/info`, { bookletId, userAccount, info });
+  const res = await axios.post(`${base}/info`, authBody(auth, { bookletId, info }));
   if (!res.data?.ok) throw new Error(res.data?.message || '수련회 정보 저장에 실패했습니다.');
   return { imageMain: res.data.imageMain };
 }
 
 export async function saveRetreatPrograms(
   bookletId: number,
-  userAccount: string,
+  auth: RetreatAuthParams,
   programs: RetreatProgramRow[],
 ): Promise<void> {
-  const res = await axios.post(`${base}/programs`, { bookletId, userAccount, programs });
+  const res = await axios.post(`${base}/programs`, authBody(auth, { bookletId, programs }));
   if (!res.data?.ok) throw new Error(res.data?.message || '프로그램 저장에 실패했습니다.');
 }
 
 export async function fetchRetreatRequests(
   bookletId: number | string,
-  userAccount: string,
+  auth: RetreatAuthParams,
 ): Promise<RetreatRequestRow[]> {
   const res = await axios.get(`${base}/requests/${bookletId}`, {
-    params: { userAccount },
+    params: authParams(auth),
   });
   if (!res.data?.ok) throw new Error(res.data?.message || '신청자 목록을 불러오지 못했습니다.');
   return res.data.list ?? [];
@@ -122,12 +155,12 @@ export async function fetchRetreatRequestMain(
 
 export async function saveRetreatRequestMain(
   bookletId: number,
-  userAccount: string,
+  auth: RetreatAuthParams,
   customQuestions: RetreatCustomQuestion[],
 ): Promise<void> {
   const res = await axios.post(`${base}/request-main`, {
     bookletId,
-    userAccount,
+    ...authParams(auth),
     customQuestions,
   });
   if (!res.data?.ok) throw new Error(res.data?.message || '질문지 저장에 실패했습니다.');
@@ -138,6 +171,8 @@ export async function submitRetreatAnswer(payload: {
   userName: string;
   userPhone: string;
   userGroup?: string;
+  userGender?: string;
+  userAge?: string;
   note?: string;
   customAnswers?: Record<string, string | string[]>;
 }): Promise<void> {
@@ -147,10 +182,10 @@ export async function submitRetreatAnswer(payload: {
 
 export async function fetchRetreatAnswers(
   bookletId: number | string,
-  userAccount: string,
+  auth: RetreatAuthParams,
 ): Promise<RetreatAnswersResponse> {
   const res = await axios.get(`${base}/answers/${bookletId}`, {
-    params: { userAccount },
+    params: authParams(auth),
   });
   if (!res.data?.ok) throw new Error(res.data?.message || '신청자 목록을 불러오지 못했습니다.');
   return {

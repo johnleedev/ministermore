@@ -1,12 +1,25 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FaCheckCircle } from 'react-icons/fa';
+import CopyTextButton from '../../../components/CopyTextButton';
 import goToMmservice from '../../../goToMmservice';
 import MmserviceURL from '../../../MmserviceURL';
 import './RetreatPayComplete.scss';
 
+type PayCompleteState = {
+  churchName?: string;
+  passwd?: string;
+  ownerpw?: string;
+};
+
 export default function RetreatPayComplete() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = (location.state as PayCompleteState | null) ?? {};
   const adminBase = MmserviceURL.replace(/\/$/, '');
+
+  const churchName = state.churchName?.trim() || '';
+  const passwd = state.passwd?.trim() || '';
+  const ownerpw = state.ownerpw?.trim() || '';
 
   return (
     <div className="retreat-pay-complete">
@@ -18,7 +31,41 @@ export default function RetreatPayComplete() {
         <p className="retreat-pay-complete__desc">
           결제가 정상 승인되었습니다. 전단지 제작은 아래 버튼을 눌러
         </p>
-        <p className="retreat-pay-complete__highlight">서비스관리자 페이지에서 진행해 주세요.</p>
+        <p className="retreat-pay-complete__highlight">서비스관리자 사이트에서 진행해 주세요.</p>
+
+        {churchName && passwd ? (
+          <div className="retreat-pay-complete__credentials">
+            <h2 className="retreat-pay-complete__credentials-title">서비스관리자 접속 정보</h2>
+            <dl className="retreat-pay-complete__credentials-list">
+              <div className="retreat-pay-complete__credentials-row">
+                <dt>교회 이름</dt>
+                <dd>{churchName}</dd>
+              </div>
+              <div className="retreat-pay-complete__credentials-row">
+                <dt>비밀번호</dt>
+                <dd className="retreat-pay-complete__credential-value">
+                  <span className="retreat-pay-complete__mono">{passwd}</span>
+                  <CopyTextButton text={passwd} />
+                </dd>
+              </div>
+              {ownerpw ? (
+                <div className="retreat-pay-complete__credentials-row">
+                  <dt>관리자 비밀번호</dt>
+                  <dd className="retreat-pay-complete__credential-value">
+                    <span className="retreat-pay-complete__mono">{ownerpw}</span>
+                    <CopyTextButton text={ownerpw} />
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+            <p className="retreat-pay-complete__credentials-warn">
+              관리자 비번은 공유하지 마세요.
+            </p>
+            <p className="retreat-pay-complete__credentials-note">
+              위 정보는 서비스관리자 로그인에 사용됩니다. 반드시 안전한 곳에 보관해 주세요.
+            </p>
+          </div>
+        ) : null}
 
         <div className="retreat-pay-complete__info">
           <p>

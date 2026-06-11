@@ -5,7 +5,8 @@ import { DaumPostcodeEmbed } from 'react-daum-postcode';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { FaChevronDown, FaChevronUp, FaInfoCircle, FaUser } from 'react-icons/fa';
-import { recoilUserData } from '../../../RecoilStore';
+import { recoilRetreatAuth } from '../../../RecoilStore';
+import type { RetreatAuthParams } from '../../../api/retreatApi';
 import MainURL from '../../../MainURL';
 import {
   fetchRetreatDetail,
@@ -603,7 +604,13 @@ export default function RetreatEdit() {
   const navigate = useNavigate();
   const { bookletId: bookletIdParam } = useParams();
   const bookletId = parseInt(String(bookletIdParam), 10);
-  const userAccount = useRecoilValue(recoilUserData)?.userAccount?.trim() || '';
+  const retreatAuth = useRecoilValue(recoilRetreatAuth);
+  const auth: RetreatAuthParams = {
+    churchName: retreatAuth.churchName,
+    passwd: retreatAuth.passwd,
+    ownerpw: retreatAuth.ownerpw,
+  };
+  const churchSlug = retreatAuth.churchName?.trim() || 'church';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -694,7 +701,7 @@ export default function RetreatEdit() {
   );
 
   useEffect(() => {
-    if (!bookletId || !userAccount) {
+    if (!bookletId || !retreatAuth.loggedIn || !auth.churchName || !auth.passwd) {
       setLoading(false);
       return;
     }
@@ -704,7 +711,7 @@ export default function RetreatEdit() {
     setError(null);
 
     Promise.all([
-      fetchRetreatDetail(bookletId, userAccount),
+      fetchRetreatDetail(bookletId, auth),
       fetchRetreatRequestMain(bookletId).catch(() => []),
     ])
       .then(([detail, loadedQuestions]) => {
@@ -751,7 +758,7 @@ export default function RetreatEdit() {
     return () => {
       cancelled = true;
     };
-  }, [bookletId, userAccount]);
+  }, [bookletId, retreatAuth.loggedIn, auth.churchName, auth.passwd, auth.ownerpw]);
 
   const updateInfo = (key: keyof RetreatInfoForm, value: string) => {
     setInfo((prev) => {
@@ -938,7 +945,7 @@ export default function RetreatEdit() {
       const processed = await Promise.all(
         pairs.map(async ({ slotIndex: si, file }) => {
           const resizingBlob = await imageCompression(file, options);
-          const fileName = buildRetreatMainImageFileName(file, userAccount, si);
+          const fileName = buildRetreatMainImageFileName(file, churchSlug, si);
           const newFile = new File([resizingBlob], fileName, { type: file.type });
           return {
             slotIndex: si,
@@ -966,7 +973,7 @@ export default function RetreatEdit() {
     } finally {
       setMainImageLoadingSlot(null);
     }
-  }, [info, programs, recomputeDirty, userAccount, mainImages]);
+  }, [info, programs, recomputeDirty, churchSlug, mainImages]);
 
   const clearMainImageSlot = (slotIndex: number) => {
     setMainImages((prev) => {
@@ -1023,17 +1030,17 @@ export default function RetreatEdit() {
   };
 
   const saveCurrentTab = async (): Promise<void> => {
-    if (!bookletId || !userAccount) return;
+    if (!bookletId || !retreatAuth.loggedIn || !auth.churchName || !auth.passwd) return;
 
     if (activeTab === 'program' || activeTab === 'order') {
-      await saveRetreatPrograms(bookletId, userAccount, programs);
+      await saveRetreatPrograms(bookletId, auth, programs);
       programsBaselineRef.current = programs.map((row) => ({ ...row }));
     } else if (activeTab === 'apply') {
       const imageMainSerialized = serializeMainImageNameForDb(
         mainImages.map((m) => m.serverName ?? ''),
       );
       const infoToSave = { ...info, imageMain: imageMainSerialized };
-      const saveResult = await saveRetreatInfo(bookletId, userAccount, infoToSave, {
+      const saveResult = await saveRetreatInfo(bookletId, auth, infoToSave, {
         imageMainName: imageMainSerialized,
         mainImageFiles: mainImages.some((m) => !!m.file)
           ? mainImages.map((m) => m.file)
@@ -1044,7 +1051,7 @@ export default function RetreatEdit() {
       const questionsToSave = customQuestions
         .map((question) => ({ ...question, label: question.label.trim() }))
         .filter((question) => question.label);
-      await saveRetreatRequestMain(bookletId, userAccount, questionsToSave);
+      await saveRetreatRequestMain(bookletId, auth, questionsToSave);
       customQuestionsBaselineRef.current = questionsToSave.map((question) => ({ ...question }));
       setCustomQuestions(questionsToSave);
     } else {
@@ -1052,7 +1059,7 @@ export default function RetreatEdit() {
         mainImages.map((m) => m.serverName ?? ''),
       );
       const infoToSave = { ...info, imageMain: imageMainSerialized };
-      const saveResult = await saveRetreatInfo(bookletId, userAccount, infoToSave, {
+      const saveResult = await saveRetreatInfo(bookletId, auth, infoToSave, {
         imageMainName: imageMainSerialized,
         mainImageFiles: mainImages.some((m) => !!m.file)
           ? mainImages.map((m) => m.file)
@@ -2023,8 +2030,13 @@ export default function RetreatEdit() {
             <p className="retreat-edit__group-desc">구글폼처럼 추가 질문을 자유롭게 구성할 수 있습니다</p>
           </div>
         </div>
-        <p className="retreat-edit__hint">
-          이름·연락처·소속은 기본 항목으로 자동 포함됩니다. 안내 문구는 기본 정보 탭에서 수정할 수 있습니다.
+        <div className="retreat-edit__apply-default-notice">
+          <p className="retreat-edit__apply-default-notice__text">
+            <strong>이름·연락처·소속·성별·나이</strong>는 기본 항목으로 자동 포함됩니다.
+          </p>
+        </div>
+        <p className="retreat-edit__hint retreat-edit__hint--inline">
+          안내 문구는 기본 정보 탭에서 수정할 수 있습니다.
         </p>
         <RetreatRequestFormBuilder
           questions={customQuestions}

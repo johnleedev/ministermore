@@ -1,6 +1,7 @@
 export type RetreatListItem = {
   id: number;
   userAccount: string | null;
+  churchName: string | null;
   orderTitle: string | null;
   ordererName: string | null;
   ordererPhone: string | null;
@@ -58,6 +59,8 @@ export type RetreatAnswerRow = {
   userName: string;
   userPhone: string;
   userGroup: string | null;
+  userGender: string | null;
+  userAge: string | null;
   note: string | null;
   customAnswers: Record<string, string | string[]>;
   created_at: string;

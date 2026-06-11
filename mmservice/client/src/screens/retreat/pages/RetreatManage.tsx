@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
-import { recoilUserData } from '../../../RecoilStore';
+import { recoilRetreatAuth } from '../../../RecoilStore';
+import type { RetreatAuthParams } from '../../../api/retreatApi';
 import { fetchRetreatList } from '../../../api/retreatApi';
 import RetreatApplicantsModal from '../components/RetreatApplicantsModal';
 import type { RetreatListItem } from '../lib/types';
@@ -113,7 +114,12 @@ function RetreatThumbIcon() {
 
 export default function RetreatManage() {
   const navigate = useNavigate();
-  const userAccount = useRecoilValue(recoilUserData)?.userAccount?.trim() || '';
+  const retreatAuth = useRecoilValue(recoilRetreatAuth);
+  const auth: RetreatAuthParams = {
+    churchName: retreatAuth.churchName,
+    passwd: retreatAuth.passwd,
+    ownerpw: retreatAuth.ownerpw,
+  };
 
   const [list, setList] = useState<RetreatListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -124,7 +130,7 @@ export default function RetreatManage() {
   const [sortNewest, setSortNewest] = useState(true);
 
   useEffect(() => {
-    if (!userAccount) {
+    if (!retreatAuth.loggedIn || !auth.churchName || !auth.passwd) {
       setList([]);
       return;
     }
@@ -133,7 +139,7 @@ export default function RetreatManage() {
     setLoading(true);
     setError(null);
 
-    fetchRetreatList(userAccount)
+    fetchRetreatList(auth)
       .then((rows) => {
         if (!cancelled) setList(rows);
       })
@@ -149,7 +155,7 @@ export default function RetreatManage() {
     return () => {
       cancelled = true;
     };
-  }, [userAccount]);
+  }, [retreatAuth.loggedIn, auth.churchName, auth.passwd, auth.ownerpw]);
 
   const stats = useMemo(() => {
     const active = list.filter((item) => item.hasInfo).length;
@@ -183,29 +189,23 @@ export default function RetreatManage() {
     return rows;
   }, [list, filterTab, search, sortNewest]);
 
-  const resolvePublicLink = (item: RetreatListItem) => {
-    if (item.link?.trim()) return item.link.trim();
-    return `${MainURL.replace(/\/$/, '')}/retreat/view?id=${item.id}`;
-  };
+  const buildBookletRetreatUrl = (bookletId: number) =>
+    `${MainURL.replace(/\/$/, '')}/booklet-retreat?id=${bookletId}`;
+
+  const resolvePublicLink = (item: RetreatListItem) => buildBookletRetreatUrl(item.id);
 
   const copyLink = async (item: RetreatListItem) => {
     const url = resolvePublicLink(item);
     try {
       await navigator.clipboard.writeText(url);
-      alert('링크가 복사되었습니다.');
+      alert('전단지 링크가 복사되었습니다.');
     } catch {
       window.prompt('아래 링크를 복사하세요.', url);
     }
   };
 
   const handleCreateNew = () => {
-    const draft = list.find((item) => !item.hasInfo);
-    if (draft) {
-      navigate(`/retreat/edit/${draft.id}`);
-      window.scrollTo(0, 0);
-      return;
-    }
-    window.open(RETREAT_APPLY_URL, '_blank', 'noopener,noreferrer');
+    navigate(`https://ministermore.co.kr/service/bookletretreat`);
   };
 
   const goToEdit = (id: number) => {
@@ -406,7 +406,7 @@ export default function RetreatManage() {
       {applicantsTarget ? (
         <RetreatApplicantsModal
           bookletId={applicantsTarget.id}
-          userAccount={userAccount}
+          auth={auth}
           title={applicantsTarget.eventName || applicantsTarget.orderTitle || ''}
           onClose={() => setApplicantsTarget(null)}
         />

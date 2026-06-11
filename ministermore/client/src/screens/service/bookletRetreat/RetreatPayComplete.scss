@@ -40,6 +40,82 @@
   line-height: 1.6;
 }
 
+.retreat-pay-complete__credentials {
+  text-align: left;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+
+.retreat-pay-complete__credentials-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #92400e;
+  margin: 0 0 14px 0;
+}
+
+.retreat-pay-complete__credentials-list {
+  margin: 0;
+  padding: 0;
+}
+
+.retreat-pay-complete__credentials-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid #fde68a;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  dt {
+    flex: 0 0 110px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #78350f;
+    margin: 0;
+  }
+
+  dd {
+    flex: 1;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+    word-break: break-all;
+  }
+}
+
+.retreat-pay-complete__credential-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.retreat-pay-complete__mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.retreat-pay-complete__credentials-warn {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.retreat-pay-complete__credentials-note {
+  margin: 0;
+  font-size: 13px;
+  color: #78716c;
+  line-height: 1.6;
+}
+
 .retreat-pay-complete__info {
   text-align: left;
   background: #fff;

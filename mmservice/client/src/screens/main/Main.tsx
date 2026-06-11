@@ -1,24 +1,15 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRecoilValue } from 'recoil';
-import { recoilLoginState, recoilUserData } from '../../RecoilStore';
-import Login from '../login/Login';
+import { useRecoilState, useRecoilValue } from 'recoil';
+import { recoilRetreatAuth } from '../../RecoilStore';
+import { loginRetreat } from '../../api/retreatApi';
 import MainSiteURL from '../../MainSiteURL';
-import { fetchDashboardSubscriptions } from '../../api/dashboardApi';
 import {
-  EMPTY_SERVICE_SUBSCRIPTIONS,
   SERVICE_CATALOG,
   type ServiceCatalogItem,
-  type ServiceSubscriptions,
   type ServiceTypeKey,
 } from '../../constants/serviceCatalog';
-import Loading from '../../components/Loading';
 import './Main.scss';
-
-function formatExpireLabel(expireDate: string | null) {
-  if (!expireDate) return '만료일 없음';
-  return `만료 ${expireDate}`;
-}
 
 function ServiceCardIcon({ serviceKey }: { serviceKey: ServiceTypeKey }) {
   const props = {
@@ -122,12 +113,11 @@ function StarIcon() {
 type ServiceCardProps = {
   service: ServiceCatalogItem;
   locked: boolean;
-  expireDate: string | null;
   onManage: () => void;
   onApply: () => void;
 };
 
-function ServiceCard({ service, locked, expireDate, onManage, onApply }: ServiceCardProps) {
+function ServiceCard({ service, locked, onManage, onApply }: ServiceCardProps) {
   const handleClick = () => {
     if (locked) {
       onApply();
@@ -146,13 +136,14 @@ function ServiceCard({ service, locked, expireDate, onManage, onApply }: Service
   return (
     <article
       className={`service-admin__card ${service.cardClass}${
-        locked ? ' service-admin__card--locked' : ''
+        locked ? ' service-admin__card--locked' : ' service-admin__card--active'
       }`}
       role="button"
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
+      {!locked ? <span className="service-admin__card-status">이용 중</span> : null}
       <div className="service-admin__card-icon">
         <ServiceCardIcon serviceKey={service.key} />
       </div>
@@ -161,15 +152,13 @@ function ServiceCard({ service, locked, expireDate, onManage, onApply }: Service
       <div className="service-admin__card-meta">
         {locked ? (
           <>
-            <span className="service-admin__badge service-admin__badge--outline">미이용</span>
+            <span className="service-admin__badge service-admin__badge--locked">미이용</span>
             <span className="service-admin__badge service-admin__badge--gray">신청 필요</span>
           </>
         ) : (
           <>
-            <span className="service-admin__badge">이용 가능</span>
-            <span className="service-admin__badge service-admin__badge--gray">
-              {formatExpireLabel(expireDate)}
-            </span>
+            <span className="service-admin__badge service-admin__badge--success">이용 가능</span>
+            <span className="service-admin__badge service-admin__badge--gray">로그인됨</span>
           </>
         )}
       </div>
@@ -183,17 +172,23 @@ function ServiceCard({ service, locked, expireDate, onManage, onApply }: Service
 
 export default function Main() {
   const navigate = useNavigate();
-  const isLogin = useRecoilValue(recoilLoginState);
-  const userData = useRecoilValue(recoilUserData);
+  const retreatAuth = useRecoilValue(recoilRetreatAuth);
+  const [, setRetreatAuth] = useRecoilState(recoilRetreatAuth);
 
-  const [subscriptions, setSubscriptions] = useState<ServiceSubscriptions>(EMPTY_SERVICE_SUBSCRIPTIONS);
-  const [loadingSubs, setLoadingSubs] = useState(false);
-  const [subsError, setSubsError] = useState<string | null>(null);
+  const [churchNameInput, setChurchNameInput] = useState('');
+  const [passwdInput, setPasswdInput] = useState('');
+  const [ownerpwInput, setOwnerpwInput] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  const displayName = useMemo(() => {
-    if (userData?.userNickName) return `${userData.userNickName}님`;
-    return '게스트';
-  }, [userData?.userNickName]);
+  const heroMessage = useMemo(() => {
+    if (!retreatAuth.loggedIn) return '로그인이 필요합니다';
+    if (retreatAuth.churchName) {
+      const roleLabel = retreatAuth.role === 'admin' ? '관리자' : '';
+      return `${retreatAuth.churchName}${roleLabel ? ` (${roleLabel})` : ''}님, 환영합니다`;
+    }
+    return '환영합니다';
+  }, [retreatAuth]);
 
   const [topServices, bottomServices] = useMemo(() => {
     const top = SERVICE_CATALOG.slice(0, 3);
@@ -201,50 +196,40 @@ export default function Main() {
     return [top, bottom] as const;
   }, []);
 
-  useEffect(() => {
-    const userId = userData?.userAccount?.trim();
-    if (!isLogin || !userId) {
-      setSubscriptions(EMPTY_SERVICE_SUBSCRIPTIONS);
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    const churchName = churchNameInput.trim();
+    const passwd = passwdInput.trim();
+    const ownerpw = ownerpwInput.trim();
+
+    if (!churchName || !passwd) {
+      setLoginError('교회 이름과 비밀번호를 입력해 주세요.');
       return;
     }
 
-    let cancelled = false;
-    setLoadingSubs(true);
-    setSubsError(null);
+    setLoginLoading(true);
+    setLoginError(null);
 
-    fetchDashboardSubscriptions(userId)
-      .then((data) => {
-        if (!cancelled) setSubscriptions(data.subscriptions);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setSubscriptions(EMPTY_SERVICE_SUBSCRIPTIONS);
-          setSubsError(err instanceof Error ? err.message : '구독 정보를 불러오지 못했습니다.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingSubs(false);
+    try {
+      const result = await loginRetreat({
+        churchName,
+        passwd,
+        ...(ownerpw ? { ownerpw } : {}),
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLogin, userData?.userAccount]);
-
-  if (!isLogin) {
-    return <Login />;
-  }
-
-  if (loadingSubs) {
-    return (
-      <div className="service-admin service-admin--loading">
-        <div className="service-admin__loading-screen">
-          <Loading />
-          <p className="service-admin__loading-text">구독 정보를 불러오는 중…</p>
-        </div>
-      </div>
-    );
-  }
+      setRetreatAuth({
+        loggedIn: true,
+        churchName: result.churchName,
+        passwd,
+        ownerpw: result.role === 'admin' ? ownerpw : '',
+        role: result.role,
+      });
+      setOwnerpwInput('');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
   const goTo = (path: string) => {
     navigate(path);
@@ -262,16 +247,21 @@ export default function Main() {
   const mainSiteBase = MainSiteURL.replace(/\/$/, '');
 
   const renderServiceCard = (service: ServiceCatalogItem) => {
-    const access = subscriptions[service.key];
-    const locked = !access.hasAccess;
+    const locked = service.key === 'FLYER_RETREAT' ? !retreatAuth.loggedIn : true;
 
     return (
       <ServiceCard
         key={service.key}
         service={service}
         locked={locked}
-        expireDate={access.expireDate}
-        onManage={() => goTo(service.path)}
+        onManage={() => {
+          if (service.key === 'FLYER_RETREAT' && !retreatAuth.loggedIn) {
+            setLoginError('수련회 전단지 관리를 위해 먼저 로그인해 주세요.');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+          }
+          goTo(service.path);
+        }}
         onApply={() => openServiceApply(service.key, service.applyUrl)}
       />
     );
@@ -281,14 +271,67 @@ export default function Main() {
     <div className="service-admin">
       <section className="service-admin__hero">
         <div className="service-admin__hero-inner">
-          <span className="service-admin__hero-eyebrow">
-            <StarIcon />
-            {displayName}, 환영합니다
+          <span
+            className={`service-admin__hero-eyebrow${
+              !retreatAuth.loggedIn ? ' service-admin__hero-eyebrow--login-required' : ''
+            }`}
+          >
+            {retreatAuth.loggedIn ? <StarIcon /> : null}
+            {heroMessage}
           </span>
           <h1>어떤 서비스를 관리하시겠어요?</h1>
           <p>관리하실 서비스를 선택해주세요</p>
-          {subsError ? (
-            <p className="service-admin__subs-status service-admin__subs-status--error">{subsError}</p>
+
+          {!retreatAuth.loggedIn ? (
+            <form className="service-admin__login" onSubmit={handleLogin}>
+              <p className="service-admin__login-lead">
+                결제 시 안내받은 교회 이름과 비밀번호로 로그인하세요.
+              </p>
+              <div className="service-admin__login-grid">
+                <label className="service-admin__login-field">
+                  <span>교회 이름</span>
+                  <input
+                    type="text"
+                    value={churchNameInput}
+                    onChange={(e) => setChurchNameInput(e.target.value)}
+                    placeholder="예) ○○교회"
+                    autoComplete="organization"
+                  />
+                </label>
+                <label className="service-admin__login-field">
+                  <span>비밀번호</span>
+                  <input
+                    type="password"
+                    value={passwdInput}
+                    onChange={(e) => setPasswdInput(e.target.value)}
+                    placeholder="결제 완료 시 안내된 비밀번호"
+                    autoComplete="current-password"
+                  />
+                </label>
+                <label className="service-admin__login-field">
+                  <span>관리자 비밀번호 (관리자만)</span>
+                  <input
+                    type="password"
+                    value={ownerpwInput}
+                    onChange={(e) => setOwnerpwInput(e.target.value)}
+                    placeholder="관리자 로그인 시에만 입력"
+                    autoComplete="new-password"
+                  />
+                </label>
+              </div>
+              {loginError ? (
+                <p className="service-admin__login-error" role="alert">
+                  {loginError}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                className="service-admin__login-btn"
+                disabled={loginLoading}
+              >
+                {loginLoading ? '로그인 중…' : '로그인'}
+              </button>
+            </form>
           ) : null}
         </div>
       </section>
