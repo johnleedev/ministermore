@@ -13,6 +13,7 @@ import { useRecoilValue } from 'recoil';
 import { recoilLoginState, recoilUserData } from '../../RecoilStore';
 import ScrollToTopButton from '../../components/ScrollToTopButton';
 import type { CommunityBoardConfig, CommunityComment } from './BoardTypes';
+import type { BoardDetailLocationState } from './boardNavigation';
 
 type Props = {
   config: CommunityBoardConfig;
@@ -34,8 +35,19 @@ const getIsLikedToggleRoute = (config: CommunityBoardConfig) =>
 export default function BoardDetail({ config }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const propsData = location.state?.data;
-  const propsSort = location.state?.sort ?? config.sort;
+  const locationState = location.state as BoardDetailLocationState | null;
+  const propsData = locationState?.data;
+  const propsSort = locationState?.sort ?? config.sort;
+  const boardReturn = locationState?.boardReturn;
+
+  const goBackToList = () => {
+    if (boardReturn) {
+      navigate(config.listPath, { state: { boardReturn } });
+      return;
+    }
+
+    navigate(config.listPath);
+  };
   const userData = useRecoilValue(recoilUserData);
   const isLogin = useRecoilValue(recoilLoginState);
   const canInteract = isLogin && Boolean(userData.userAccount?.trim());
@@ -199,7 +211,7 @@ export default function BoardDetail({ config }: Props) {
           <div className="subpage__main__title">
             <h3>{config.detailTitle}</h3>
             <div className="subpage__main__title__actions">
-              <button type="button" className="postBtnbox" onClick={() => navigate(config.listPath)}>
+              <button type="button" className="postBtnbox" onClick={goBackToList}>
                 목록
               </button>
               {userData.userAccount === propsData.userAccount && (

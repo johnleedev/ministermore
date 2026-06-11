@@ -6,6 +6,7 @@ import { MdArrowForwardIos, MdArrowBack } from 'react-icons/md'
 import MainURL from '../../../MainURL'
 import axios from 'axios'
 import type { RecruitBoardConfig } from './RecruitTypes'
+import type { RecruitDetailLocationState } from './recruitNavigation'
 import { safeJsonParse } from './recruitUtils'
 
 const DEFAULT_SORT_ITEM = [{ sort: '전임', content: '' }]
@@ -36,7 +37,7 @@ export default function RecruitDetail({ config }: { config: RecruitBoardConfig }
   const ID = url.searchParams.get('id')
   const navigate = useNavigate()
   const locationHook = useLocation()
-  const recruitState = (locationHook && (locationHook as any).state)?.recruitState
+  const recruitState = (locationHook.state as RecruitDetailLocationState | null)?.recruitState
 
   const [part, setPart] = useState<any>(DEFAULT_SORT_ITEM)
   const [partDetail, setPartDetail] = useState<any>(DEFAULT_SORT_ITEM)
@@ -77,8 +78,12 @@ export default function RecruitDetail({ config }: { config: RecruitBoardConfig }
   const { naver } = window
 
   const goToList = () => {
-    window.scrollTo(0, 0)
-    navigate(config.listPath, { state: { recruitState } })
+    if (recruitState) {
+      navigate(config.listPath, { state: { recruitState } })
+      return
+    }
+
+    navigate(config.listPath)
   }
 
   const handleListButtonHover = (e: React.MouseEvent<HTMLDivElement>, enter: boolean) => {

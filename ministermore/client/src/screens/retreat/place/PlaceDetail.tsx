@@ -131,7 +131,6 @@ export default function PlaceDetail() {
   };
 
   const goBackToList = () => {
-    window.scrollTo(0, 0);
     if (placeReturn) {
       navigate(PLACE_LIST_PATH, { state: { placeReturn } });
       return;

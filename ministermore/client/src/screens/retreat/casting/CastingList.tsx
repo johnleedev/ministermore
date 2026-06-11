@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import { MdOutlineKeyboardDoubleArrowDown } from 'react-icons/md';
 import MainURL from '../../../MainURL';
@@ -8,6 +8,14 @@ import Loading from '../../../components/Loading';
 import ScrollToTopButton from '../../../components/ScrollToTopButton';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
 import { fetchScrapStatusMap, scrapKeyOf, toggleScrap } from '../../mypage/scrapApi';
+import type { CastingListLocationState, CastingReturnState } from './castingNavigation';
+import {
+  CASTING_LIST_PATH,
+  clearCastingListRestore,
+  loadCastingListRestore,
+  saveCastingListRestore,
+  shouldRestoreCastingList,
+} from './castingNavigation';
 import '../place/Place.scss';
 import './Casting.scss';
 
@@ -22,6 +30,22 @@ interface CastingItem {
 const CASTING_SORT_TABS = ['설교자', '찬양사역자', '특강강사', '기타'] as const;
 
 const PAGE_SIZE = 9;
+const RESTORE_TTL_MS = 10 * 60 * 1000;
+
+const restoreScroll = (scrollY: number) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+    });
+  });
+};
+
+const resolveInitialCastingReturn = (locationState: CastingListLocationState | null): CastingReturnState | null => {
+  const fromRouter = locationState?.castingReturn;
+  if (fromRouter) return fromRouter;
+  if (shouldRestoreCastingList()) return loadCastingListRestore(RESTORE_TTL_MS);
+  return null;
+};
 
 const getImages = (images: CastingItem['images']) => {
   if (!images) return [];
@@ -37,19 +61,27 @@ const getImages = (images: CastingItem['images']) => {
 
 export default function CastingList() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialRestoreRef = useRef<CastingReturnState | null | undefined>(undefined);
+  if (initialRestoreRef.current === undefined) {
+    initialRestoreRef.current = resolveInitialCastingReturn(location.state as CastingListLocationState | null);
+  }
+  const initialRestore = initialRestoreRef.current;
+
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
   const [list, setList] = useState<CastingItem[]>([]);
-  const [selectSort, setSelectSort] = useState<string>('all');
-  const [searchWord, setSearchWord] = useState('');
+  const [selectSort, setSelectSort] = useState(initialRestore?.sort ?? 'all');
+  const [searchWord, setSearchWord] = useState(initialRestore?.searchWord ?? '');
   const [isResdataFalse, setIsResdataFalse] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialRestore?.currentPage ?? 1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isSearching, setIsSearching] = useState(initialRestore?.isSearching ?? false);
   const [scrapMap, setScrapMap] = useState<Record<string, boolean>>({});
+  const hasInitializedRef = useRef(false);
 
   const fetchPosts = async (page: number, append = false) => {
     if (append) {
@@ -93,6 +125,7 @@ export default function CastingList() {
   };
 
   const resetListState = () => {
+    clearCastingListRestore();
     setList([]);
     setCurrentPage(1);
     setHasMore(true);
@@ -101,7 +134,122 @@ export default function CastingList() {
     setTotalCount(0);
   };
 
+  const restoreListPages = async (targetPage: number, scrollY: number) => {
+    setIsLoading(true);
+    try {
+      let allItems: CastingItem[] = [];
+      let count = 0;
+      let lastPageHasMore = true;
+
+      for (let page = 1; page <= targetPage; page++) {
+        const res = await axios.post(`${MainURL}/retreatcasting/getdatacasting`, {
+          sort: selectSort,
+          page,
+          pageSize: PAGE_SIZE,
+        });
+
+        if (res.data.data) {
+          const newItems = [...res.data.data] as CastingItem[];
+          allItems = [...allItems, ...newItems];
+          count = res.data.count ?? 0;
+          lastPageHasMore = newItems.length >= PAGE_SIZE;
+        } else {
+          lastPageHasMore = false;
+          if (page === 1) {
+            count = res.data.count ?? 0;
+          }
+          break;
+        }
+      }
+
+      setList(allItems);
+      setTotalCount(count);
+      setHasMore(lastPageHasMore);
+      setIsResdataFalse(allItems.length === 0);
+      setCurrentPage(targetPage);
+      restoreScroll(scrollY);
+    } catch (error) {
+      console.error(error);
+      setList([]);
+      setIsResdataFalse(true);
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runSearch = async (word: string) => {
+    const trimmed = word.trim();
+    if (trimmed.length < 2) return;
+
+    setIsSearching(true);
+    setIsLoading(true);
+    setHasMore(false);
+    setCurrentPage(1);
+
+    try {
+      const res = await axios.post(`${MainURL}/retreatcasting/getdatacastingsearch`, {
+        word: trimmed,
+      });
+
+      if (res.data.data) {
+        const visible = (res.data.data as CastingItem[]).filter(
+          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true',
+        );
+        const filtered =
+          selectSort === 'all' ? visible : visible.filter((item) => item.sort === selectSort);
+        setList(filtered);
+        setTotalCount(filtered.length);
+        setIsResdataFalse(false);
+      } else {
+        setList([]);
+        setTotalCount(0);
+        setIsResdataFalse(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setList([]);
+      setIsResdataFalse(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const restored = initialRestore;
+
+      const restoredSearchWord = restored?.searchWord?.trim() ?? '';
+      if (restored?.isSearching && restoredSearchWord.length >= 2) {
+        void runSearch(restoredSearchWord).then(() => {
+          if (restored.scrollY) {
+            restoreScroll(restored.scrollY);
+          }
+        });
+        clearCastingListRestore();
+        navigate(CASTING_LIST_PATH, { replace: true, state: {} });
+        return;
+      }
+
+      const shouldRestoreList =
+        restored && ((restored.scrollY ?? 0) > 0 || (restored.currentPage ?? 1) > 1);
+
+      if (shouldRestoreList) {
+        const targetPage = restored.currentPage ?? 1;
+        const scrollY = restored.scrollY ?? 0;
+        setCurrentPage(targetPage);
+        void restoreListPages(targetPage, scrollY);
+        clearCastingListRestore();
+        navigate(CASTING_LIST_PATH, { replace: true, state: {} });
+        return;
+      }
+
+      if (restored) {
+        navigate(CASTING_LIST_PATH, { replace: true, state: {} });
+      }
+    }
+
     resetListState();
     fetchPosts(1);
   }, [selectSort]);
@@ -172,37 +320,7 @@ export default function CastingList() {
       return;
     }
 
-    setIsSearching(true);
-    setIsLoading(true);
-    setHasMore(false);
-    setCurrentPage(1);
-
-    try {
-      const res = await axios.post(`${MainURL}/retreatcasting/getdatacastingsearch`, {
-        word: searchWord.trim(),
-      });
-
-      if (res.data.data) {
-        const visible = (res.data.data as CastingItem[]).filter(
-          (item) => item.isView === true || item.isView === 1 || item.isView === '1' || item.isView === 'true'
-        );
-        const filtered =
-          selectSort === 'all' ? visible : visible.filter((item) => item.sort === selectSort);
-        setList(filtered);
-        setTotalCount(filtered.length);
-        setIsResdataFalse(false);
-      } else {
-        setList([]);
-        setTotalCount(0);
-        setIsResdataFalse(true);
-      }
-    } catch (error) {
-      console.error(error);
-      setList([]);
-      setIsResdataFalse(true);
-    } finally {
-      setIsLoading(false);
-    }
+    await runSearch(searchWord);
   };
 
   const resetSearch = () => {
@@ -222,8 +340,18 @@ export default function CastingList() {
       return;
     }
 
+    const returnState: CastingReturnState = {
+      sort: selectSort,
+      searchWord,
+      isSearching,
+      scrollY: window.scrollY,
+      currentPage,
+    };
+    saveCastingListRestore(returnState);
     window.scrollTo(0, 0);
-    navigate(`/retreat/casting/detail?id=${id}`);
+    navigate(`/retreat/casting/detail?id=${id}`, {
+      state: { castingReturn: returnState },
+    });
   };
 
   const openCastingRequest = () => {

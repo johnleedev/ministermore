@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import './PraiseMain.scss';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import altImage from '../../../images/altImage.jpeg';
 import { MdArrowBack } from "react-icons/md";
 import axios from 'axios';
 import MainURL from '../../../MainURL';
+import type { PraiseDetailLocationState } from './praiseNavigation';
+import { PRAISE_LIST_PATH } from './praiseNavigation';
 
 interface SongProps {
   id: number;
@@ -21,11 +23,21 @@ interface SongProps {
 }
 
 export default function PraiseDetail() {
-
   const navigate = useNavigate();
+  const location = useLocation();
+  const praiseReturn = (location.state as PraiseDetailLocationState | null)?.praiseReturn;
   const url = new URL(window.location.href);
   const ID = url.searchParams.get("id");
   const [songData, setSongData] = useState<SongProps | null>(null);
+
+  const goBackToList = () => {
+    if (praiseReturn) {
+      navigate(PRAISE_LIST_PATH, { state: { praiseReturn } });
+      return;
+    }
+
+    navigate(PRAISE_LIST_PATH);
+  };
 
   
   // 게시글 가져오기
@@ -140,12 +152,7 @@ export default function PraiseDetail() {
               <h3 className='main_title'>
                 {songData.title}
               </h3>
-              <div className="back-button"
-                onClick={() => {
-                  navigate(-1);
-                  window.scrollTo(0, 0);
-                }}
-                >
+              <div className="back-button" onClick={goBackToList}>
                   <MdArrowBack className="back-icon" />
                   <span>목록</span>
                 </div>
@@ -360,12 +367,7 @@ export default function PraiseDetail() {
 
           {/* 하단 뒤로가기 버튼 */}
           <div className="bottom-back-button-container">
-            <div className="back-button bottom-back-button"
-            onClick={() => {
-              navigate(-1);
-              window.scrollTo(0, 0);
-            }}
-            >
+            <div className="back-button bottom-back-button" onClick={goBackToList}>
               <MdArrowBack className="back-icon" />
               <span>목록</span>
             </div>

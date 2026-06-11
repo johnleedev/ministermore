@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import { MdOutlineAccessTime, MdOutlineRemoveRedEye } from 'react-icons/md';
 import { FaPen, FaRegThumbsUp } from 'react-icons/fa';
@@ -9,6 +9,8 @@ import { CiCircleMinus } from 'react-icons/ci';
 import MainURL from '../../../MainURL';
 import DateFormmating from '../../../components/DateFormmating';
 import { recoilLoginState, recoilUserData } from '../../../RecoilStore';
+import type { ReviewDetailLocationState } from './reviewNavigation';
+import { REVIEW_LIST_PATH } from './reviewNavigation';
 import './Review.scss';
 
 interface ReviewPost {
@@ -46,8 +48,19 @@ export default function ReviewDetail() {
   const url = new URL(window.location.href);
   const id = url.searchParams.get('id');
   const navigate = useNavigate();
+  const location = useLocation();
+  const reviewReturn = (location.state as ReviewDetailLocationState | null)?.reviewReturn;
   const isLogin = useRecoilValue(recoilLoginState);
   const userData = useRecoilValue(recoilUserData);
+
+  const goBackToList = () => {
+    if (reviewReturn) {
+      navigate(REVIEW_LIST_PATH, { state: { reviewReturn } });
+      return;
+    }
+
+    navigate(REVIEW_LIST_PATH);
+  };
 
   const [post, setPost] = useState<ReviewPost>();
   const [commentsList, setCommentsList] = useState<ReviewComment[]>([]);
@@ -198,7 +211,7 @@ export default function ReviewDetail() {
           <div className="subpage__main__title">
             <h3>장소후기</h3>
             <div className="place__detail-actions">
-              <button className="btn btn--secondary" type="button" onClick={() => navigate('/retreat/review')}>
+              <button className="btn btn--secondary" type="button" onClick={goBackToList}>
                 목록
               </button>
               {post.userAccount === userData.userAccount && (
@@ -308,14 +321,7 @@ export default function ReviewDetail() {
                 >
                   Top
                 </button>
-                <button
-                  className="btn btn--primary"
-                  type="button"
-                  onClick={() => {
-                    window.scrollTo({ top: 0, behavior: 'auto' });
-                    navigate('/retreat/review');
-                  }}
-                >
+                <button className="btn btn--primary" type="button" onClick={goBackToList}>
                   목록으로
                 </button>
               </div>
