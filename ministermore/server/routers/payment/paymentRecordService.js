@@ -123,8 +123,11 @@ async function insertOneTimePayment(payload) {
     throw err;
   }
 
+  const paymentStatus = strOrNull(payload.paymentStatus, 32) || 'PAID';
+  const isFree = paymentStatus.toUpperCase() === 'FREE';
   const totalAmount = intOrNull(payload.totalAmount);
-  if (totalAmount == null || totalAmount < 1) throw new Error('totalAmount is required');
+  if (!isFree && (totalAmount == null || totalAmount < 1)) throw new Error('totalAmount is required');
+  const resolvedTotal = isFree ? 0 : totalAmount;
 
   const result = await queryResultAsync(
     `INSERT INTO oneTimePayment (
@@ -145,7 +148,7 @@ async function insertOneTimePayment(payload) {
       strOrNull(payload.orderName, 255),
       intOrNull(payload.supplyAmount),
       intOrNull(payload.vatAmount),
-      totalAmount,
+      resolvedTotal,
       portonePaymentId,
       strOrNull(payload.portoneTxId, 64),
       strOrNull(payload.portonePaidAt, 64),

@@ -437,6 +437,166 @@ router.post('/event/complete-browser', async (req, res) => {
   }
 });
 
+/** 수련회 전단지 — 50명 이하 무료 신청 (PortOne 결제 없음) */
+router.post('/event/complete-free', async (req, res) => {
+  const {
+    orderTitle,
+    ordererName,
+    ordererPhone,
+    userAccount,
+    bookletType,
+    visibleTabs,
+    churchName,
+    passwd,
+    ownerpw,
+    participantTier,
+    serviceType: subscriptionServiceType,
+    subscriptionServiceType: subscriptionServiceTypeAlt,
+  } = req.body ?? {};
+
+  if (bookletType !== 'retreat') {
+    return res.status(400).json({ ok: false, message: '무료 신청은 수련회 전단지에서만 가능합니다.' });
+  }
+
+  const tier = participantTier != null ? String(participantTier).trim() : '';
+  if (tier !== 'up50') {
+    return res.status(400).json({ ok: false, message: '무료 신청은 50명 이하 구간만 가능합니다.' });
+  }
+
+  const orderTitleNorm = orderTitle != null ? String(orderTitle).trim() : '';
+  const ordererNameNorm = ordererName != null ? String(ordererName).trim() : '';
+  const ordererPhoneNorm = ordererPhone != null ? String(ordererPhone).replace(/\s/g, '') : '';
+  const userAccountNorm = userAccount != null ? String(userAccount).trim() : '';
+  const churchNameNorm = churchName != null ? String(churchName).trim() : '';
+  const passwdNorm = passwd != null ? String(passwd).trim() : '';
+  const ownerpwNorm = ownerpw != null ? String(ownerpw).trim() : '';
+
+  if (!orderTitleNorm || !ordererNameNorm || !ordererPhoneNorm) {
+    return res.status(400).json({ ok: false, message: '타이틀, 이름, 전화번호가 필요합니다.' });
+  }
+  if (!churchNameNorm || !passwdNorm || !ownerpwNorm) {
+    return res.status(400).json({
+      ok: false,
+      message: '교회 이름, 비밀번호, 관리자 비밀번호가 필요합니다.',
+    });
+  }
+
+  let visibleTabsJson = JSON.stringify(['info', 'program', 'profile']);
+  if (visibleTabs != null) {
+    const s = typeof visibleTabs === 'string' ? visibleTabs : JSON.stringify(visibleTabs);
+    if (s.trim()) {
+      try {
+        const p = JSON.parse(s);
+        if (Array.isArray(p) && p.length) {
+          const n = normalizeVisibleTabsArray(p);
+          if (n) visibleTabsJson = JSON.stringify(n);
+        }
+      } catch (_) {
+        /* keep default */
+      }
+    }
+  }
+
+  const pid = `free_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`;
+
+  try {
+    await ensureEventMainPortoneColumns();
+
+    let eventMainId;
+    try {
+      eventMainId = await insertEventMainWithPayment(bookleteventdb, {
+        userAccount: userAccountNorm,
+        ordererName: ordererNameNorm,
+        ordererPhone: ordererPhoneNorm,
+        orderTitle: orderTitleNorm,
+        bookletType: 'retreat',
+        visibleTabsJson,
+        portonePaymentId: pid,
+        portoneTxId: null,
+        portonePaidAmount: 0,
+        portoneOrderName: '수련회 전단지 제작',
+        portonePaidAt: null,
+        churchName: churchNameNorm,
+        passwd: passwdNorm,
+        ownerpw: ownerpwNorm,
+      });
+    } catch (dbErr) {
+      if (dbErr && dbErr.code === 'DUPLICATE_PORTONE' && dbErr.existingId != null) {
+        return res.status(409).json({
+          ok: false,
+          message: dbErr.message || '이미 신청된 건입니다.',
+          eventMainId: dbErr.existingId,
+          paymentId: pid,
+        });
+      }
+      console.error('eventMain INSERT after free apply', dbErr);
+      return res.status(500).json({
+        ok: false,
+        message: '신청 저장에 실패했습니다. 고객센터로 문의해 주세요.',
+        paymentId: pid,
+      });
+    }
+
+    const eventCustomData = {
+      bookletType: 'retreat',
+      visibleTabs: visibleTabsJson,
+      participantTier: tier,
+    };
+
+    await safeInsertOneTimePayment({
+      serviceType: 'bookletRetreat',
+      userAccount: userAccountNorm,
+      churchName: churchNameNorm || null,
+      passwd: passwdNorm || null,
+      ownerpw: ownerpwNorm || null,
+      ordererName: ordererNameNorm,
+      ordererPhone: ordererPhoneNorm,
+      orderTitle: orderTitleNorm,
+      orderName: '수련회 전단지 제작',
+      supplyAmount: 0,
+      vatAmount: 0,
+      totalAmount: 0,
+      portonePaymentId: pid,
+      portoneTxId: null,
+      portonePaidAt: null,
+      paymentStatus: 'FREE',
+      resourceType: 'eventMain',
+      resourceId: String(eventMainId),
+      customData: eventCustomData,
+      memo: [`eventMainId=${eventMainId}`, `participantTier=${tier}`].join('\n'),
+    });
+
+    const subType = subscriptionServiceType ?? subscriptionServiceTypeAlt;
+    await notifyMmserviceSubscription({
+      userAccount: userAccountNorm,
+      subscriptionServiceType: subType,
+      customData: eventCustomData,
+    });
+
+    await notifyMmserviceRetreatProvision({
+      eventMainId,
+      userAccount: userAccountNorm,
+      orderTitle: orderTitleNorm,
+      ordererName: ordererNameNorm,
+      ordererPhone: ordererPhoneNorm,
+      churchName: churchNameNorm,
+      passwd: passwdNorm,
+      ownerpw: ownerpwNorm,
+      visibleTabs: visibleTabsJson,
+    });
+
+    return res.json({
+      ok: true,
+      paymentId: pid,
+      eventMainId,
+      portoneOrderName: '수련회 전단지 제작',
+    });
+  } catch (e) {
+    console.error('complete-free handler', e);
+    return res.status(500).json({ ok: false, message: e?.message || String(e) });
+  }
+});
+
 router.post('/homeinapp/complete-browser', async (req, res) => {
   const {
     paymentId,

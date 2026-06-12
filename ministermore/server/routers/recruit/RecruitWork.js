@@ -1453,6 +1453,82 @@ router.post('/checkemailsentstatus', async (req, res) => {
   }
 });
 
+const RENEWAL_EMAIL_SUBJECT = '[사역자모아] 사역자모아 리뉴얼 오픈 및 공식 모바일 앱 출시 안내';
+const RENEWAL_TEST_EMAIL = 'johnlovesyou@naver.com';
+
+const buildRenewalAnnouncementHtml = (options = {}) => {
+  const testBanner = options.isTest
+    ? `<div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+         <p style="margin: 0; color: #856404; font-size: 15px; font-weight: bold;">[테스트 발송]</p>
+         <p style="margin: 8px 0 0; color: #856404; font-size: 14px;">수신 주소: ${RENEWAL_TEST_EMAIL}</p>
+       </div>`
+    : '';
+
+  return `
+    <html lang="kr">
+    <body>
+      <div style="max-width: 720px; margin: 0 auto; padding: 20px; font-family: Arial, 'Malgun Gothic', sans-serif;">
+        <div style="background-color: #4a90e2; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: #fff; margin: 0; font-size: 24px;">사역자모아</h1>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+          ${testBanner}
+          <h2 style="color: #333; font-size: 20px; margin: 0 0 24px; line-height: 1.5;">${RENEWAL_EMAIL_SUBJECT}</h2>
+
+          <p style="font-size: 16px; color: #333; line-height: 1.8; margin: 0 0 16px;">안녕하세요.<br>목회자·사역자 정보 공유 플랫폼 '사역자모아' 운영진입니다.</p>
+
+          <p style="font-size: 16px; color: #333; line-height: 1.8; margin: 0 0 16px;">
+            다름이 아니라, 그동안 저희 서비스를 이용해 주신 교회와 사역자분들께 더욱 전문성 있고 편리한 서비스를 통합적으로 제공해 드리고자,
+            이번에 사역자모아 홈페이지를 전면 리뉴얼 오픈하게 되어 안내차 연락을 드립니다.
+          </p>
+
+          <p style="font-size: 16px; color: #333; line-height: 1.8; margin: 0 0 16px;">
+            이번 리뉴얼은 전국의 흩어져 있던 사역 정보들을 한곳에 모으고, 교회의 디지털 사역을 실질적으로 돕는 데 중점을 두었습니다.
+            이에 따라 기존 '수련회모아' 사이트를 하나로 통합하였으며, 교회 맞춤형 모바일 서비스(홈페이지 및 어플 제작)를 강화하였습니다.
+            이제 사역자 청빙부터 수련회 장소 섭외, 교회 디지털 전환까지 사역자모아에서 한 번에 해결하실 수 있습니다.
+          </p>
+
+          <p style="font-size: 16px; color: #333; line-height: 1.8; margin: 0 0 12px;">
+            더불어, 언제 어디서나 우리 교회에 꼭 필요한 청빙 공고와 사역 정보들을 가장 쉽고 빠르게 확인하실 수 있도록
+            '사역자모아 공식 모바일 앱'을 새롭게 출시하였습니다.
+          </p>
+
+          <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin: 0 0 20px; border: 1px solid #e8ebef;">
+            <p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 10px;"><strong>📲 스마트한 실시간 알림:</strong> 우리 교회 공고의 지원 현황이나 꼭 필요한 구인구직, 집회·세미나 소식을 푸시 알림으로 가장 빠르게 확인하세요.</p>
+            <p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 10px;"><strong>👀 모바일 최적화 화면:</strong> 모바일 브라우저 접속 없이, 탭 한 번으로 더 가볍고 직관적인 서비스를 경험할 수 있습니다.</p>
+            <p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0;"><strong>🕊️ 사역자 맞춤형 인터페이스:</strong> 손끝 하나로 간편하게 동역자를 찾고 사역 정보를 나누어 보세요.</p>
+          </div>
+
+          <p style="font-size: 14px; color: #666; line-height: 1.7; margin: 0 0 20px;">
+            ※ 현재 iOS(앱스토어) 버전이 먼저 출시되었으며, 구글 플레이스토어는 곧 출시될 예정입니다.
+          </p>
+
+          <p style="font-size: 16px; color: #333; line-height: 1.8; margin: 0 0 16px;">
+            새롭게 단장한 사역자모아가 교회의 미래를 위한 든든한 동역자가 되기를 소망합니다.<br>
+            앞으로도 더 나은 서비스를 위해 늘 노력하겠습니다.<br>
+            감사합니다.
+          </p>
+
+          <div style="margin-top: 28px; padding: 20px; background-color: #fff; border-radius: 8px; border-top: 3px solid #4a90e2;">
+            <p style="font-size: 15px; color: #333; margin: 0 0 8px;"><strong>홈페이지:</strong> <a href="https://www.ministermore.co.kr/" style="color: #4a90e2;">https://www.ministermore.co.kr/</a></p>
+            <p style="font-size: 15px; color: #333; margin: 0 0 8px;"><strong>문의 이메일:</strong> <a href="mailto:yeplat@naver.com" style="color: #4a90e2;">yeplat@naver.com</a></p>
+            <p style="font-size: 15px; color: #333; margin: 0;"><strong>카카오채널:</strong> <a href="https://pf.kakao.com/_Xzwrn" style="color: #4a90e2;">https://pf.kakao.com/_Xzwrn</a></p>
+          </div>
+
+          <div style="text-align: center; margin-top: 28px;">
+            <a href="https://www.ministermore.co.kr/" style="display: inline-block; background-color: #4a90e2; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">사역자모아 방문하기</a>
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="font-size: 14px; color: #666; text-align: center; margin: 0;">본 메일은 사역자모아에서 발송되었습니다.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 const buildRecruitNotificationHtml = (item, deleteLink, denyLink, options = {}) => {
   const testBanner = options.isTest
     ? `<div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
@@ -1512,30 +1588,11 @@ const buildRecruitNotificationHtml = (item, deleteLink, denyLink, options = {}) 
 };
 
 router.post('/sendtestrecruitemail', async (req, res) => {
-  const today = new Date().toISOString().slice(0, 10);
-  const item = req.body.item || {
-    id: 0,
-    title: '테스트 채용 공고',
-    church: '테스트 교회',
-    source: '사역자모아',
-    saveDate: today,
-    email: 'sample@example.com',
-  };
-
-  let originalEmail = typeof item.email === 'string' ? item.email.trim() : '';
-
-  if (!originalEmail && item.inquiry) {
-    try {
-      const inquiryCopy = JSON.parse(item.inquiry);
-      originalEmail = inquiryCopy.email || '';
-    } catch (parseError) {
-      return res.status(400).json({ success: false, message: 'inquiry 파싱 실패' });
-    }
-  }
+  const testEmail = RENEWAL_TEST_EMAIL;
   const emailRule = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
 
-  if (!emailRule.test(originalEmail)) {
-    return res.status(400).json({ success: false, message: '유효하지 않은 이메일' });
+  if (!emailRule.test(testEmail)) {
+    return res.status(400).json({ success: false, message: '유효하지 않은 테스트 이메일' });
   }
 
   let transporter;
@@ -1549,19 +1606,17 @@ router.post('/sendtestrecruitemail', async (req, res) => {
   }
 
   try {
-    const { deleteLink, denyLink } = buildEmailActionLinks(item, originalEmail);
-
     await transporter.sendMail({
       from: navermail.NAVER_FROM,
-      to: originalEmail,
-      subject: '[사역자모아]에 귀하의 교회 채용 공고가 등록되었습니다',
-      html: buildRecruitNotificationHtml(item, deleteLink, denyLink),
+      to: testEmail,
+      subject: RENEWAL_EMAIL_SUBJECT,
+      html: buildRenewalAnnouncementHtml({ isTest: true }),
     });
 
     res.json({
       success: true,
-      message: `테스트 메일이 ${originalEmail} 으로 발송되었습니다.`,
-      email: originalEmail,
+      message: `리뉴얼 안내 테스트 메일이 ${testEmail} 으로 발송되었습니다.`,
+      email: testEmail,
     });
   } catch (error) {
     console.error('테스트 이메일 발송 오류:', error);
@@ -1575,9 +1630,9 @@ router.post('/sendtestrecruitemail', async (req, res) => {
   }
 });
 
-// 일괄 이메일 발송
+// 일괄 이메일 발송 (리뉴얼 안내 — isSentEmail === 'true' 만)
 router.post('/sendbulkrecruitemail', async function(req, res) {
-  console.log('일괄 이메일 발송 요청 받음');
+  console.log('일괄 리뉴얼 안내 이메일 발송 요청 받음');
   const { emailList } = req.body;
   
   if (!Array.isArray(emailList) || emailList.length === 0) {
@@ -1585,7 +1640,17 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
     return res.status(400).json({ success: false, message: '발송할 이메일 목록이 없습니다.' });
   }
 
-  console.log(`발송할 이메일 개수: ${emailList.length}`);
+  const eligibleList = emailList.filter((item) => String(item.isSentEmail || '').trim() === 'true');
+  const skippedNotEligible = emailList.length - eligibleList.length;
+
+  if (eligibleList.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'isSentEmail이 true인 발송 대상이 없습니다.',
+    });
+  }
+
+  console.log(`발송할 이메일 개수: ${eligibleList.length} (제외 ${skippedNotEligible}건)`);
 
   let transporter;
   try {
@@ -1604,10 +1669,10 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
   let failCount = 0;
 
   try {
-    for (let i = 0; i < emailList.length; i++) {
-      const item = emailList[i];
+    for (let i = 0; i < eligibleList.length; i++) {
+      const item = eligibleList[i];
       if ((i + 1) % 10 === 0 || i === 0) {
-        console.log(`이메일 발송 진행 중: ${i + 1}/${emailList.length}`);
+        console.log(`이메일 발송 진행 중: ${i + 1}/${eligibleList.length}`);
       }
       
       let emailSent = false;
@@ -1623,23 +1688,13 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
           continue;
         }
 
-        let deleteLink;
-        let denyLink;
-        try {
-          ({ deleteLink, denyLink } = buildEmailActionLinks(item, emailAddress));
-        } catch (tokenError) {
-          failCount++;
-          results.push({ id: item.id, success: false, message: `토큰 생성 실패: ${tokenError.message}` });
-          continue;
-        }
-
         // 이메일 발송
         try {
           await transporter.sendMail({
             from: navermail.NAVER_FROM,
             to: emailAddress,
-            subject: '[사역자모아]에 귀하의 교회 채용 공고가 등록되었습니다',
-            html: buildRecruitNotificationHtml(item, deleteLink, denyLink),
+            subject: RENEWAL_EMAIL_SUBJECT,
+            html: buildRenewalAnnouncementHtml(),
           });
           emailSent = true;
         } catch (sendError) {
@@ -1654,7 +1709,7 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
         if (emailSent) {
           try {
             await new Promise((resolve, reject) => {
-              recruitdb.query(`UPDATE emails SET isSentEmail = 'true' WHERE id = ?`, [item.id], (error, result) => {
+              recruitdb.query(`UPDATE emails SET isSentEmail = 'renewal_sent' WHERE id = ?`, [item.id], (error, result) => {
                 if (error) return reject(error);
                 resolve(result);
               });
@@ -1686,11 +1741,11 @@ router.post('/sendbulkrecruitemail', async function(req, res) {
       }
     }
 
-    console.log(`일괄 이메일 발송 완료: 총 ${emailList.length}개 중 ${successCount}개 성공, ${failCount}개 실패`);
+    console.log(`일괄 리뉴얼 안내 발송 완료: 총 ${eligibleList.length}개 중 ${successCount}개 성공, ${failCount}개 실패`);
     
     const responseData = { 
       success: true, 
-      message: `총 ${emailList.length}개 중 ${successCount}개 성공, ${failCount}개 실패`,
+      message: `총 ${eligibleList.length}개 중 ${successCount}개 성공, ${failCount}개 실패${skippedNotEligible > 0 ? ` (isSentEmail 미충족 ${skippedNotEligible}건 제외)` : ''}`,
       successCount,
       failCount,
       results

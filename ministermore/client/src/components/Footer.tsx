@@ -33,7 +33,6 @@ export default function Footer (props:any) {
             <li className='text black'>예플랫</li>
             <li className='text black'>대표자: 강신애</li>
             <li className='text'>사업자등록번호: 422-20-02318</li>
-            <li className='text'>연락처: 010-9579-2318</li>
           </ul>
 
           <ul>
@@ -42,6 +41,11 @@ export default function Footer (props:any) {
 
           <ul>
             <li className='text'>E-mail: yeplat@naver.com</li>
+            <li className='text kakao-channel'>카카오채널: 
+              <a href='http://pf.kakao.com/_Xzwrn' target='_blank'>
+                <p>http://pf.kakao.com/_Xzwrn</p>
+              </a>
+            </li>
           </ul>
 
           <ul className='copyright'>

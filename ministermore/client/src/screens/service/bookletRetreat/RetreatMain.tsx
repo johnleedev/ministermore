@@ -11,6 +11,7 @@ import sample2 from '../../../images/bookletretreat/sample2.png';
 import sample3 from '../../../images/bookletretreat/sample3.png';
 import sample4 from '../../../images/bookletretreat/sample4.png';
 import bottomBox from '../../../images/bookletretreat/bottombox.png';
+import PricingGroupIcon from './PricingGroupIcon';
 import './RetreatMain.scss';
 
 const SAMPLE_BOOKLET_ID = 4;
@@ -153,6 +154,38 @@ const PROCESS_STEPS = [
     icon: 'megaphone' as const,
     title: '오픈 및 공유 시작',
     desc: '완성된 랜딩을 전달하고 카톡, 문자, SNS에 공유할 수 있도록 운영용 가이드를 함께 제공합니다.',
+  },
+];
+
+const PRICING_ITEMS = [
+  {
+    badge: '무료 시작',
+    count: '50명 이하',
+    price: '무료',
+    desc: '작은 규모 수련회는 부담 없이 시작해보세요.',
+    variant: 'free' as const,
+    icon: 'group-heart' as const,
+  },
+  {
+    count: '51~100명',
+    price: '5,000원',
+    desc: '기본 안내와 신청 흐름을 가볍게 운영할 수 있습니다.',
+    variant: 'default' as const,
+    icon: 'group' as const,
+  },
+  {
+    count: '100명대',
+    price: '10,000원',
+    desc: '안내와 신청 동선이 더 중요해지는 규모에 적합합니다.',
+    variant: 'default' as const,
+    icon: 'group-cross' as const,
+  },
+  {
+    count: '200명 이상',
+    price: '20,000원 ~',
+    desc: '인원 구간별로 2만원부터 최대 5만원까지 적용됩니다. 1,000명 이상은 운영진 문의.',
+    variant: 'default' as const,
+    icon: 'group-large' as const,
   },
 ];
 
@@ -461,6 +494,10 @@ function DemoFeatureIcon({ type }: { type: 'link' | 'mobile' | 'time' | 'chart' 
   }
 }
 
+function SectionEyebrow() {
+  return <div className="retreat-main__eyebrow" aria-hidden />;
+}
+
 export default function RetreatMain() {
   const navigate = useNavigate();
   const isLogin = useRecoilValue(recoilLoginState);
@@ -505,7 +542,7 @@ export default function RetreatMain() {
             </p>
             <div className="retreat-main__button-row">
               <button type="button" className="retreat-main__btn retreat-main__btn--primary" onClick={onApply}>
-                수련회 전단지 상담받기
+                수련회 전단지 신청하기
               </button>
               <button
                 type="button"
@@ -538,6 +575,7 @@ export default function RetreatMain() {
       <section id="pain" className="retreat-main__section">
         <div className="retreat-main__wrap">
           <div className="retreat-main__section-head">
+            <SectionEyebrow />
             <h2>
               수련회 모집이 어려운 이유는
               <br />
@@ -565,6 +603,7 @@ export default function RetreatMain() {
       <section id="demo" className="retreat-main__section">
         <div className="retreat-main__wrap">
           <div className="retreat-main__section-head retreat-main__section-head--center">
+            <SectionEyebrow />
             <h2>실제로는 이렇게 보입니다</h2>
           </div>
 
@@ -608,7 +647,7 @@ export default function RetreatMain() {
       <section className="retreat-main__section">
         <div className="retreat-main__wrap">
           <div className="retreat-main__section-head retreat-main__section-head--center">
-            <div className="retreat-main__eyebrow">Before / After</div>
+            <SectionEyebrow />
             <h2>수련회 모집 방식이 이렇게 달라집니다</h2>
           </div>
 
@@ -654,7 +693,7 @@ export default function RetreatMain() {
       <section id="process" className="retreat-main__section">
         <div className="retreat-main__wrap">
           <div className="retreat-main__section-head retreat-main__section-head--center">
-            <div className="retreat-main__eyebrow">제작 프로세스</div>
+            <SectionEyebrow />
             <h2>수련회에 맞게, 이런 순서로 제작됩니다</h2>
           </div>
           <div className="retreat-main__process-grid">
@@ -672,10 +711,82 @@ export default function RetreatMain() {
         </div>
       </section>
 
+      <section id="pricing" className="retreat-main__section retreat-main__section--pricing">
+        <div className="retreat-main__wrap">
+          <div className="retreat-main__section-head retreat-main__section-head--center retreat-main__section-head--pricing">
+            <SectionEyebrow />
+            <h2>참석 인원 기준 요금 안내</h2>
+            <p className="retreat-main__subcopy">
+              수련회 규모에 따라 부담 없이 시작할 수 있도록 참석 인원 기준으로 요금을 안내합니다.
+            </p>
+          </div>
+
+          <div className="retreat-main__pricing-grid">
+            {PRICING_ITEMS.map((item) => (
+              <article
+                key={item.count}
+                className={`retreat-main__pricing-card${
+                  item.variant === 'free' ? ' retreat-main__pricing-card--free' : ''
+                }`}
+              >
+                {item.badge ? <div className="retreat-main__pricing-badge">{item.badge}</div> : null}
+                <div className="retreat-main__pricing-icon">
+                  <PricingGroupIcon type={item.icon} />
+                </div>
+                <div className="retreat-main__pricing-count">{item.count}</div>
+                <div className="retreat-main__pricing-divider" aria-hidden />
+                <div
+                  className={`retreat-main__pricing-price${
+                    item.variant === 'free' ? ' retreat-main__pricing-price--free' : ''
+                  }`}
+                >
+                  {item.price}
+                </div>
+                <p className="retreat-main__pricing-desc">{item.desc}</p>
+              </article>
+            ))}
+          </div>
+
+          <p className="retreat-main__pricing-note">
+            <span className="retreat-main__pricing-note-icon" aria-hidden>
+              <svg viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M10 9v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <circle cx="10" cy="6.5" r="0.9" fill="currentColor" />
+              </svg>
+            </span>
+            요금은 참석 인원 기준이며, 1회 수련회 기준으로 적용됩니다. 상세 구성은 상담 후 최종 안내됩니다.
+          </p>
+
+          <div className="retreat-main__pricing-cta">
+            <button
+              type="button"
+              className="retreat-main__btn retreat-main__btn--primary"
+              onClick={onApply}
+            >
+              <span className="retreat-main__pricing-cta-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M6 8.5a4.5 4.5 0 0 1 4.5-4.5h3A4.5 4.5 0 0 1 18 8.5V14a4.5 4.5 0 0 1-4.5 4.5h-1.2L9 20.5V18.5H10.5A4.5 4.5 0 0 1 6 14V8.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="9.5" cy="11.5" r="0.8" fill="currentColor" />
+                  <circle cx="12" cy="11.5" r="0.8" fill="currentColor" />
+                  <circle cx="14.5" cy="11.5" r="0.8" fill="currentColor" />
+                </svg>
+              </span>
+              신청하기
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section id="faq" className="retreat-main__section">
         <div className="retreat-main__wrap">
           <div className="retreat-main__section-head retreat-main__section-head--center">
-            <div className="retreat-main__eyebrow">FAQ</div>
+            <SectionEyebrow />
             <h2>자주 묻는 질문</h2>
           </div>
           <div className="retreat-main__faq-list">

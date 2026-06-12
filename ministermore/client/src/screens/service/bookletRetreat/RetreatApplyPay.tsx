@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
@@ -8,23 +9,32 @@ import {
   PaymentSuccessModal,
   digitsFromPhoneParts,
   defineServicePaymentConfig,
+  recordServiceApply,
   useOneTimePayment,
 } from '../payment';
+import PaymentAPIURL from '../payment/paymentApi';
 import {
   orderVisibleTabIds,
   presetVisibleTabsForBookletType,
 } from '../bookletEvent/createEvent/eventTemplateTypes';
 import { generateRetreatPasswd } from './retreatPasswd';
+import PricingGroupIcon from './PricingGroupIcon';
+import {
+  RETREAT_INQUIRY_TIER,
+  RETREAT_LARGE_TIERS,
+  RETREAT_PRICING_CARDS,
+  type RetreatPricingCard,
+  type RetreatPricingTierId,
+  formatRetreatSupplyPrice,
+  getCardIdFromTierId,
+  getRetreatPricingTier,
+  isInquiryTierId,
+  isLargeTierId,
+} from './retreatPricing';
 import './RetreatApplyPay.scss';
 
 const BOOKLET_TYPE = 'retreat' as const;
-
-/** 결제 방식·가격 — supplyPrice(공급가)만 수정 */
-const PAYMENT = defineServicePaymentConfig({
-  kind: 'oneTime',
-  supplyPrice: 10_000,
-  orderName: '수련회 전단지 제작',
-});
+const ORDER_NAME = '수련회 전단지 제작';
 
 type RetreatPaymentSuccessState = {
   eventMainId: number;
@@ -53,8 +63,69 @@ export default function RetreatApplyPay() {
   const [phonePrefix, setPhonePrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
   const [phoneMid, setPhoneMid] = useState('');
   const [phoneLast, setPhoneLast] = useState('');
+  const [participantTierId, setParticipantTierId] = useState<RetreatPricingTierId>('up50');
+  const [freeApplying, setFreeApplying] = useState(false);
   const phoneMidRef = useRef<HTMLInputElement | null>(null);
   const phoneLastRef = useRef<HTMLInputElement | null>(null);
+
+  const selectedTier = useMemo(
+    () => getRetreatPricingTier(participantTierId),
+    [participantTierId],
+  );
+  const selectedCardId = useMemo(
+    () => getCardIdFromTierId(participantTierId),
+    [participantTierId],
+  );
+  const isLargeTierSelected = isLargeTierId(participantTierId);
+  const isInquiryTierSelected = isInquiryTierId(participantTierId);
+
+  const handlePricingCardSelect = useCallback((card: RetreatPricingCard) => {
+    if (card.cardId === '201-plus') {
+      setParticipantTierId((prev) => (isLargeTierId(prev) ? prev : '201-300'));
+      return;
+    }
+    if (card.tierId) {
+      setParticipantTierId(card.tierId);
+    }
+  }, []);
+  const payment = useMemo(
+    () =>
+      defineServicePaymentConfig({
+        kind: 'oneTime',
+        supplyPrice: isInquiryTierSelected ? 0 : selectedTier.supplyPrice,
+        orderName: ORDER_NAME,
+      }),
+    [isInquiryTierSelected, selectedTier.supplyPrice],
+  );
+  const isFreeOrder = !isInquiryTierSelected && payment.totalAmount === 0;
+
+  const buildParticipantMemoLine = useCallback(
+    () =>
+      isInquiryTierSelected
+        ? `참석 인원: ${selectedTier.label} (운영진 문의)`
+        : `참석 인원: ${selectedTier.label} (${selectedTier.priceLabel})`,
+    [isInquiryTierSelected, selectedTier.label, selectedTier.priceLabel],
+  );
+
+  const validateBeforeApply = useCallback(() => {
+    if (isInquiryTierId(participantTierId)) {
+      return '1,000명 이상은 운영진에게 문의해 주세요. 결제 신청이 불가합니다.';
+    }
+    const titleTrim = orderTitle.trim();
+    const nameTrim = ordererName.trim();
+    const phoneDigits = digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast);
+    const churchTrim = churchName.trim();
+    const ownerTrim = ownerpw.trim();
+    if (!titleTrim || !nameTrim || !phoneDigits) {
+      return '타이틀, 이름, 전화번호를 모두 입력해 주세요.';
+    }
+    if (!churchTrim) return '교회 이름을 입력해 주세요.';
+    if (!passwd.trim()) return '비밀번호가 생성되지 않았습니다. 다시 시도해 주세요.';
+    if (!ownerTrim) return '관리자 비밀번호를 입력해 주세요.';
+    if (!participantTierId) return '예상 참석 인원을 선택해 주세요.';
+    return null;
+  }, [churchName, orderTitle, ordererName, ownerpw, participantTierId, passwd, phoneLast, phoneMid, phonePrefix]);
+
   const {
     paymentLoading,
     paymentSuccess: paymentSuccessState,
@@ -64,8 +135,9 @@ export default function RetreatApplyPay() {
     closeAlert,
     handleAlertCopy,
     handlePaymentSubmit,
+    setPaymentSuccess,
   } = useOneTimePayment<RetreatPaymentSuccessState & { paymentId?: string }>({
-    payment: PAYMENT,
+    payment,
     recordServiceType: 'bookletRetreat',
     subscriptionServiceType: 'FLYER_RETREAT',
     userAccount,
@@ -76,20 +148,7 @@ export default function RetreatApplyPay() {
     ownerpw,
     memo,
     completePath: '/paymentrequestpay/event/complete-browser',
-    validateBeforePay: () => {
-      const titleTrim = orderTitle.trim();
-      const nameTrim = ordererName.trim();
-      const phoneDigits = digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast);
-      const churchTrim = churchName.trim();
-      const ownerTrim = ownerpw.trim();
-      if (!titleTrim || !nameTrim || !phoneDigits) {
-        return '타이틀, 이름, 전화번호를 모두 입력해 주세요.';
-      }
-      if (!churchTrim) return '교회 이름을 입력해 주세요.';
-      if (!passwd.trim()) return '비밀번호가 생성되지 않았습니다. 다시 시도해 주세요.';
-      if (!ownerTrim) return '관리자 비밀번호를 입력해 주세요.';
-      return null;
-    },
+    validateBeforePay: validateBeforeApply,
     buildCompleteBody: () => ({
       orderTitle: orderTitle.trim(),
       ordererName: ordererName.trim(),
@@ -100,6 +159,8 @@ export default function RetreatApplyPay() {
       churchName: churchName.trim(),
       passwd: passwd.trim(),
       ownerpw: ownerpw.trim(),
+      participantTier: participantTierId,
+      totalAmount: payment.totalAmount,
     }),
     parseSuccess: (data) => {
       const d = data as { ok?: boolean; eventMainId?: number; paymentId?: string };
@@ -128,9 +189,129 @@ export default function RetreatApplyPay() {
       };
     },
     buildRecordMemo: (success) =>
-      [memo.trim(), `eventMainId=${success.eventMainId}`].filter(Boolean).join('\n\n'),
+      [memo.trim(), buildParticipantMemoLine(), `eventMainId=${success.eventMainId}`]
+        .filter(Boolean)
+        .join('\n\n'),
     getPaymentId: (success, fallback) => success.paymentId || fallback,
   });
+
+  const handleFreeApplySubmit = useCallback(async () => {
+    const precheck = validateBeforeApply();
+    if (precheck) {
+      openErrorAlert(precheck, '입력 정보 확인');
+      return;
+    }
+
+    setFreeApplying(true);
+    try {
+      const completeRes = await axios.post(`${PaymentAPIURL}/paymentrequestpay/event/complete-free`, {
+        orderTitle: orderTitle.trim(),
+        ordererName: ordererName.trim(),
+        ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        userAccount,
+        bookletType: BOOKLET_TYPE,
+        visibleTabs: visibleTabsJson,
+        churchName: churchName.trim(),
+        passwd: passwd.trim(),
+        ownerpw: ownerpw.trim(),
+        participantTier: participantTierId,
+        serviceType: 'FLYER_RETREAT',
+      });
+
+      const d = completeRes.data as { ok?: boolean; eventMainId?: number; paymentId?: string };
+      if (!d?.ok || d.eventMainId == null || Number.isNaN(Number(d.eventMainId))) {
+        openErrorAlert('신청 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.', '신청 실패');
+        return;
+      }
+
+      const paymentId = d.paymentId || `free_${Date.now()}`;
+      await recordServiceApply({
+        serviceType: 'bookletRetreat',
+        orderName: ORDER_NAME,
+        userAccount,
+        churchName: churchName.trim(),
+        passwd: passwd.trim(),
+        ownerpw: ownerpw.trim(),
+        ordererName: ordererName.trim(),
+        ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        amount: 0,
+        vat: 0,
+        totalAmount: 0,
+        paymentStatus: 'free',
+        paymentId,
+        memo: [memo.trim(), buildParticipantMemoLine(), `eventMainId=${d.eventMainId}`]
+          .filter(Boolean)
+          .join('\n\n'),
+      });
+
+      setPaymentSuccess({
+        eventMainId: Number(d.eventMainId),
+        ordererName: ordererName.trim(),
+        ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+        churchName: churchName.trim(),
+        passwd: passwd.trim(),
+        ownerpw: ownerpw.trim(),
+        paymentId,
+      });
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        const conflict = err.response.data as { eventMainId?: number; paymentId?: string };
+        if (conflict?.eventMainId != null) {
+          setPaymentSuccess({
+            eventMainId: Number(conflict.eventMainId),
+            ordererName: ordererName.trim(),
+            ordererPhone: digitsFromPhoneParts(phonePrefix, phoneMid, phoneLast),
+            churchName: churchName.trim(),
+            passwd: passwd.trim(),
+            ownerpw: ownerpw.trim(),
+            paymentId: conflict.paymentId || '',
+          });
+          return;
+        }
+      }
+      console.error('free retreat apply error:', err);
+      openErrorAlert('알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', '신청 실패');
+    } finally {
+      setFreeApplying(false);
+    }
+  }, [
+    buildParticipantMemoLine,
+    churchName,
+    memo,
+    openErrorAlert,
+    orderTitle,
+    ordererName,
+    ownerpw,
+    participantTierId,
+    passwd,
+    phoneLast,
+    phoneMid,
+    phonePrefix,
+    setPaymentSuccess,
+    userAccount,
+    validateBeforeApply,
+    visibleTabsJson,
+  ]);
+
+  const handleApplySubmit = useCallback(() => {
+    if (isInquiryTierSelected) {
+      openErrorAlert('1,000명 이상은 운영진에게 문의해 주세요. 결제 신청이 불가합니다.', '운영진 문의');
+      return;
+    }
+    if (isFreeOrder) {
+      void handleFreeApplySubmit();
+      return;
+    }
+    void handlePaymentSubmit();
+  }, [
+    handleFreeApplySubmit,
+    handlePaymentSubmit,
+    isFreeOrder,
+    isInquiryTierSelected,
+    openErrorAlert,
+  ]);
+
+  const isSubmitting = paymentLoading || freeApplying;
 
   const finalizeSuccessfulPayment = useCallback(() => {
     if (!paymentSuccessState) return;
@@ -277,6 +458,138 @@ export default function RetreatApplyPay() {
               </div>
             </div>
 
+            <h2 className="event-template-select__form-title">참석 인원</h2>
+            <div className="retreat-apply-pay__participant-section">
+              <div className="retreat-apply-pay__pricing-grid" role="radiogroup" aria-label="예상 참석 인원">
+                {RETREAT_PRICING_CARDS.map((card) => {
+                  const isSelected = selectedCardId === card.cardId;
+                  return (
+                    <button
+                      key={card.cardId}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      className={`retreat-apply-pay__pricing-card${
+                        card.variant === 'free' ? ' retreat-apply-pay__pricing-card--free' : ''
+                      }${isSelected ? ' retreat-apply-pay__pricing-card--selected' : ''}`}
+                      onClick={() => handlePricingCardSelect(card)}
+                    >
+                      {isSelected ? (
+                        <span className="retreat-apply-pay__pricing-check" aria-hidden>
+                          <svg viewBox="0 0 20 20" fill="none">
+                            <circle cx="10" cy="10" r="9" fill="currentColor" />
+                            <path
+                              d="M6.2 10.2l2.2 2.2 5.4-5.6"
+                              stroke="#fff"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      ) : null}
+                      {card.badge ? (
+                        <div className="retreat-apply-pay__pricing-badge">{card.badge}</div>
+                      ) : null}
+                      <div className="retreat-apply-pay__pricing-icon">
+                        <PricingGroupIcon type={card.icon} />
+                      </div>
+                      <div className="retreat-apply-pay__pricing-count">{card.count}</div>
+                      <div className="retreat-apply-pay__pricing-divider" aria-hidden />
+                      <div
+                        className={`retreat-apply-pay__pricing-price${
+                          card.variant === 'free' ? ' retreat-apply-pay__pricing-price--free' : ''
+                        }`}
+                      >
+                        {card.price}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {isLargeTierSelected ? (
+                <div className="retreat-apply-pay__large-tier-panel">
+                  <div className="retreat-apply-pay__large-tier-head">
+                    <span className="retreat-apply-pay__large-tier-head-icon" aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+                        <path
+                          d="M5.5 19.5c.8-3.2 3.2-5 6.5-5s5.7 1.8 6.5 5"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                        <circle cx="17.5" cy="9" r="2" stroke="currentColor" strokeWidth="1.4" />
+                        <path
+                          d="M15.5 14.5c1.2-.6 2.4-.8 3.6-.4"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="retreat-apply-pay__large-tier-head-title">상세 인원 구간</p>
+                      <p className="retreat-apply-pay__large-tier-head-desc">
+                        200명 이상 규모에 맞는 요금 구간을 선택해 주세요.
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className="retreat-apply-pay__large-tier-list"
+                    role="radiogroup"
+                    aria-label="상세 인원 구간"
+                  >
+                    {RETREAT_LARGE_TIERS.map((tier) => {
+                      const isTierSelected = participantTierId === tier.id;
+                      return (
+                        <button
+                          key={tier.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={isTierSelected}
+                          className={`retreat-apply-pay__large-tier-option${
+                            isTierSelected ? ' retreat-apply-pay__large-tier-option--selected' : ''
+                          }`}
+                          onClick={() => setParticipantTierId(tier.id)}
+                        >
+                          <span className="retreat-apply-pay__large-tier-option-radio" aria-hidden>
+                            <span className="retreat-apply-pay__large-tier-option-radio-dot" />
+                          </span>
+                          <span className="retreat-apply-pay__large-tier-option-label">{tier.label}</span>
+                          <span className="retreat-apply-pay__large-tier-option-price">{tier.priceLabel}</span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={isInquiryTierSelected}
+                      className={`retreat-apply-pay__large-tier-option retreat-apply-pay__large-tier-option--inquiry${
+                        isInquiryTierSelected ? ' retreat-apply-pay__large-tier-option--selected' : ''
+                      }`}
+                      onClick={() => setParticipantTierId(RETREAT_INQUIRY_TIER.id)}
+                    >
+                      <span className="retreat-apply-pay__large-tier-option-radio" aria-hidden>
+                        <span className="retreat-apply-pay__large-tier-option-radio-dot" />
+                      </span>
+                      <span className="retreat-apply-pay__large-tier-option-label">
+                        1,000명 이상은 운영진에게 문의해 주세요
+                      </span>
+                      <span className="retreat-apply-pay__large-tier-option-price retreat-apply-pay__large-tier-option-price--inquiry">
+                        문의 필요
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <p className="event-template-select__form-hint retreat-apply-pay__participant-hint">
+                참석 인원 기준으로 요금이 적용됩니다. 1회 수련회 기준입니다. 전단지는 제작 후 6개월간 이용 가능합니다.
+              </p>
+            </div>
+
             <h2 className="event-template-select__form-title">주문자정보</h2>
             <div className="event-template-select__form-block">
               <div className="event-template-select__form-row">
@@ -377,40 +690,63 @@ export default function RetreatApplyPay() {
               <h2 className="event-template-select__form-title">결제</h2>
               <div className="event-template-select__payment-block">
                 <h3 className="event-template-select__plan-section-title">수련회 전단지 이용권</h3>
-                <div className="event-template-select__plan-cards event-template-select__plan-cards--single">
-                  <div className="event-template-select__plan-card event-template-select__plan-card--selected">
-                    <p className="event-template-select__plan-card-name">1건 제작</p>
-                    <p className="event-template-select__plan-card-price">
-                      {PAYMENT.supplyPrice.toLocaleString('ko-KR')}원
+                {isInquiryTierSelected ? (
+                  <div className="retreat-apply-pay__inquiry-summary">
+                    <p className="retreat-apply-pay__inquiry-summary-title">운영진 문의 필요</p>
+                    <p className="retreat-apply-pay__inquiry-summary-text">
+                      1,000명 이상 규모는 별도 상담 후 진행됩니다.
+                      <br />
+                      운영진에게 문의해 주세요.
                     </p>
-                    <p className="event-template-select__plan-card-billing">수련회 전단지 제작 · 3개월 이용</p>
-                    <p className="event-template-select__plan-card-vat">(부가세 10% 별도)</p>
                   </div>
-                </div>
-                <dl className="event-template-select__price-list">
-                  <div>
-                    <dt>상품 금액</dt>
-                    <dd>{PAYMENT.supplyPrice.toLocaleString('ko-KR')}원</dd>
-                  </div>
-                  <div>
-                    <dt>부가세 (10%)</dt>
-                    <dd>{PAYMENT.vatAmount.toLocaleString('ko-KR')}원</dd>
-                  </div>
-                  <div className="is-total">
-                    <dt>총 결제금액</dt>
-                    <dd>{PAYMENT.totalAmount.toLocaleString('ko-KR')}원</dd>
-                  </div>
-                </dl>
+                ) : (
+                  <>
+                    <div className="event-template-select__plan-cards event-template-select__plan-cards--single">
+                      <div className="event-template-select__plan-card event-template-select__plan-card--selected">
+                        <p className="event-template-select__plan-card-name">{selectedTier.label}</p>
+                        <p className="event-template-select__plan-card-price">
+                          {formatRetreatSupplyPrice(payment.supplyPrice)}
+                        </p>
+                        <p className="event-template-select__plan-card-billing">수련회 전단지 제작 · 3개월 이용</p>
+                        <p className="event-template-select__plan-card-vat">
+                          {isFreeOrder ? '무료 신청 (결제 없음)' : '(부가세 10% 별도)'}
+                        </p>
+                      </div>
+                    </div>
+                    <dl className="event-template-select__price-list">
+                      <div>
+                        <dt>상품 금액</dt>
+                        <dd>{formatRetreatSupplyPrice(payment.supplyPrice)}</dd>
+                      </div>
+                      <div>
+                        <dt>부가세 (10%)</dt>
+                        <dd>{payment.vatAmount.toLocaleString('ko-KR')}원</dd>
+                      </div>
+                      <div className="is-total">
+                        <dt>{isFreeOrder ? '총 신청 금액' : '총 결제금액'}</dt>
+                        <dd>{formatRetreatSupplyPrice(payment.totalAmount)}</dd>
+                      </div>
+                    </dl>
+                  </>
+                )}
               </div>
 
               <div className="event-template-select__footer-wrap">
                 <button
                   type="button"
                   className="event-template-select__pay-btn"
-                  onClick={handlePaymentSubmit}
-                  disabled={paymentLoading}
+                  onClick={handleApplySubmit}
+                  disabled={isSubmitting || isInquiryTierSelected}
                 >
-                  {paymentLoading ? '결제 처리 중...' : '결제하기'}
+                  {isInquiryTierSelected
+                    ? '운영진 문의 필요'
+                    : isSubmitting
+                      ? isFreeOrder
+                        ? '신청 처리 중...'
+                        : '결제 처리 중...'
+                      : isFreeOrder
+                        ? '신청하기'
+                        : '결제하기'}
                 </button>
                 <button
                   type="button"

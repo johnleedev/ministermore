@@ -36,6 +36,21 @@
 
       li.text {
         margin-right: 20px;
+
+        &.kakao-channel {
+          display: flex;
+          align-items: center;
+
+          p {
+            margin-left: 5px;
+            text-decoration: underline;
+            color: #8C8C8C;
+          }
+          p:hover {
+            cursor: pointer;
+            opacity: 0.8;
+          }
+        }
       }
     }
 

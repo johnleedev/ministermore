@@ -42,6 +42,7 @@ export default function AdminEmail() {
 
       const mappedRows: EmailListItem[] = res.data.resultData
         .filter((item: any) => EMAIL_RULE.test((item.email || '').trim()))
+        .filter((item: any) => String(item.isSentEmail || '').trim() === 'true')
         .map((item: any) => ({
           id: item.id,
           post_id: item.post_id ?? null,
@@ -104,38 +105,24 @@ export default function AdminEmail() {
     return pageNumbers;
   };
 
-  const getFirstTestRow = () => (allRows.length > 0 ? allRows[0] : null);
-
-  const buildMailItem = (row?: EmailListItem) => {
-    if (!row) return undefined;
-
-    return {
-      id: row.id,
-      post_id: row.post_id,
-      title: row.church || row.title,
-      church: row.church,
-      source: row.source || '사역자모아',
-      saveDate: row.date || row.saveDate,
-      email: row.email,
-      inquiry: row.inquiry,
-    };
-  };
+  const buildMailItem = (row: EmailListItem) => ({
+    id: row.id,
+    post_id: row.post_id,
+    title: row.church || row.title,
+    church: row.church,
+    source: row.source || '사역자모아',
+    saveDate: row.date || row.saveDate,
+    email: row.email,
+    inquiry: row.inquiry,
+    isSentEmail: row.isSentEmail,
+  });
 
   const handleTestSendEmail = async () => {
-    const firstRow = getFirstTestRow();
-    if (!firstRow) {
-      alert('테스트 발송할 목록 데이터가 없습니다.');
-      return;
-    }
-
     const confirmMessage = [
-      '목록 첫 번째 항목 내용으로 테스트 메일을 발송합니다.',
+      '리뉴얼 안내 테스트 메일을 1건만 발송합니다.',
       '',
-      `post_id: ${firstRow.post_id ?? '-'}`,
-      `교회: ${firstRow.church}`,
-      `날짜: ${firstRow.date}`,
-      `isSentEmail: ${firstRow.isSentEmail || '-'}`,
-      `수신: ${firstRow.email}`,
+      '수신: johnlovesyou@naver.com',
+      'DB는 변경되지 않습니다.',
     ].join('\n');
 
     if (!window.confirm(confirmMessage)) {
@@ -144,8 +131,7 @@ export default function AdminEmail() {
 
     setIsSending(true);
     try {
-      const item = buildMailItem(firstRow);
-      const res = await axios.post(`${MainURL}/recruitwork/sendtestrecruitemail`, { item });
+      const res = await axios.post(`${MainURL}/recruitwork/sendtestrecruitemail`, {});
 
       if (res.data.success) {
         alert(res.data.message);
@@ -166,7 +152,7 @@ export default function AdminEmail() {
       return;
     }
 
-    if (!window.confirm(`현재 페이지의 ${list.length}개 이메일을 발송하시겠습니까?\n발송에는 시간이 소요될 수 있습니다.`)) {
+    if (!window.confirm(`현재 페이지의 isSentEmail=true 대상 ${list.length}건에 리뉴얼 안내 메일을 발송하시겠습니까?\n발송에는 시간이 소요될 수 있습니다.`)) {
       return;
     }
 
@@ -194,8 +180,6 @@ export default function AdminEmail() {
     }
   };
 
-  const firstTestRow = getFirstTestRow();
-
   return (
     <div className="admin-register">
       <div className="inner">
@@ -205,20 +189,20 @@ export default function AdminEmail() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={handleTestSendEmail}
-              disabled={isSending || allRows.length === 0}
+              disabled={isSending}
               style={{
-                width: '280px',
+                width: '320px',
                 height: '50px',
-                background: isSending || allRows.length === 0 ? '#ccc' : '#28a745',
+                background: isSending ? '#ccc' : '#28a745',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '5px',
                 fontSize: '16px',
                 fontWeight: 600,
-                cursor: isSending || allRows.length === 0 ? 'not-allowed' : 'pointer',
+                cursor: isSending ? 'not-allowed' : 'pointer',
               }}
             >
-              {isSending ? '발송 중...' : '테스트 발송 (목록 1번째)'}
+              {isSending ? '발송 중...' : '테스트 발송 (johnlovesyou@naver.com)'}
             </button>
             <button
               onClick={handleBulkSendEmail}
@@ -235,22 +219,16 @@ export default function AdminEmail() {
                 cursor: isSending || list.length === 0 ? 'not-allowed' : 'pointer',
               }}
             >
-              {isSending ? '발송 중...' : `일괄 이메일 발송 (${list.length}개)`}
+              {isSending ? '발송 중...' : `리뉴얼 안내 일괄 발송 (${list.length}개)`}
             </button>
             <p style={{ fontSize: '14px', color: '#666' }}>
-              * 테스트 발송은 목록 1번째 항목을 원본 이메일 주소로 1건만 발송합니다. DB는 변경되지 않습니다.
+              * 테스트는 johnlovesyou@naver.com 으로 리뉴얼 안내 1건만 발송합니다. DB는 변경되지 않습니다.
+              <br />
+              * 일괄 발송은 isSentEmail=true 인 항목만 대상이며, 발송 후 renewal_sent 로 표시됩니다.
             </p>
           </div>
-          {firstTestRow && (
-            <div style={{ fontSize: '14px', color: '#333', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e8ebef' }}>
-              <strong>테스트 발송 대상 (목록 1번째)</strong>
-              <p style={{ margin: '8px 0 0' }}>
-                post_id: {firstTestRow.post_id ?? '-'} · {firstTestRow.church} · {firstTestRow.date} · isSentEmail: {firstTestRow.isSentEmail || '-'} · {firstTestRow.email}
-              </p>
-            </div>
-          )}
           <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>
-            현재 페이지: {currentPage} / {totalPages} | 전체 이메일: {listAllLength}개 (isSentEmail 무관)
+            현재 페이지: {currentPage} / {totalPages} | 발송 대상(isSentEmail=true): {listAllLength}개
             {isLoading ? ' (불러오는 중...)' : ''}
           </div>
         </div>
@@ -271,7 +249,7 @@ export default function AdminEmail() {
               </div>
             ))
           ) : (
-            <p>{isLoading ? '이메일 목록을 불러오는 중입니다.' : '발송할 이메일이 없습니다.'}</p>
+            <p>{isLoading ? '이메일 목록을 불러오는 중입니다.' : 'isSentEmail=true 인 발송 대상이 없습니다.'}</p>
           )}
         </div>
 
