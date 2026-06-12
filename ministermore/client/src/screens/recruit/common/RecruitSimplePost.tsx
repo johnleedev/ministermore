@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useKakaoAddress } from './useKakaoAddress';
 import './Recruit.scss'
 import './RecruitList.scss'
 import MainURL from '../../../MainURL';
@@ -6,7 +7,6 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone'
 import imageCompression from "browser-image-compression";
-import { DaumPostcodeEmbed } from 'react-daum-postcode';
 import { format } from "date-fns";
 import { useRecoilState } from 'recoil';
 import { recoilUserData } from '../../../RecoilStore';
@@ -54,7 +54,20 @@ export default function RecruitSimplePost({ config }: Props) {
   const [religiousbody, setReligiousbody] = useState('');
   const [location, setLocation] = useState('');
   const [locationDetail, setLocationDetail] = useState('');
-  const [address, setAddress] = useState('');
+  const {
+    postcode,
+    address,
+    addressExtra,
+    addressGuide,
+    addressDetail,
+    setAddressDetail,
+    addressDetailRef,
+    handleAddressSearch,
+    getFullAddress,
+    resetFromSaved,
+  } = useKakaoAddress({
+    onRegion: (region) => setLocation(region),
+  });
   const [mainpastor, setMainpastor] = useState('');
   const [homepage, setHomepage] = useState('');
   const [churchLogo, setChurchLogo] = useState<File | null>(null);
@@ -70,8 +83,6 @@ export default function RecruitSimplePost({ config }: Props) {
   const [inquiry, setInquiry] = useState({inquiryName:"", email:"", phone:""});
   const [etcNotice, setEtcNotice] = useState('');
   
-  const [isViewAddress, setIsViewAddress] = useState(false);
-
   const [customInput, setCustomInput] = useState('');
 
   /** 페이지 하단까지 스크롤되면 저장 버튼을 우측 → 중앙으로 옮김 */
@@ -83,15 +94,6 @@ export default function RecruitSimplePost({ config }: Props) {
   };
 
 
-
-  // 주소 입력 함수
-  const onCompletePost = (data:any) => {
-    const copy = data.address;
-    const sido = `${data.sido} ${data.sigungu}`
-    setLocation(sido);
-    setAddress(copy);
-    setIsViewAddress(false);
-  };
 
   // 첨부 이미지 삭제 
   const deleteInputImage = async () => {
@@ -146,7 +148,7 @@ export default function RecruitSimplePost({ config }: Props) {
       religiousbody,
       location,
       locationDetail,
-      address,
+      address: getFullAddress(),
       mainpastor,
       homepage,
       school: JSON.stringify(school),
@@ -177,7 +179,7 @@ export default function RecruitSimplePost({ config }: Props) {
         setReligiousbody('');
         setLocation('');
         setLocationDetail('');
-        setAddress('');
+        resetFromSaved('');
         setMainpastor('');
         setHomepage('');
         setSort('');
@@ -371,32 +373,55 @@ export default function RecruitSimplePost({ config }: Props) {
               </div>
               <div className="inputBox">
                 <h3 className='title'><p>주소</p></h3>
-                <div className="inputRow">
-                  {
-                    (isViewAddress && address === '')
-                    ?
-                    <div style={{width:'85%'}}>
-                      <DaumPostcodeEmbed
-                          key="daum-postcode"
-                          style={{
-                            width:'100%',
-                            height:'400px',
-                            padding:'10px',
-                            boxSizing:'border-box',
-                            border:'1px solid #E9E9E9'
-                          }}
-                          onComplete={onCompletePost}
-                        />
-                    </div>
-                    :
-                    <input value={address} className="inputdefault" type="text" 
-                      key="input-address"
-                      onChange={(e) => {setAddress(e.target.value)}}
-                      onClick={()=>{
-                        setIsViewAddress(true);
+                <div className="inputRow recruit-address-fields">
+                  <div className="recruit-address-row recruit-address-row--postcode">
+                    <input
+                      value={postcode}
+                      className="inputdefault recruit-address-postcode"
+                      type="text"
+                      placeholder="우편번호"
+                      readOnly
+                      onClick={() => {
+                        if (!postcode.trim()) {
+                          handleAddressSearch();
+                        }
                       }}
                     />
-                  }
+                    <button
+                      type="button"
+                      className="recruit-address-search-btn"
+                      onClick={handleAddressSearch}
+                    >
+                      우편번호 찾기
+                    </button>
+                  </div>
+                  <input
+                    value={address}
+                    className="inputdefault recruit-address-input"
+                    type="text"
+                    placeholder="주소"
+                    readOnly
+                  />
+                  {addressExtra.trim() !== '' && (
+                    <input
+                      value={addressExtra}
+                      className="inputdefault recruit-address-extra-input"
+                      type="text"
+                      placeholder="참고항목"
+                      readOnly
+                    />
+                  )}
+                  {addressGuide.trim() !== '' && (
+                    <p className="recruit-address-guide">{addressGuide}</p>
+                  )}
+                  <input
+                    ref={addressDetailRef}
+                    value={addressDetail}
+                    className="inputdefault recruit-address-detail-input"
+                    type="text"
+                    placeholder="상세주소"
+                    onChange={(e) => setAddressDetail(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="inputBox">

@@ -327,6 +327,54 @@
         width: 85%;
         height: max-content;
 
+        &.recruit-address-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .recruit-address-row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          width: 100%;
+
+          &--postcode {
+            .recruit-address-postcode {
+              flex: 0 0 120px;
+              width: 120px;
+              cursor: pointer;
+            }
+          }
+
+          .inputdefault,
+          .recruit-address-input {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+            background: #fff;
+          }
+        }
+
+        .recruit-address-input,
+        .recruit-address-extra-input,
+        .recruit-address-detail-input {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .recruit-address-extra-input {
+          color: #666;
+          background: #fafafa;
+        }
+
+        .recruit-address-guide {
+          margin: 0;
+          font-size: 13px;
+          color: #999;
+          line-height: 1.4;
+        }
+
         .subTitle {
           position: relative;
           margin-bottom: 10px;
@@ -808,4 +856,22 @@
 
 }
 
+.recruit-address-search-btn {
+  flex-shrink: 0;
+  height: 50px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #334968;
+  border: 1px solid #334968;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
 

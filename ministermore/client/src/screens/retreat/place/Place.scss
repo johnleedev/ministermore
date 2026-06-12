@@ -1199,8 +1199,70 @@
           }
         }
 
-        .inputbox--postcode {
+        .inputbox--address {
           align-items: flex-start;
+        }
+
+        .place-request__address-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .place-request__address-row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          width: 100%;
+
+          &--postcode {
+            input {
+              flex: 0 0 120px;
+              width: 120px;
+              cursor: pointer;
+            }
+          }
+
+          input {
+            flex: 1;
+            min-width: 0;
+          }
+        }
+
+        .place-request__address-fields > input {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .place-request__address-extra {
+          color: #666;
+          background: #fafafa;
+        }
+
+        .place-request__address-guide {
+          margin: 0;
+          font-size: 13px;
+          color: #999;
+          line-height: 1.4;
+        }
+
+        .place-request__address-search-btn {
+          flex-shrink: 0;
+          height: 46px;
+          padding: 0 14px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #fff;
+          background: #33383f;
+          border: 1px solid #33383f;
+          border-radius: 10px;
+          cursor: pointer;
+          white-space: nowrap;
+
+          &:hover {
+            opacity: 0.9;
+          }
         }
 
         .imageInputBox {

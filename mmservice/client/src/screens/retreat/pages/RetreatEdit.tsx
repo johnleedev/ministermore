@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
-import { DaumPostcodeEmbed } from 'react-daum-postcode';
+import { KakaoAddressFields } from '../../../components/KakaoAddressFields';
+import { useKakaoAddress } from '../../../lib/useKakaoAddress';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { FaChevronDown, FaChevronUp, FaInfoCircle, FaUser } from 'react-icons/fa';
@@ -619,7 +620,6 @@ export default function RetreatEdit() {
   const [info, setInfo] = useState<RetreatInfoForm>(mapInfoToForm(null));
   const [programs, setPrograms] = useState<RetreatProgramRow[]>([createEmptyProgramRow(0)]);
   const [activeTab, setActiveTab] = useState<RetreatEditTabId>('info');
-  const [isViewAddress, setIsViewAddress] = useState(false);
   const [mainImages, setMainImages] = useState<MainImageSlot[]>(emptyMainImageSlots);
   const [mainImageLoadingSlot, setMainImageLoadingSlot] = useState<number | null>(null);
   const [customQuestions, setCustomQuestions] = useState<RetreatCustomQuestion[]>([]);
@@ -700,6 +700,16 @@ export default function RetreatEdit() {
     [customQuestions],
   );
 
+  const kakaoAddress = useKakaoAddress({
+    onRegion: (location) => {
+      setInfo((prev) => {
+        const next = { ...prev, place: location };
+        recomputeDirty(next, programs, mainImages);
+        return next;
+      });
+    },
+  });
+
   useEffect(() => {
     if (!bookletId || !retreatAuth.loggedIn || !auth.churchName || !auth.passwd) {
       setLoading(false);
@@ -736,6 +746,7 @@ export default function RetreatEdit() {
 
         setOrderTitle(detail.main?.orderTitle || '');
         setInfo(mappedInfo);
+        kakaoAddress.resetFromSaved(mappedInfo.address);
         setPrograms(mappedPrograms);
         setCustomQuestions(mappedQuestions);
         setMainImages(loadedMainImages);
@@ -899,24 +910,6 @@ export default function RetreatEdit() {
     });
   };
 
-  const onCompletePost = (data: {
-    address: string;
-    sido?: string;
-    sigungu?: string;
-  }) => {
-    const region = [data.sido, data.sigungu].filter(Boolean).join(' ').trim();
-    setInfo((prev) => {
-      const next = {
-        ...prev,
-        address: data.address,
-        ...(region ? { place: region } : {}),
-      };
-      recomputeDirty(next, programs, mainImages);
-      return next;
-    });
-    setIsViewAddress(false);
-  };
-
   const onMainImageDrop = useCallback(async (slotIndex: number, acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
 
@@ -1039,7 +1032,11 @@ export default function RetreatEdit() {
       const imageMainSerialized = serializeMainImageNameForDb(
         mainImages.map((m) => m.serverName ?? ''),
       );
-      const infoToSave = { ...info, imageMain: imageMainSerialized };
+      const infoToSave = {
+        ...info,
+        address: kakaoAddress.getFullAddress() || info.address,
+        imageMain: imageMainSerialized,
+      };
       const saveResult = await saveRetreatInfo(bookletId, auth, infoToSave, {
         imageMainName: imageMainSerialized,
         mainImageFiles: mainImages.some((m) => !!m.file)
@@ -1058,7 +1055,11 @@ export default function RetreatEdit() {
       const imageMainSerialized = serializeMainImageNameForDb(
         mainImages.map((m) => m.serverName ?? ''),
       );
-      const infoToSave = { ...info, imageMain: imageMainSerialized };
+      const infoToSave = {
+        ...info,
+        address: kakaoAddress.getFullAddress() || info.address,
+        imageMain: imageMainSerialized,
+      };
       const saveResult = await saveRetreatInfo(bookletId, auth, infoToSave, {
         imageMainName: imageMainSerialized,
         mainImageFiles: mainImages.some((m) => !!m.file)
@@ -1134,13 +1135,13 @@ export default function RetreatEdit() {
       eventName: info.eventName,
       date: info.date,
       place: info.place,
-      address: info.address,
+      address: kakaoAddress.getFullAddress() || info.address,
       superViser: info.superViser,
       quiry: info.quiry,
       placeNaver: info.placeNaver,
       placeKakao: info.placeKakao,
     }),
-    [info],
+    [info, kakaoAddress.address, kakaoAddress.addressExtra, kakaoAddress.addressDetail],
   );
 
   const previewPrograms = useMemo(
@@ -1253,8 +1254,8 @@ export default function RetreatEdit() {
             <div className="notice-create__preview-footer">
               <p className="notice-create__preview-footer-info">
                 {info.quiry}
-                {info.quiry && info.address ? ' | ' : ''}
-                {info.address}
+                {info.quiry && (kakaoAddress.getFullAddress() || info.address) ? ' | ' : ''}
+                {kakaoAddress.getFullAddress() || info.address}
                 <br />
                 © {new Date().getFullYear()} {info.eventName || '수련회'} All Rights Reserved.
               </p>
@@ -1568,36 +1569,21 @@ export default function RetreatEdit() {
         </div>
 
         <div className="retreat-edit__field">
-          <label className="retreat-edit__field-label" htmlFor="retreat-address">
+          <label className="retreat-edit__field-label" htmlFor="retreat-address-detail">
             주소
           </label>
           <div className="retreat-edit__address-field">
-            {isViewAddress && info.address === '' ? (
-              <div className="retreat-edit__postcode-wrap">
-                <DaumPostcodeEmbed
-                  key="daum-postcode"
-                  style={{
-                    width: '100%',
-                    height: '400px',
-                    padding: '10px',
-                    boxSizing: 'border-box',
-                    border: '1px solid #E9E9E9',
-                    borderRadius: '8px',
-                  }}
-                  onComplete={onCompletePost}
-                />
-              </div>
-            ) : (
-              <input
-                id="retreat-address"
-                key="input-address"
-                type="text"
-                className="retreat-edit__input retreat-edit__input--address"
-                value={info.address}
-                onChange={(e) => updateInfo('address', e.target.value)}
-                onClick={() => setIsViewAddress(true)}
-              />
-            )}
+            <KakaoAddressFields
+              postcode={kakaoAddress.postcode}
+              address={kakaoAddress.address}
+              addressExtra={kakaoAddress.addressExtra}
+              addressGuide={kakaoAddress.addressGuide}
+              addressDetail={kakaoAddress.addressDetail}
+              onAddressDetailChange={kakaoAddress.setAddressDetail}
+              onSearch={kakaoAddress.handleAddressSearch}
+              detailInputRef={kakaoAddress.addressDetailRef}
+              inputClassName="retreat-edit__input"
+            />
           </div>
         </div>
 
@@ -1667,8 +1653,21 @@ export default function RetreatEdit() {
               className="retreat-edit__input"
               value={info.placeNaver}
               onChange={(e) => updateInfo('placeNaver', e.target.value)}
-              placeholder="https://map.naver.com/..."
+              placeholder="예시) https://naver.me/GyNv7dGv"
             />
+            <button
+              type="button"
+              className="retreat-edit__map-open-btn retreat-edit__map-open-btn--naver"
+              onClick={() => {
+                const q = (kakaoAddress.getFullAddress() || info.address).trim();
+                const url = q
+                  ? `https://map.naver.com/p/search/${encodeURIComponent(q)}`
+                  : 'https://map.naver.com/';
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              네이버지도
+            </button>
             <span
               className="retreat-edit__info-icon"
               role="button"
@@ -1698,8 +1697,21 @@ export default function RetreatEdit() {
               className="retreat-edit__input"
               value={info.placeKakao}
               onChange={(e) => updateInfo('placeKakao', e.target.value)}
-              placeholder="https://map.kakao.com/..."
+              placeholder="예시)https://kko.to/Mo4dcW-xOo"
             />
+            <button
+              type="button"
+              className="retreat-edit__map-open-btn retreat-edit__map-open-btn--kakao"
+              onClick={() => {
+                const q = (kakaoAddress.getFullAddress() || info.address).trim();
+                const url = q
+                  ? `https://map.kakao.com/link/search/${encodeURIComponent(q)}`
+                  : 'https://map.kakao.com/';
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              카카오지도
+            </button>
             <span
               className="retreat-edit__info-icon"
               role="button"

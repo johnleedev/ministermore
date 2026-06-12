@@ -1,0 +1,56 @@
+.kakao-address-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+
+  &__row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+
+    &--postcode {
+      .kakao-address-fields__postcode {
+        flex: 0 0 120px;
+        width: 120px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  &__extra {
+    color: #666;
+    background: #fafafa;
+  }
+
+  &__guide {
+    margin: 0;
+    font-size: 13px;
+    color: #999;
+    line-height: 1.4;
+  }
+
+  &__search-btn {
+    flex-shrink: 0;
+    height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: #334968;
+    border: 1px solid #334968;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+}

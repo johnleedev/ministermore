@@ -299,7 +299,7 @@ export default function Main() {
                   />
                 </label>
                 <label className="service-admin__login-field">
-                  <span>비밀번호</span>
+                  <span>비밀번호 (사역자모아 '마이페이지'에서 확인하세요)</span>
                   <input
                     type="password"
                     value={passwdInput}

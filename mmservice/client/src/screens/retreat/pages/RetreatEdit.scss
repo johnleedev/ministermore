@@ -580,6 +580,42 @@
 
     .retreat-edit__input {
       flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__map-open-btn {
+    flex-shrink: 0;
+    height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+
+    &--naver {
+      background: #03c75a;
+      color: #ffffff;
+      border-color: #03c75a;
+
+      &:hover {
+        background: #02b552;
+        border-color: #02b552;
+      }
+    }
+
+    &--kakao {
+      background: #fee500;
+      color: #181600;
+      border-color: #fee500;
+
+      &:hover {
+        background: #ffd400;
+        border-color: #ffd400;
+      }
     }
   }
 
@@ -594,16 +630,19 @@
     }
   }
 
-  &__postcode-wrap {
-    width: 100%;
-  }
-
   &__address-field {
     width: 100%;
-  }
 
-  &__input--address {
-    cursor: pointer;
+    .kakao-address-fields__input.retreat-edit__input {
+      width: 100%;
+    }
+
+    .kakao-address-fields__search-btn {
+      height: 40px;
+      background: var(--navy);
+      border-color: var(--navy);
+      border-radius: 8px;
+    }
   }
 
   &__program-entry {

@@ -33,10 +33,11 @@ export const EditorTinymce: React.FC<EditorTinymceProps> = ({ widthProps, height
           plugins: [
             'advlist', 'lists', 'charmap',
             'preview', 'anchor', 'searchreplace', 'visualblocks',
-            'fullscreen', 'insertdatetime', 'wordcount', 'fontsize'
+            'fullscreen', 'insertdatetime', 'wordcount',
           ],
           toolbar:
-            'blocks fontsize | bold italic underline forecolor backcolor | fullscreen',
+            'blocks fontsizeinput | bold italic underline forecolor backcolor | fullscreen',
+          font_size_formats: '10px 12px 14px 16px 18px 24px 36px',
           content_style: 'body { font-size: 14px; outline: none; }',
           automatic_uploads: true,
         }}

@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { DaumPostcodeEmbed } from 'react-daum-postcode';
+import { useKakaoAddress } from '../../recruit/common/useKakaoAddress';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { CiCircleMinus } from 'react-icons/ci';
@@ -44,7 +44,19 @@ const PlaceRequest = () => {
   const [region, setRegion] = useState('선택');
   const [size, setSize] = useState('선택');
   const [location, setLocation] = useState('');
-  const [address, setAddress] = useState('');
+  const {
+    postcode,
+    address,
+    addressExtra,
+    addressGuide,
+    addressDetail,
+    setAddressDetail,
+    addressDetailRef,
+    handleAddressSearch,
+    getFullAddress,
+  } = useKakaoAddress({
+    onRegion: (region) => setLocation(region),
+  });
   const [phone, setPhone] = useState('');
   const [homepage, setHomepage] = useState('');
   const [userContact, setUserContact] = useState('');
@@ -53,11 +65,6 @@ const PlaceRequest = () => {
   const [imageLoading, setImageLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
-
-  const onCompletePost = (data: any) => {
-    setLocation(`${data.sido} ${data.sigungu}`);
-    setAddress(data.address);
-  };
 
   const date = format(new Date(), 'yyMMddHHmmss');
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -109,7 +116,8 @@ const PlaceRequest = () => {
   const registerPost = async () => {
     if (submittingRef.current) return;
 
-    if (!placeName || sort === '선택' || region === '선택' || size === '선택' || !address || !userContact) {
+    const fullAddress = getFullAddress();
+    if (!placeName || sort === '선택' || region === '선택' || size === '선택' || !fullAddress || !userContact) {
       alert('필수 항목을 입력해주세요.');
       return;
     }
@@ -126,7 +134,7 @@ const PlaceRequest = () => {
     formData.append('region', region);
     formData.append('location', location);
     formData.append('size', size);
-    formData.append('address', address);
+    formData.append('address', fullAddress);
     formData.append('phone', phone);
     formData.append('date', format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"));
     formData.append('homepage', homepage);
@@ -192,18 +200,45 @@ const PlaceRequest = () => {
               <DropdownBox widthmain="100%" height="46px" selectedValue={size} options={sizeOptions} handleChange={(e: any) => setSize(e.target.value)} />
             </div>
 
-            <div className="inputbox inputbox--postcode">
-              <label>주소찾기</label>
-              <DaumPostcodeEmbed style={{ width: '100%', height: '320px' }} onComplete={onCompletePost} />
+            <div className="inputbox inputbox--address">
+              <label>주소</label>
+              <div className="place-request__address-fields">
+                <div className="place-request__address-row place-request__address-row--postcode">
+                  <input
+                    type="text"
+                    value={postcode}
+                    placeholder="우편번호"
+                    readOnly
+                    onClick={() => {
+                      if (!postcode.trim()) {
+                        handleAddressSearch();
+                      }
+                    }}
+                  />
+                  <button type="button" className="place-request__address-search-btn" onClick={handleAddressSearch}>
+                    우편번호 찾기
+                  </button>
+                </div>
+                <input type="text" value={address} placeholder="주소" readOnly />
+                {addressExtra.trim() !== '' && (
+                  <input type="text" value={addressExtra} placeholder="참고항목" readOnly className="place-request__address-extra" />
+                )}
+                {addressGuide.trim() !== '' && (
+                  <p className="place-request__address-guide">{addressGuide}</p>
+                )}
+                <input
+                  ref={addressDetailRef}
+                  type="text"
+                  value={addressDetail}
+                  placeholder="상세주소"
+                  onChange={(e) => setAddressDetail(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="inputbox">
               <label>위치</label>
               <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} />
-            </div>
-            <div className="inputbox">
-              <label>주소</label>
-              <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
             </div>
             <div className="inputbox">
               <label>장소연락처</label>

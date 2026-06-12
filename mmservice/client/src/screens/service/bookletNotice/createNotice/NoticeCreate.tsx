@@ -12,7 +12,9 @@ import naverbloglogo from '../../../../images/naverblog.png';
 import navermapnotice from '../../../../images/booklet/navermapnotice.jpg';
 import kakaomapnotice from '../../../../images/booklet/kakaomapnotice.jpg';
 import { FaInstagram, FaYoutube, FaFacebookF, FaInfoCircle, FaChevronUp, FaChevronDown } from 'react-icons/fa';
-import { DaumPostcodeEmbed } from 'react-daum-postcode';
+import { KakaoAddressFields } from '../../../../components/KakaoAddressFields';
+import { formatKakaoAddressForSave } from '../../../../lib/kakaoPostcode';
+import { useKakaoAddress } from '../../../../lib/useKakaoAddress';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { religiousbodySubSort } from '../../../../data/religiousbodySubSort';
@@ -546,8 +548,12 @@ export default function NoticeCreate() {
   const [mainImages, setMainImages] = useState<MainImageSlot[]>(emptyMainImageSlots);
   const [mainImageLoadingSlot, setMainImageLoadingSlot] = useState<number | null>(null);
   const [religiousbody, setReligiousbody] = useState('');
-  const [address, setAddress] = useState('');
-  const [addressDetail, setAddressDetail] = useState('');
+  const kakaoAddress = useKakaoAddress();
+  const getAddressBase = () => formatKakaoAddressForSave({
+    address: kakaoAddress.address,
+    extraAddress: kakaoAddress.addressExtra,
+    detailAddress: '',
+  });
   const [placeNaver, setPlaceNaver] = useState('');
   const [placeKakao, setPlaceKakao] = useState('');
   const [quiryPrefix, setQuiryPrefix] = useState<string>(PHONE_PREFIX_OPTIONS[0]);
@@ -595,7 +601,6 @@ export default function NoticeCreate() {
   const serverInputResetFns = useRef<Record<number, () => void>>({});
   const sermonThumbResetFns = useRef<Record<number, () => void>>({});
   const galleryImageResetFns = useRef<Record<number, () => void>>({});
-  const [isViewAddress, setIsViewAddress] = useState(false);
   const [activeTab, setActiveTab] = useState<'intro' | 'servants' | 'sermon' | 'gallery'>('intro');
   const [showPastorCareer, setShowPastorCareer] = useState(true);
   /** URL `?id=` — 첫 렌더부터 읽어야 마이페이지「수정」직후 소개 저장이 신규 생성으로 가지 않음 (useEffect보다 늦으면 안 됨) */
@@ -676,8 +681,8 @@ export default function NoticeCreate() {
           setChurchNameEn(d.churchNameEn || '');
           setMainPastor(d.mainPastor || '');
           setReligiousbody(d.religiousbody || '');
-          setAddress(d.address || '');
-          setAddressDetail(d.addressDetail != null ? String(d.addressDetail) : '');
+          kakaoAddress.resetFromSaved(d.address || '');
+          kakaoAddress.setAddressDetail(d.addressDetail != null ? String(d.addressDetail) : '');
           setPlaceNaver(d.placeNaver || '');
           setPlaceKakao(d.placeKakao || '');
           {
@@ -855,8 +860,8 @@ export default function NoticeCreate() {
       churchNameEn,
       mainPastor,
       religiousbody,
-      address,
-      addressDetail,
+      address: getAddressBase(),
+      addressDetail: kakaoAddress.addressDetail,
       quiry,
       youtube,
       blog,
@@ -881,8 +886,9 @@ export default function NoticeCreate() {
     churchNameEn,
     mainPastor,
     religiousbody,
-    address,
-    addressDetail,
+    kakaoAddress.address,
+    kakaoAddress.addressExtra,
+    kakaoAddress.addressDetail,
     quiryPrefix,
     quiryMid,
     quiryLast,
@@ -1089,8 +1095,8 @@ export default function NoticeCreate() {
         formData.append('churchNameEn', churchNameEn);
         formData.append('mainPastor', mainPastor);
         formData.append('religiousbody', religiousbody);
-        formData.append('address', address);
-        formData.append('addressDetail', addressDetail);
+        formData.append('address', getAddressBase());
+        formData.append('addressDetail', kakaoAddress.addressDetail);
         formData.append('quiry', quiry);
         formData.append('youtube', youtube);
         formData.append('blog', blog);
@@ -1143,8 +1149,8 @@ export default function NoticeCreate() {
           churchNameEn,
           mainPastor,
           religiousbody,
-          address,
-          addressDetail,
+          address: getAddressBase(),
+          addressDetail: kakaoAddress.addressDetail,
           quiry,
           youtube,
           blog,
@@ -1176,8 +1182,8 @@ export default function NoticeCreate() {
         introFormData.append('churchNameEn', churchNameEn);
         introFormData.append('mainPastor', mainPastor);
         introFormData.append('religiousbody', religiousbody);
-        introFormData.append('address', address);
-        introFormData.append('addressDetail', addressDetail);
+        introFormData.append('address', getAddressBase());
+        introFormData.append('addressDetail', kakaoAddress.addressDetail);
         introFormData.append('quiry', quiry);
         introFormData.append('youtube', youtube);
         introFormData.append('blog', blog);
@@ -1341,11 +1347,6 @@ export default function NoticeCreate() {
     } finally {
       setSaveLoading(false);
     }
-  };
-
-  const onCompletePost = (data: { address: string }) => {
-    setAddress(data.address);
-    setIsViewAddress(false);
   };
 
   const pastorCareerList = pastorCareerLines.map((s) => s.trim()).filter(Boolean);
@@ -2098,7 +2099,7 @@ export default function NoticeCreate() {
                             <div>
                               <p className="notice-create__preview-chip-label">위치</p>
                               <p className="notice-create__preview-chip-value">
-                                {formatAddressLine(address, addressDetail) || '서울시 강남구'}
+                                {formatAddressLine(getAddressBase(), kakaoAddress.addressDetail) || '서울시 강남구'}
                               </p>
                             </div>
                           </div>
@@ -2143,8 +2144,8 @@ export default function NoticeCreate() {
                   <div className="notice-create__preview-footer">
                     <p className="notice-create__preview-footer-info">
                       {quiry && `${quiry}`}
-                      {quiry && formatAddressLine(address, addressDetail) && ' | '}
-                      {formatAddressLine(address, addressDetail)}
+                      {quiry && formatAddressLine(getAddressBase(), kakaoAddress.addressDetail) && ' | '}
+                      {formatAddressLine(getAddressBase(), kakaoAddress.addressDetail)}
                       <br />
                       © {new Date().getFullYear()} {churchName || '교회'} All Rights Reserved.
                     </p>
@@ -2401,41 +2402,19 @@ export default function NoticeCreate() {
               <div className="notice-create__label">
                 <span className="notice-create__label-text">주소</span>
                 <div className="notice-create__address-field">
-                  {isViewAddress && address === '' ? (
-                    <div className="notice-create__postcode-wrap">
-                      <DaumPostcodeEmbed
-                        style={{
-                          width: '100%',
-                          height: '400px',
-                          padding: '10px',
-                          boxSizing: 'border-box',
-                          border: '1px solid #e2e8f0',
-                        }}
-                        onComplete={onCompletePost}
-                      />
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      className="notice-create__input"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      onClick={() => setIsViewAddress(true)}
-                      placeholder="주소 검색 클릭"
-                    />
-                  )}
+                  <KakaoAddressFields
+                    postcode={kakaoAddress.postcode}
+                    address={kakaoAddress.address}
+                    addressExtra={kakaoAddress.addressExtra}
+                    addressGuide={kakaoAddress.addressGuide}
+                    addressDetail={kakaoAddress.addressDetail}
+                    onAddressDetailChange={kakaoAddress.setAddressDetail}
+                    onSearch={kakaoAddress.handleAddressSearch}
+                    detailInputRef={kakaoAddress.addressDetailRef}
+                    inputClassName="notice-create__input"
+                  />
                 </div>
               </div>
-              <label className="notice-create__label">
-                <span className="notice-create__label-text">상세주소</span>
-                <input
-                  type="text"
-                  className="notice-create__input"
-                  value={addressDetail}
-                  onChange={(e) => setAddressDetail(e.target.value)}
-                  placeholder="동·호수 등 (선택)"
-                />
-              </label>
             </div>
           </div>
 
@@ -2604,7 +2583,7 @@ export default function NoticeCreate() {
                     type="button"
                     className="notice-create__map-open-btn notice-create__map-open-btn--naver"
                     onClick={() => {
-                      const q = address.trim();
+                      const q = formatAddressLine(getAddressBase(), kakaoAddress.addressDetail).trim();
                       const url = q
                         ? `https://map.naver.com/p/search/${encodeURIComponent(q)}`
                         : 'https://map.naver.com/';
@@ -2642,7 +2621,7 @@ export default function NoticeCreate() {
                     type="button"
                     className="notice-create__map-open-btn notice-create__map-open-btn--kakao"
                     onClick={() => {
-                      const q = address.trim();
+                      const q = formatAddressLine(getAddressBase(), kakaoAddress.addressDetail).trim();
                       const url = q
                         ? `https://map.kakao.com/link/search/${encodeURIComponent(q)}`
                         : 'https://map.kakao.com/';

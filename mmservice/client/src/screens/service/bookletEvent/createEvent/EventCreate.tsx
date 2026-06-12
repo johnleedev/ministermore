@@ -12,7 +12,8 @@ import orderImgSchedule from '../../../../images/bookletevent/ordersamples/order
 import orderImgWorship from '../../../../images/bookletevent/ordersamples/ordersample1.png';
 import orderImgConcert from '../../../../images/bookletevent/ordersamples/ordersample3.png';
 import { FaInfoCircle, FaUser } from 'react-icons/fa';
-import { DaumPostcodeEmbed } from 'react-daum-postcode';
+import { KakaoAddressFields } from '../../../../components/KakaoAddressFields';
+import { useKakaoAddress } from '../../../../lib/useKakaoAddress';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import MainHeroCarousel from '../../../../exceptbooklets/component/MainHeroCarousel';
@@ -527,7 +528,7 @@ export default function EventCreate() {
   const [superViser, setSuperViser] = useState('');
   const [mainImages, setMainImages] = useState<MainImageSlot[]>(emptyMainImageSlots);
   const [mainImageLoadingSlot, setMainImageLoadingSlot] = useState<number | null>(null);
-  const [address, setAddress] = useState('');
+  const kakaoAddress = useKakaoAddress();
   const [placeNaver, setPlaceNaver] = useState('');
   const [placeKakao, setPlaceKakao] = useState('');
   const [quiry, setQuiry] = useState('');
@@ -544,7 +545,6 @@ export default function EventCreate() {
   const [castImageLoadingIndex, setCastImageLoadingIndex] = useState<number | null>(null);
   const [programImageLoading, setProgramImageLoading] = useState<Record<string, boolean>>({});
   const programImageResetFns = useRef<Record<string, () => void>>({});
-  const [isViewAddress, setIsViewAddress] = useState(false);
   /** URL의 id를 첫 렌더에서 읽어 데이터 로드 useEffect가 한 번에 실행되도록 함 (마이페이지→수정 진입 시 이미지 등 로드 누락 방지) */
   const [eventMainId, setEventMainId] = useState<string | null>(() =>
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
@@ -580,13 +580,13 @@ export default function EventCreate() {
       eventName,
       date,
       place,
-      address,
+      address: kakaoAddress.getFullAddress(),
       superViser,
       quiry,
       placeNaver,
       placeKakao,
     }),
-    [eventName, date, place, address, superViser, quiry, placeNaver, placeKakao]
+    [eventName, date, place, kakaoAddress.address, kakaoAddress.addressExtra, kakaoAddress.addressDetail, superViser, quiry, placeNaver, placeKakao]
   );
 
   useEffect(() => {
@@ -695,7 +695,7 @@ export default function EventCreate() {
           setMainImages(
             mainNames.map((serverName) => ({ serverName, file: null, previewUrl: '' }))
           );
-          setAddress(d.address || '');
+          kakaoAddress.resetFromSaved(d.address || '');
           setPlaceNaver(d.placeNaver || '');
           setPlaceKakao(d.placeKakao || '');
           setQuiry(d.quiry || '');
@@ -836,7 +836,7 @@ export default function EventCreate() {
       date,
       place,
       superViser,
-      address,
+      address: kakaoAddress.getFullAddress(),
       placeNaver,
       placeKakao,
       quiry,
@@ -845,7 +845,7 @@ export default function EventCreate() {
       visibleTabs: JSON.stringify(orderVisibleTabs(visibleTabIds)),
     });
     setDirtyTabs((prev) => (prev.info !== (snapshot !== lastSavedInfoRef.current) ? { ...prev, info: snapshot !== lastSavedInfoRef.current } : prev));
-  }, [eventName, eventNameEn, date, place, superViser, address, placeNaver, placeKakao, quiry, mainImages, visibleTabIds]);
+  }, [eventName, eventNameEn, date, place, superViser, kakaoAddress.address, kakaoAddress.addressExtra, kakaoAddress.addressDetail, placeNaver, placeKakao, quiry, mainImages, visibleTabIds]);
 
   useEffect(() => {
     if (lastSavedProgramRef.current === null) return;
@@ -1015,11 +1015,6 @@ export default function EventCreate() {
     }
   };
 
-  const onCompletePost = (data: { address: string }) => {
-    setAddress(data.address);
-    setIsViewAddress(false);
-  };
-
   const handleSaveClick = async () => {
     if (saveLoading) return;
     let currentEventMainId = eventMainId;
@@ -1040,7 +1035,7 @@ export default function EventCreate() {
         formData.append('date', date);
         formData.append('place', place);
         formData.append('superViser', superViser);
-        formData.append('address', address);
+        formData.append('address', kakaoAddress.getFullAddress());
         formData.append('placeNaver', placeNaver);
         formData.append('placeKakao', placeKakao);
         formData.append('quiry', quiry);
@@ -1071,7 +1066,7 @@ export default function EventCreate() {
           date,
           place,
           superViser,
-          address,
+          address: kakaoAddress.getFullAddress(),
           placeNaver,
           placeKakao,
           quiry,
@@ -1692,8 +1687,8 @@ export default function EventCreate() {
                         <div className="notice-create__preview-footer">
                           <p className="notice-create__preview-footer-info">
                             {quiry && `${quiry}`}
-                            {quiry && address && ' | '}
-                            {address}
+                            {quiry && kakaoAddress.getFullAddress() && ' | '}
+                            {kakaoAddress.getFullAddress()}
                             <br />
                             © {new Date().getFullYear()} {eventName || '행사'} All Rights Reserved.
                           </p>
@@ -1966,29 +1961,17 @@ export default function EventCreate() {
                     <label className="event-create__label">
                       <span className="event-create__label-text">주소</span>
                       <div className="event-create__address-field">
-                        {isViewAddress && address === '' ? (
-                          <div className="event-create__postcode-wrap">
-                            <DaumPostcodeEmbed
-                              style={{
-                                width: '100%',
-                                height: '400px',
-                                padding: '10px',
-                                boxSizing: 'border-box',
-                                border: '1px solid #e2e8f0',
-                              }}
-                              onComplete={onCompletePost}
-                            />
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            className="event-create__input"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            onClick={() => setIsViewAddress(true)}
-                            placeholder="주소 검색 클릭"
-                          />
-                        )}
+                        <KakaoAddressFields
+                          postcode={kakaoAddress.postcode}
+                          address={kakaoAddress.address}
+                          addressExtra={kakaoAddress.addressExtra}
+                          addressGuide={kakaoAddress.addressGuide}
+                          addressDetail={kakaoAddress.addressDetail}
+                          onAddressDetailChange={kakaoAddress.setAddressDetail}
+                          onSearch={kakaoAddress.handleAddressSearch}
+                          detailInputRef={kakaoAddress.addressDetailRef}
+                          inputClassName="event-create__input"
+                        />
                       </div>
                     </label>
                   </div>
