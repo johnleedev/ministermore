@@ -1,5 +1,11 @@
 @import '../bookletEvent/createEvent/EventApplyPay.scss';
 
+$teal: #15857d;
+$teal-dark: #0f6660;
+$navy: #1f3250;
+$navy-deep: #13233a;
+$muted: #61758c;
+
 .retreat-apply-pay__church-block {
   .event-template-select__form-row {
     align-items: flex-start;
@@ -27,6 +33,365 @@
   flex: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   letter-spacing: 0.04em;
+}
+
+.retreat-apply-pay__participant-section {
+  margin-bottom: 12px;
+  padding: 22px 20px 20px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fcfb 0%, #ffffff 100%);
+  border: 1px solid rgba(219, 233, 231, 0.9);
+  box-shadow: 0 10px 28px rgba(19, 35, 58, 0.04);
+}
+
+.retreat-apply-pay__participant-hint {
+  margin: 16px 0 0;
+  text-align: center;
+  color: $muted;
+}
+
+.retreat-apply-pay__pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 10px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.retreat-apply-pay__pricing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+  padding: 28px 16px 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1.5px solid rgba(219, 233, 231, 0.95);
+  box-shadow: 0 12px 28px rgba(19, 35, 58, 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: -24px;
+    top: -24px;
+    width: 100px;
+    height: 100px;
+    border-radius: 999px;
+    background: rgba(21, 133, 125, 0.06);
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px rgba(19, 35, 58, 0.1);
+    border-color: rgba(21, 133, 125, 0.22);
+  }
+
+  &--selected {
+    border-color: $teal;
+    background: linear-gradient(180deg, rgba(233, 248, 245, 0.55), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 0 0 2px rgba(21, 133, 125, 0.18), 0 16px 34px rgba(19, 35, 58, 0.1);
+  }
+
+  &--free {
+    overflow: visible;
+    padding-top: 34px;
+    border-color: rgba(21, 133, 125, 0.24);
+    background: linear-gradient(180deg, rgba(233, 248, 245, 0.85), rgba(255, 255, 255, 0.96));
+
+    &.retreat-apply-pay__pricing-card--selected {
+      border-color: $teal;
+    }
+
+    .retreat-apply-pay__pricing-badge {
+      position: absolute;
+      top: 0;
+      left: 16px;
+      z-index: 2;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+.retreat-apply-pay__pricing-badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, $teal, $teal-dark);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.retreat-apply-pay__pricing-icon {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  color: $teal-dark;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.retreat-apply-pay__pricing-count {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  font-weight: 800;
+  color: $navy;
+  letter-spacing: -0.02em;
+}
+
+.retreat-apply-pay__pricing-divider {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 110px;
+  margin: 12px 0;
+  border-top: 2px dotted rgba(97, 117, 140, 0.35);
+}
+
+.retreat-apply-pay__pricing-price {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1.05;
+  font-weight: 900;
+  color: $navy-deep;
+  letter-spacing: -0.04em;
+  margin-bottom: 8px;
+
+  &--free {
+    color: $teal-dark;
+  }
+}
+
+.retreat-apply-pay__pricing-desc {
+  position: relative;
+  z-index: 1;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: $muted;
+}
+
+.retreat-apply-pay__pricing-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  color: $teal;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+.retreat-apply-pay__large-tier-panel {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(21, 133, 125, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.retreat-apply-pay__large-tier-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(219, 233, 231, 0.9);
+}
+
+.retreat-apply-pay__large-tier-head-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(21, 133, 125, 0.1);
+  color: $teal-dark;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.retreat-apply-pay__large-tier-head-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: $navy;
+  letter-spacing: -0.02em;
+}
+
+.retreat-apply-pay__large-tier-head-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: $muted;
+}
+
+.retreat-apply-pay__large-tier-list {
+  display: grid;
+  gap: 8px;
+}
+
+.retreat-apply-pay__large-tier-option {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(219, 233, 231, 0.95);
+  background: #fafcfc;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: rgba(21, 133, 125, 0.28);
+    background: #f3fbf9;
+  }
+
+  &--selected {
+    border-color: $teal;
+    background: linear-gradient(90deg, rgba(233, 248, 245, 0.9), rgba(255, 255, 255, 0.95));
+    box-shadow: 0 0 0 1px rgba(21, 133, 125, 0.12);
+
+    .retreat-apply-pay__large-tier-option-radio {
+      border-color: $teal;
+    }
+
+    .retreat-apply-pay__large-tier-option-radio-dot {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .retreat-apply-pay__large-tier-option-price {
+      color: $teal-dark;
+    }
+  }
+}
+
+.retreat-apply-pay__large-tier-option-radio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(97, 117, 140, 0.45);
+  transition: border-color 0.2s ease;
+}
+
+.retreat-apply-pay__large-tier-option-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: $teal;
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.retreat-apply-pay__large-tier-option-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: $navy;
+  letter-spacing: -0.01em;
+}
+
+.retreat-apply-pay__large-tier-option-price {
+  font-size: 14px;
+  font-weight: 800;
+  color: $navy-deep;
+  white-space: nowrap;
+
+  &--inquiry {
+    color: #b45309;
+  }
+}
+
+.retreat-apply-pay__large-tier-option--inquiry {
+  grid-template-columns: auto 1fr auto;
+
+  .retreat-apply-pay__large-tier-option-label {
+    line-height: 1.45;
+  }
+
+  &.retreat-apply-pay__large-tier-option--selected {
+    border-color: #d97706;
+    background: linear-gradient(90deg, rgba(255, 247, 237, 0.95), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.14);
+
+    .retreat-apply-pay__large-tier-option-radio {
+      border-color: #d97706;
+    }
+
+    .retreat-apply-pay__large-tier-option-radio-dot {
+      background: #d97706;
+    }
+  }
+}
+
+.retreat-apply-pay__inquiry-summary {
+  padding: 22px 18px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  text-align: center;
+}
+
+.retreat-apply-pay__inquiry-summary-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #9a3412;
+}
+
+.retreat-apply-pay__inquiry-summary-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #b45309;
 }
 
 .retreat-apply-pay__passwd-regen {
